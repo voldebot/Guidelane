@@ -91,7 +91,11 @@ async function main() {
   const outDir = opts.outDir ? resolve(opts.outDir) : join(REPO_ROOT, 'docs', 'research')
   // --out is an unvalidated write path today and this file seeds an adapter that
   // will one day take paths from a UI. Confine it now, while it costs nothing.
+  // RUNNER_TEMP is GitHub Actions' scratch dir and is NOT os.tmpdir() there
+  // (/home/runner/work/_temp vs /tmp) — CI writes its report outside the working
+  // tree so the committed baseline cannot be clobbered, and that is legitimate.
   const allowedRoots = [REPO_ROOT, resolve(tmpdir())]
+  if (process.env.RUNNER_TEMP) allowedRoots.push(resolve(process.env.RUNNER_TEMP))
   if (!allowedRoots.some((root) => outDir === root || outDir.startsWith(root + sep))) {
     process.stderr.write(`--out must be inside the repo or the temp dir (got ${outDir})\n`)
     return 2
