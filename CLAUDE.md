@@ -144,11 +144,25 @@ Guidelane/
 
 ## 5. Sprint state
 
-**Current sprint**: S0 (engine conformance) — **complete**. 30 probes on disk (13 free, 17 live),
-last full live run **30 pass / 0 fail / 0 partial / 0 inconclusive / 0 error** against CLI 2.1.220.
-ADR-007 and ADR-008 are its output; REVIEW-02 is its honest gap list.
-**Next**: S1 — cockpit + engine adapter, **gated on REVIEW-02 Tier A** (7 runtime
-unknowns; four of them can stall the activity feed silently).
+**Current sprint**: **S1 — cockpit + engine adapter. OPEN as of 2026-07-31.**
+Gated on REVIEW-02 Tier A, which is decomposed by *dependency* rather than into
+seven equal parts: **S1-A** (A2, A4, A6, A7 — measurable on the existing harness,
+~80% confidence), then **S1-B** (a ~40-line throwaway reactive rig, ~62%), then
+**S1-C** (A1, A5, A3b — structurally unmeasurable with `spawnCapture`, ~58%).
+S1-B carries a hard validation gate: the rig must observe an event mid-stream and
+write a reply the engine visibly acts on. If it cannot, A1's exit criterion
+becomes "prove the engine never asks" and S1 gets cheaper.
+
+**S0 (engine conformance) — complete.** 30 probes on disk (13 free, 17 live),
+last full live run **30 pass / 0 fail / 0 partial / 0 inconclusive / 0 error**
+against CLI 2.1.220. ADR-007 and ADR-008 are its output; REVIEW-02 is its honest
+gap list.
+**The S0 lesson that outlives S0**: three review passes found the same defect
+**22 times** — *the harness inferred where it should have asserted, and every
+inference failed open*. A guard that cannot fire is decoration; a convention is
+not a constraint; a counter with no pinned expectation falsifies nothing. The
+22nd instance was a guard added and falsified by CI within the hour, on the last
+day of the sprint. Expect the 23rd.
 **Last sprint close**: 2026-07-31 (S0, post-audit hardening). Shipped: `tools/probe/`
 (30 probes, all green), ADR-007 + ADR-008 with two dated corrections, REVIEW-02
 (+§13 free Tier A answers), CI wiring, LICENSE, THIRD-PARTY-NOTICES, the two

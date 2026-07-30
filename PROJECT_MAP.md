@@ -3,6 +3,7 @@ context_priority: high
 project: "Guidelane"
 created: "2026-07-30"
 last_sprint_close: "2026-07-31 (S0 — engine conformance, post-audit hardening)"
+current_sprint: "S1 — cockpit + engine adapter (opened 2026-07-31, gated on REVIEW-02 Tier A)"
 ---
 
 # Guidelane — Project Map
@@ -47,6 +48,7 @@ source (MIT), non-commercial, zero Guidelane-operated servers.
 6. **Credit donors, keep notices**: WrongStack and taste-skill are MIT — copied code carries THIRD-PARTY-NOTICES.md entries.
 7. **The plan's authority chain**: measurement > REVIEW-01 > RESEARCH-02 > RESEARCH-01, where they conflict. An ADR backed by a probe (ADR-007, ADR-008) overrides any research prose about engine behaviour, including prose I wrote confidently.
 8. **A binary string is evidence a code path exists, not that it fires.** Static extraction sets the probe agenda; only a live run sets a decision.
+9. **Assert where the adversary is.** Three review passes over S0 found the same defect 22 times: *inferred where it should have asserted, and every inference failed open.* Three tests before shipping any guard — **can it fire?** (an assertion over the same constant its own delete loop just used cannot); **is it a constraint or a convention?** (a comment saying "for non-session tools" stops nobody); **does it have a pinned expectation?** (a counter nothing compares against falsifies nothing).
 
 ## 3. Domain Map (bounded contexts)
 
