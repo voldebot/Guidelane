@@ -242,9 +242,24 @@ In addition to global gates (`~/.claude/CLAUDE.md` §6):
   `Desktop/Projects/Guidelane` — harmless here, a client's name for a pilot user
   checked out under `~/work/<client>/`. Both fixed; the rule is that the
   boundary must be at least as strong as its backstop, always.
-- Two written confirmations pending: z.ai (GLM allowlist) and Anthropic (headless
-  subscription use) — both are S0/S1 exit criteria; GLM/Codex engines stay unshipped
-  until answered/accepted.
+- **Vendor inquiries re-gated by the owner (2026-07-31): from S0/S1 exit criteria
+  to a PILOT-INSTALL gate.** REVIEW-01 #1 made the Anthropic letter an S1 exit
+  criterion; the owner's decision is to prove the system runs on this machine
+  first — *"önceliğimiz claude code ve codex sistemin çalıştığını kanıtlamak"* —
+  and send the letters afterwards. The reasoning holds while two conditions do:
+  it is the **owner's own subscription** and **nothing is installed for anyone
+  else**. The moment either changes — the first friend's pilot install — the
+  pattern becomes "someone else's subscription driven by my software", which is
+  exactly the question the letters ask, and they must be answered before that
+  install. Both drafts sit unsent in `docs/inquiries/`. Nothing about ADR-001
+  relaxes: no credential is ever read, and no workaround exists in the codebase
+  regardless of what any vendor answers.
+- **There is no drafted inquiry for OpenAI, and Codex needs one.** `codex` under
+  a ChatGPT subscription raises the *same* headless-automation question as
+  `claude` under a Max subscription, and only the Anthropic and z.ai letters
+  exist. If Codex moves earlier in the roadmap, a third letter has to be written
+  — cheap to draft, and easy to forget precisely because the other two are
+  already sitting there looking complete.
 - Calendar honesty: 2.5–4 months of steady work (REVIEW-01 #4), content track separate.
 - **macOS only for now** (K5, decided 2026-07-30). The harness's process-group
   kill is POSIX-only; Windows needs a `taskkill /T /F` branch before S7. Do not
