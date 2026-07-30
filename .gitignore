@@ -1,0 +1,26 @@
+# Claude-managed
+.claude/.filemap.lock
+docs/FILEMAP.md.bak
+
+# Standard
+node_modules/
+dist/
+build/
+.next/
+.turbo/
+.DS_Store
+*.log
+.env
+.env.local
+.env.*.local
+
+# Probe harness leftovers. `--keep-workspaces` deliberately leaves temp dirs on
+# disk for debugging; they contain files a probe session wrote and must never be
+# committed to a public repo.
+tools/probe/.workspaces/
+guidelane-probe-*/
+
+# Filtered / free-tier probe runs. Only the full `--live` report is the
+# conformance baseline; the .partial files are debugging output.
+docs/research/*.partial.json
+docs/research/*.partial.md

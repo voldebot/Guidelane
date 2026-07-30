@@ -1,0 +1,95 @@
+# Engine conformance — the free tier only.
+#
+# WHY THIS FILE CANNOT RUN THE FULL SUITE
+# ---------------------------------------
+# ADR-001's invariant is that Guidelane never holds a credential, and engines are
+# official vendor binaries running under the *user's own login*. A GitHub runner
+# has no such login, so `--live` (17 probes that make real engine calls) can only
+# ever run on a machine where a human is already signed in.
+#
+# The split is therefore deliberate, not a limitation we forgot:
+#   - here (CI):    free tier — help-text + observational probes, every push + daily.
+#                   This is what catches a CLI release changing a flag or a
+#                   help-text contract, which is REVIEW-01 #5's remedy.
+#   - on a laptop:  `--live`, scheduled locally (see tools/probe/README-ci.md).
+#                   This is what catches a change in runtime behaviour.
+#
+# HONESTY NOTE: the free tier has never been executed on a logged-out machine.
+# Probes that shell out to `claude auth status --json` / `auto-mode config` are
+# expected to still pass (they assert field *presence*, not a signed-in state),
+# but that is reasoning, not measurement — REVIEW-02 B5 covers it. The first CI
+# run is the measurement; if a probe fails only because the runner is logged
+# out, fix the probe, do not weaken the assertion.
+
+name: engine-conformance
+
+on:
+  push:
+    paths:
+      - 'tools/probe/**'
+      - '.github/workflows/engine-conformance.yml'
+  pull_request:
+  schedule:
+    # 04:00 UTC daily — a new CLI release should be caught before the owner
+    # starts work, not halfway through a build.
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+jobs:
+  free-tier:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Pinning is intentional: an unpinned install would make the probe test a
+      # different engine every night, which is the opposite of version
+      # governance. Bump this deliberately, then re-run --live locally before
+      # the bump lands (CLAUDE.md §3, "tested CLI version range maintained").
+      - name: Install the engine under test
+        run: npm install -g @anthropic-ai/claude-code@2.1.220
+
+      - name: Record the exercised version
+        run: claude --version
+
+      # Written outside the working tree, so the committed baseline cannot be
+      # touched even by accident. Exit codes: 0 green · 1 the engine's contract
+      # changed · 2 the harness broke · 3 inconclusive (stall/capacity).
+      - name: Run the free tier
+        run: node tools/probe/run.mjs --out "${RUNNER_TEMP}/probe-out"
+
+      - name: Publish the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          # Deliberately NOT named like the baseline: this is ~10 probes with no
+          # live calls, and a reviewer downloading it must not mistake it for the
+          # 27-probe conformance report.
+          name: s0-conformance-FREE-TIER-partial
+          path: ${{ runner.temp }}/probe-out/
+
+      # Fail-closed. A `|| true` here would let a clobbered baseline through
+      # green, which is the failure mode this whole job exists to prevent.
+      - name: Assert the committed baseline was not modified
+        if: always()
+        run: |
+          set -euo pipefail
+          git diff --exit-code -- docs/research/
+
+      # The redaction boundary is only as good as its last regression. This is
+      # the cheapest possible check that no home path, username, temp-dir salt or
+      # address reached a file headed for a public repo.
+      - name: Assert the committed artifacts carry no identifiers
+        run: |
+          set -uo pipefail
+          if grep -nE '/Users/[a-z]|/home/[a-z]|/var/folders/|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' \
+               docs/research/S0-conformance-report.md \
+               docs/research/S0-conformance-results.json; then
+            echo "::error::Identifier leaked into a committed conformance artifact."
+            exit 1
+          fi
+          echo "No identifiers in the committed artifacts."

@@ -1,0 +1,12 @@
+{
+  "name": "guidelane-probe",
+  "displayName": "Guidelane Conformance Probe",
+  "version": "0.1.0",
+  "description": "Throwaway fixture plugin used by the S0 engine conformance probe. Not shipped to users.",
+  "license": "MIT",
+  "author": { "name": "Guidelane" },
+  "skills": "./skills/",
+  "agents": ["./agents/probe-agent.md"],
+  "hooks": "./hooks/hooks.json",
+  "mcpServers": "./.mcp.json"
+}

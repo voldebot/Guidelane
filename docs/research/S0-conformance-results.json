@@ -1,0 +1,864 @@
+{
+  "version": "2.1.220 (Claude Code)",
+  "generatedAt": "2026-07-30T20:25:07.384Z",
+  "suiteRoot": "<TMP>/guidelane-probe-<run>",
+  "workspacesKept": false,
+  "runScope": {
+    "complete": true,
+    "live": true,
+    "only": null,
+    "kinds": null,
+    "probesDefined": 27,
+    "probesRun": 27
+  },
+  "options": {
+    "live": true,
+    "model": "haiku",
+    "timeoutMs": 120000
+  },
+  "envScrub": {
+    "denyList": [
+      "CLAUDECODE",
+      "CLAUDE_CODE_ENTRYPOINT",
+      "CLAUDE_CODE_SSE_PORT",
+      "CLAUDE_CODE_SIMPLE",
+      "CLAUDE_CODE_SAFE_MODE"
+    ],
+    "spawns": 30,
+    "ambientSpawns": 4,
+    "actuallyRemoved": [
+      "CLAUDECODE",
+      "CLAUDE_CODE_ENTRYPOINT",
+      "CLAUDE_CODE_SSE_PORT"
+    ]
+  },
+  "counts": {
+    "pass": 25,
+    "fail": 0,
+    "partial": 2,
+    "skip": 0,
+    "error": 0,
+    "inconclusive": 0
+  },
+  "results": [
+    {
+      "id": "p-flag-surface",
+      "title": "Every depended-on CLI flag exists",
+      "kind": "help-text",
+      "loadBearing": "critical",
+      "claim": "All 33 flags the architecture depends on are present in the installed CLI, with the semantics the plan assumes.",
+      "docRefs": [
+        "RESEARCH-01 §4.1",
+        "RESEARCH-02 §5",
+        "ADR-001"
+      ],
+      "failureImpact": "A missing flag invalidates whichever mechanism depends on it and may force the PTY contingency for that capability.",
+      "status": "pass",
+      "detail": "All 33 required flags present.",
+      "evidence": {
+        "required": 33,
+        "missing": []
+      },
+      "ms": 319
+    },
+    {
+      "id": "p-bare-forbidden",
+      "title": "--bare would break subscription auth (so it must never be used)",
+      "kind": "help-text",
+      "loadBearing": "critical",
+      "claim": "The installed binary documents that --bare reads auth strictly from ANTHROPIC_API_KEY/apiKeyHelper and never from OAuth or the keychain.",
+      "docRefs": [
+        "RESEARCH-01 §3.2",
+        "CLAUDE.md §3",
+        "ADR-001"
+      ],
+      "failureImpact": "If the semantics differ, the prohibition in CLAUDE.md §3 rests on a stale quote and must be re-derived.",
+      "status": "pass",
+      "detail": "Help text confirms API-key-only auth under --bare, verbatim as the plan quotes it.",
+      "evidence": {
+        "hasOAuthClause": true,
+        "hasKeyClause": true
+      },
+      "ms": 1
+    },
+    {
+      "id": "p-safe-mode-forbidden",
+      "title": "--safe-mode disables the customizations Guidelane depends on",
+      "kind": "help-text",
+      "loadBearing": "high",
+      "claim": "--safe-mode disables plugins, hooks, skills, and MCP servers.",
+      "docRefs": [
+        "RESEARCH-01 §3.2",
+        "CLAUDE.md §3"
+      ],
+      "failureImpact": "If it were harmless, the prohibition would be unnecessary noise in the constitution.",
+      "status": "pass",
+      "detail": "--safe-mode help mentions disabling: skills, plugins, hooks, MCP servers.",
+      "evidence": {
+        "mentions": [
+          "skills",
+          "plugins",
+          "hooks",
+          "MCP servers"
+        ]
+      },
+      "ms": 1
+    },
+    {
+      "id": "p-doctor-exists",
+      "title": "`claude doctor` exists and can back G0",
+      "kind": "help-text",
+      "loadBearing": "medium",
+      "claim": "The CLI ships an environment health check that Guidelane can wrap instead of reimplementing preflight.",
+      "docRefs": [
+        "REVIEW-01 C1 (low finding)",
+        "RESEARCH-02 §4 G0"
+      ],
+      "failureImpact": "G0 must implement all environment checks itself.",
+      "status": "pass",
+      "detail": "Subcommand present; G0 should wrap it rather than duplicate environment checks.",
+      "evidence": {
+        "present": true
+      },
+      "ms": 0
+    },
+    {
+      "id": "p-plugin-eval-exists",
+      "title": "`claude plugin validate --strict` and `plugin eval` exist",
+      "kind": "help-text",
+      "loadBearing": "medium",
+      "claim": "The behaviour pack can be regression-tested by the vendor tooling rather than by vibes.",
+      "docRefs": [
+        "RESEARCH-01 §4.2",
+        "RESEARCH-02 §11 S4"
+      ],
+      "failureImpact": "S4 loses its objective gate; jargon-leak checking stays manual.",
+      "status": "pass",
+      "detail": "plugin subcommands — validate: true, eval: true.",
+      "evidence": {
+        "hasValidate": true,
+        "hasEval": true
+      },
+      "ms": 206
+    },
+    {
+      "id": "p-plugin-validate-fixture",
+      "title": "The fixture plugin passes `plugin validate --strict`",
+      "kind": "help-text",
+      "loadBearing": "high",
+      "claim": "A plugin laid out the way Guidelane will ship its behaviour pack validates strictly — manifest fields, component locations, hook schema.",
+      "docRefs": [
+        "RESEARCH-01 §4.2",
+        "RESEARCH-02 §13.7"
+      ],
+      "failureImpact": "The plugin layout in the plan is wrong and the behaviour pack would fail to load in front of users.",
+      "status": "pass",
+      "detail": "Fixture plugin validates strictly (manifest + skills + agents + hooks + bundled MCP).",
+      "evidence": {
+        "code": 0,
+        "stdout": "Validating plugin manifest: <HOME>/Desktop/Projects/Guidelane/tools/probe/fixtures/plugin/.claude-plugin/plugin.json\n\n✔ Validation passed\n",
+        "stderr": ""
+      },
+      "ms": 1617
+    },
+    {
+      "id": "p-init-receipt",
+      "title": "system/init is a machine-checkable receipt of the whole context package",
+      "kind": "live-call",
+      "loadBearing": "critical",
+      "claim": "The first stream event enumerates what the session actually got — tools, mcp_servers (with status), plugins, skills, agents, model, permissionMode, apiKeySource, memory_paths, version — so the orchestrator can assert its context package arrived instead of hoping.",
+      "docRefs": [
+        "REVIEW-02 gap: init receipt",
+        "ADR-008",
+        "RESEARCH-02 §7.4"
+      ],
+      "failureImpact": "A stage can run to completion with Atlas silently absent, on a stale CLI, or with the wrong permission mode, and the bad output gets attributed to the model rather than to a broken context package.",
+      "status": "pass",
+      "detail": "init carries every field the orchestrator needs to assert on. apiKeySource=none (the auth-mode discriminator), version=2.1.220.",
+      "evidence": {
+        "keys": [
+          "type",
+          "subtype",
+          "cwd",
+          "session_id",
+          "tools",
+          "mcp_servers",
+          "model",
+          "permissionMode",
+          "slash_commands",
+          "apiKeySource",
+          "claude_code_version",
+          "output_style",
+          "agents",
+          "skills",
+          "plugins",
+          "capabilities",
+          "analytics_disabled",
+          "product_feedback_disabled",
+          "uuid",
+          "memory_paths",
+          "fast_mode_state",
+          "fast_mode_disabled_reason"
+        ],
+        "missing": [],
+        "toolCount": 29,
+        "mcpServers": [],
+        "apiKeySource": "none",
+        "permissionMode": "default",
+        "version": "2.1.220"
+      },
+      "ms": 2993
+    },
+    {
+      "id": "p-ambient-isolation",
+      "title": "A spawned session inherits the operator's whole configuration unless isolated",
+      "kind": "live-call",
+      "loadBearing": "critical",
+      "claim": "Isolation requires BOTH --strict-mcp-config AND --setting-sources \"\". With MCP isolation alone, the child still inherits the operator's plugins, skills, agents and permission mode.",
+      "docRefs": [
+        "REVIEW-02 gap: ambient isolation",
+        "ADR-008",
+        "RESEARCH-02 §3"
+      ],
+      "failureImpact": "Fresh-session-per-stage stops meaning reproducible context: a friend's own skills, hooks and permission defaults silently alter Guidelane runs, and the owner's personal constitution is injected into every build session. Drift control — the point of the architecture — quietly evaporates.",
+      "status": "pass",
+      "detail": "--strict-mcp-config alone LEAKS operator config (plugins 4, skills 24, agents 10, permissionMode bypassPermissions); adding --setting-sources \"\" reduces it to exactly the CLI's built-in floor (16 skills, 5 agents, 0 plugins, 0 mcp_servers, permissionMode default). Both flags required — and the floor is NOT empty, so stage allow-lists must withhold Task/Skill unless a stage deliberately needs them (ADR-008 amendment).",
+      "evidence": {
+        "mcpOnly": {
+          "plugins": 4,
+          "skills": 24,
+          "agents": 10,
+          "mcpServers": 0,
+          "permissionMode": "bypassPermissions"
+        },
+        "isolated": {
+          "plugins": 0,
+          "skills": 16,
+          "agents": 5,
+          "mcpServers": 0,
+          "permissionMode": "default"
+        },
+        "isolatedSkillNames": [
+          "batch",
+          "claude-api",
+          "code-review",
+          "dataviz",
+          "debug",
+          "deep-research",
+          "design-sync",
+          "doctor",
+          "fewer-permission-prompts",
+          "loop",
+          "run",
+          "run-skill-generator",
+          "schedule",
+          "simplify",
+          "update-config",
+          "verify"
+        ],
+        "isolatedAgentNames": [
+          "Explore",
+          "Plan",
+          "claude",
+          "general-purpose",
+          "statusline-setup"
+        ],
+        "builtinFloorPinnedFor": "2.1.220",
+        "excessBeyondFloor": [],
+        "bothFlagsRequired": true
+      },
+      "ms": 33136
+    },
+    {
+      "id": "p-messagedisplay-rewrite",
+      "title": "A MessageDisplay hook rewrite reaches stream-json, not just the terminal",
+      "kind": "fixture-call",
+      "loadBearing": "critical",
+      "claim": "A MessageDisplay hook returning displayContent replaces the assistant text that Guidelane reads from --output-format stream-json. Guidelane never renders the terminal, so a terminal-only rewrite would give the product exactly zero protection.",
+      "docRefs": [
+        "REVIEW-02 gap: MessageDisplay scope",
+        "RESEARCH-01 §4.3 mech. 4",
+        "ADR-008"
+      ],
+      "failureImpact": "R3 mechanism 4 disappears from the product surface and jargon suppression falls entirely to the cockpit's whitelist renderer.",
+      "status": "pass",
+      "detail": "Rewrite propagated into assistant text AND the terminal result — mechanism 4 is real on the product surface. Note: hook failure is fail-open (the engine emits the original text), so the cockpit renderer stays the guarantee.",
+      "evidence": {
+        "assistantTexts": [
+          "REWRITTEN_BY_HOOK"
+        ],
+        "resultText": "REWRITTEN_BY_HOOK",
+        "rewritten": true
+      },
+      "ms": 19571
+    },
+    {
+      "id": "p-stream-json-roundtrip",
+      "title": "Bidirectional stream-json round-trip with partial messages and replay",
+      "kind": "live-call",
+      "loadBearing": "critical",
+      "claim": "The engine accepts stream-json on stdin and emits a parseable stream-json event sequence including a terminal result event, partial message deltas, and replayed user messages.",
+      "docRefs": [
+        "RESEARCH-01 §4.1",
+        "RESEARCH-02 §4.3 mech. 3"
+      ],
+      "failureImpact": "The cockpit cannot render a live activity feed; the entire event-translation layer (R3 mechanism 3) has no input.",
+      "status": "pass",
+      "detail": "Full round-trip. Event types: system, rate_limit_event, user, stream_event, assistant, result.",
+      "evidence": {
+        "exit": 0,
+        "eventCount": 24,
+        "types": [
+          "system",
+          "rate_limit_event",
+          "user",
+          "stream_event",
+          "assistant",
+          "result"
+        ],
+        "subtypes": [
+          "init",
+          "status",
+          "thinking_tokens",
+          "success"
+        ],
+        "sawPartial": true,
+        "sawReplay": true,
+        "sawMarker": true,
+        "resultKeys": [
+          "is_error",
+          "duration_api_ms",
+          "num_turns",
+          "stop_reason",
+          "session_id",
+          "total_cost_usd",
+          "usage",
+          "modelUsage",
+          "permission_denials",
+          "terminal_reason",
+          "fast_mode_state",
+          "fast_mode_disabled_reason",
+          "subtype",
+          "api_error_status",
+          "result",
+          "ttft_ms",
+          "ttft_stream_ms",
+          "time_to_request_ms",
+          "type",
+          "duration_ms",
+          "uuid"
+        ],
+        "stderr": ""
+      },
+      "ms": 12656
+    },
+    {
+      "id": "p-usage-accounting",
+      "title": "The result event carries usage and cost data",
+      "kind": "live-call",
+      "loadBearing": "high",
+      "claim": "The terminal result event exposes token usage (and, where applicable, cost) so the per-run cost line and token telemetry have a real source.",
+      "docRefs": [
+        "RESEARCH-02 §13.2",
+        "ADR-004"
+      ],
+      "failureImpact": "Token economy becomes unmeasurable — the R13 workstream loses its instrument and crew routing can never be tuned by data.",
+      "status": "pass",
+      "detail": "Result keys: is_error, duration_api_ms, num_turns, stop_reason, session_id, total_cost_usd, usage, modelUsage, permission_denials, terminal_reason, fast_mode_state, fast_mode_disabled_reason, subtype, api_error_status, result, ttft_ms, ttft_stream_ms, time_to_request_ms, type, duration_ms, uuid. usage=true, cost field=total_cost_usd.",
+      "evidence": {
+        "keys": [
+          "is_error",
+          "duration_api_ms",
+          "num_turns",
+          "stop_reason",
+          "session_id",
+          "total_cost_usd",
+          "usage",
+          "modelUsage",
+          "permission_denials",
+          "terminal_reason",
+          "fast_mode_state",
+          "fast_mode_disabled_reason",
+          "subtype",
+          "api_error_status",
+          "result",
+          "ttft_ms",
+          "ttft_stream_ms",
+          "time_to_request_ms",
+          "type",
+          "duration_ms",
+          "uuid"
+        ],
+        "usage": {
+          "input_tokens": 10,
+          "cache_creation_input_tokens": 6419,
+          "cache_read_input_tokens": 0,
+          "output_tokens": 50,
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 6419,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 10,
+              "output_tokens": 50,
+              "cache_read_input_tokens": 0,
+              "cache_creation_input_tokens": 6419,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 6419
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard"
+        },
+        "cost": 0.013682,
+        "durationMs": 4423,
+        "numTurns": 1
+      },
+      "ms": 17479
+    },
+    {
+      "id": "p-json-schema",
+      "title": "--json-schema forces schema-valid structured output",
+      "kind": "fixture-call",
+      "loadBearing": "critical",
+      "claim": "Passing a JSON Schema constrains the response to valid, parseable JSON matching that schema — the mechanism behind schema-valid blueprints, plans, and review verdicts.",
+      "docRefs": [
+        "RESEARCH-02 §5 item 2",
+        "ADR-002"
+      ],
+      "failureImpact": "G1/G2/G5 artifacts lose their protocol-level guarantee and the orchestrator must hand-parse model prose — the single largest source of pipeline fragility.",
+      "status": "pass",
+      "detail": "Structured output matched the schema, including the nested acceptance-criteria array.",
+      "evidence": {
+        "exit": 0,
+        "envelopeKeys": [
+          "is_error",
+          "duration_api_ms",
+          "num_turns",
+          "stop_reason",
+          "session_id",
+          "total_cost_usd",
+          "usage",
+          "modelUsage",
+          "permission_denials",
+          "terminal_reason",
+          "fast_mode_state",
+          "fast_mode_disabled_reason",
+          "subtype",
+          "api_error_status",
+          "result",
+          "structured_output",
+          "ttft_ms",
+          "ttft_stream_ms",
+          "time_to_request_ms",
+          "type",
+          "duration_ms",
+          "uuid"
+        ],
+        "payloadPreview": "{\"productName\":\"ShopList\",\"audience\":\"One person managing groceries and household shopping from home or while out\",\"invariants\":[\"Items persist between sessions\",\"A checked item can always be unchecked\",\"The list is never lost due to app refresh\",\"Adding an item takes no more than 2 taps\",\"No authentication required\"],\"acceptance\":[{\"given\":\"I open the app\",\"then\":\"I see my existing items in the same state as last time\"},{\"given\":\"I add a new item\",\"then\":\"It appears at the bottom of the list immediately\"},{\"given\":\"I tap an item\",\"then\":\"It's marked done with a visual indicator (strikethrough or grayed)\"},{\"given\":\"I tap a checked item\",\"then\":\"It returns to unchecked state\"},{\"given\":\"I de…[887 chars]",
+        "stderr": ""
+      },
+      "ms": 13794
+    },
+    {
+      "id": "p-append-system-prompt",
+      "title": "--append-system-prompt reaches the model, and --tools \"\" removes the toolset",
+      "kind": "live-call",
+      "loadBearing": "critical",
+      "claim": "Per-session persona injection takes effect, and the built-in toolset can be emptied — the two cheapest levers behind the non-engineer surface and per-stage tool scoping.",
+      "docRefs": [
+        "RESEARCH-01 §4.3 mech. 1",
+        "RESEARCH-02 §5 item 3"
+      ],
+      "failureImpact": "R3 mechanism 1 and the per-stage tool scoping in RESEARCH-02 §5 both fail; review sessions could not be made read-only by construction.",
+      "status": "pass",
+      "detail": "Appended system prompt changed behaviour in a headless session.",
+      "evidence": {
+        "exit": 0,
+        "stdout": "PERSONA_OK\n",
+        "stderr": ""
+      },
+      "ms": 12141
+    },
+    {
+      "id": "p-agents-inline",
+      "title": "--agents defines a dispatchable agent inline",
+      "kind": "live-call",
+      "loadBearing": "low",
+      "claim": "Role agents can be injected per session as JSON without shipping files. NOTE: not load-bearing — Guidelane runs each review lens as its own top-level session (ADR-002), so subagent dispatch is a convenience, not a dependency.",
+      "docRefs": [
+        "RESEARCH-01 §4.1",
+        "RESEARCH-02 §4 G5"
+      ],
+      "failureImpact": "None structural. Lenses ship as plugin agents (proven by p-plugin-skill-headless) or as separate sessions, which is the actual design.",
+      "status": "partial",
+      "detail": "Inline agent marker not observed; the flag may be accepted without the agent being invoked. Output: Here's exactly what the probe_lens agent returned:\n\n---\n\nI'm unable to complete the conformance check at this moment due to permission restrictions on Bash access. Let me explain what I've found:\n\n**Current Situation:**\n- Working directory: `<TMP>/g…[1423 chars]",
+      "evidence": {
+        "exit": 0,
+        "stdout": "Here's exactly what the probe_lens agent returned:\n\n---\n\nI'm unable to complete the conformance check at this moment due to permission restrictions on Bash access. Let me explain what I've found:\n\n**Current Situation:**\n- Working directory: `<TMP>/guidelane-probe-NpUvZi/p-agents-inline`\n- The workspace appears to be empty (no files detected)\n- The directory name suggests this is a Guidelane probe instance\n\n**To proceed with the conformance check using the probe lens, I need:**\n\n1. **Bash permissions** - to run conformance analysis tools and pr…[1423 chars]",
+        "stderr": ""
+      },
+      "ms": 60389
+    },
+    {
+      "id": "p-max-budget-subscription",
+      "title": "--max-budget-usd behaviour under the operator's current auth",
+      "kind": "live-call",
+      "loadBearing": "critical",
+      "claim": "REVIEW-01 argued the flag is inert under subscription auth. This probe settles whether it is enforced, accepted-but-inert, or rejected.",
+      "docRefs": [
+        "REVIEW-01 C1",
+        "RESEARCH-01 §4.1 (corrected)",
+        "RESEARCH-02 §8.2"
+      ],
+      "failureImpact": "If inert, the guardrail story for subscription users must rest entirely on timeouts, cycle caps, and retry ceilings — and RESEARCH-01 §4.1 stays corrected.",
+      "status": "pass",
+      "detail": "--max-budget-usd 0.0000001 → enforced (call refused or halted by the budget ceiling). Exit 1.",
+      "evidence": {
+        "verdict": "enforced (call refused or halted by the budget ceiling)",
+        "exit": 1,
+        "answered": false,
+        "stdout": "{\"is_error\":true,\"duration_api_ms\":1953,\"num_turns\":1,\"stop_reason\":null,\"session_id\":\"9389367a-f0ea-4a65-9c18-8f3cc9e90efc\",\"total_cost_usd\":0.0005870000000000001,\"usage\":{\"input_tokens\":0,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"output_tokens\":0,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"mode…[1085 chars]",
+        "stderr": ""
+      },
+      "ms": 6706
+    },
+    {
+      "id": "p-effort-model-fallback",
+      "title": "Effort, model, and fallback-model compose in one invocation",
+      "kind": "live-call",
+      "loadBearing": "high",
+      "claim": "Crew routing can set model and effort per session, with a fallback chain, in a single command.",
+      "docRefs": [
+        "ADR-004",
+        "RESEARCH-02 §13.2"
+      ],
+      "failureImpact": "ADR-004 crew routing cannot be expressed per stage; token economy loses its largest lever.",
+      "status": "pass",
+      "detail": "Accepted together; model reported as not surfaced in result.",
+      "evidence": {
+        "exit": 0,
+        "modelReported": null,
+        "stderr": ""
+      },
+      "ms": 4625
+    },
+    {
+      "id": "p-permission-allowlist",
+      "title": "Headless permissions are fail-closed: auto denies, auto + allow-list permits",
+      "kind": "live-call",
+      "loadBearing": "critical",
+      "claim": "In a headless session, --permission-mode auto ALONE denies tool calls (no interactive grant is possible), while auto plus an explicit --allowedTools list permits exactly the listed tools. This makes the engine itself the fail-closed layer and per-stage tool scoping the primary safety mechanism.",
+      "docRefs": [
+        "RESEARCH-01 §4.3 mech. 2 (CORRECTED by this probe)",
+        "RESEARCH-02 §5 item 3",
+        "ADR-007"
+      ],
+      "failureImpact": "If auto alone permitted everything, safety would rest solely on our PreToolUse hook. If the allow-list did not work either, no autonomous stage could touch the filesystem at all and the pipeline could not build anything.",
+      "status": "pass",
+      "detail": "auto alone: DENIED the write (fail-closed, exit 0). auto + --allowedTools Write: wrote the file.",
+      "evidence": {
+        "autoAloneWrote": false,
+        "autoAloneClaimedSuccess": false,
+        "autoAloneTimedOut": false,
+        "allowListTimedOut": false,
+        "denialEvidence": true,
+        "autoAloneStdout": "I need your permission to write the file. Please approve the Write operation in the prompt that should appear in your Claude Code interface.\n",
+        "allowListWrote": true,
+        "allowListStdout": "WROTE_OK\n",
+        "exits": {
+          "denied": 0,
+          "allowed": 0
+        }
+      },
+      "ms": 17526
+    },
+    {
+      "id": "p-session-identity",
+      "title": "Session id, resume, and fork behave as the artifact store assumes",
+      "kind": "live-call",
+      "loadBearing": "high",
+      "claim": "A caller-supplied session id is honoured, the session can be resumed with continuity, and --fork-session branches instead of mutating.",
+      "docRefs": [
+        "RESEARCH-02 §13.2 item 3",
+        "RESEARCH-02 §11 S2"
+      ],
+      "failureImpact": "The session-reuse economy mode and phase continuation both break; kill-9 resumability must rely on artifacts alone.",
+      "status": "pass",
+      "detail": "Session id honoured, resume kept context, fork produced a new id.",
+      "evidence": {
+        "suppliedId": "22f37e6e-ee84-44b7-8088-9e6ade4d938a",
+        "resumeRecalled": true,
+        "forkedId": "1331c330-18fb-408c-a6ab-750f675dfa2e",
+        "exits": {
+          "first": 0,
+          "second": 0,
+          "forked": 0
+        }
+      },
+      "ms": 19473
+    },
+    {
+      "id": "p-mcp-strict-load",
+      "title": "Atlas-shaped MCP server loads via --mcp-config with --strict-mcp-config isolation",
+      "kind": "fixture-call",
+      "loadBearing": "critical",
+      "claim": "A local stdio MCP server passed on the command line is reachable in a headless session, its tool is callable, and --strict-mcp-config keeps the operator's own MCP servers out.",
+      "docRefs": [
+        "ADR-003",
+        "RESEARCH-02 §7.4"
+      ],
+      "failureImpact": "Atlas cannot be delivered to sessions the way ADR-003 specifies, and a friend's own MCP config could leak into Guidelane runs.",
+      "status": "pass",
+      "detail": "MCP server loaded from the command line and its tool was callable under a fail-closed allow-list (mcp__<server>__<tool>).",
+      "evidence": {
+        "exit": 0,
+        "stdout": "{\"is_error\":false,\"duration_api_ms\":8331,\"num_turns\":3,\"stop_reason\":\"end_turn\",\"session_id\":\"31364fcd-8c57-47e6-ad36-28225eacc93d\",\"total_cost_usd\":0.0229215,\"usage\":{\"input_tokens\":28,\"cache_creation_input_tokens\":7090,\"cache_read_input_tokens\":66265,\"output_tokens\":294,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":7090,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"not_available\",\"iterations\":[{\"input_tokens\":8,\"output_tokens\":47,\"cache_read_input_tokens\":24510,\"cache_creation_input_tokens\":116,\"cache_creation\":{\"ephemeral_5m_input_tokens\":0,\"ephemeral_1h_input_tokens\":116},\"type\":\"message\"}],\"sp…[1352 chars]",
+        "stderr": ""
+      },
+      "ms": 8122
+    },
+    {
+      "id": "p-plugin-skill-headless",
+      "title": "A session-only plugin loads and its skill is invocable in -p mode",
+      "kind": "fixture-call",
+      "loadBearing": "critical",
+      "claim": "--plugin-dir loads a plugin for one session with no marketplace or install step, and its skills resolve in headless mode.",
+      "docRefs": [
+        "RESEARCH-01 §4.2",
+        "RESEARCH-02 §13.7"
+      ],
+      "failureImpact": "The behaviour pack cannot be delivered per session; the dual-surface strategy and every persona/guard mechanism lose their carrier.",
+      "status": "pass",
+      "detail": "Session-only plugin loaded and its skill resolved from a headless prompt.",
+      "evidence": {
+        "exit": 0,
+        "stdout": "SKILL_LOADED_OK\n",
+        "stderr": ""
+      },
+      "ms": 3867
+    },
+    {
+      "id": "p-hook-events-headless",
+      "title": "Which hook lifecycle events actually fire in a headless session",
+      "kind": "fixture-call",
+      "loadBearing": "critical",
+      "claim": "The events the non-engineer surface depends on — MessageDisplay, PermissionRequest, PreToolUse, Stop, Notification — fire in `claude -p`, not only in interactive sessions. Additionally, a MessageDisplay hook that writes nothing to stdout must not suppress assistant text.",
+      "docRefs": [
+        "RESEARCH-01 §4.2 (33 events)",
+        "RESEARCH-02 §4.3 mech. 4",
+        "REVIEW-01 C5"
+      ],
+      "failureImpact": "If MessageDisplay/PermissionRequest are interactive-only, R3 mechanism 4 disappears and the cockpit's deterministic rendering floor becomes the ONLY defence — a plan change, not a tuning issue. If empty-stdout MessageDisplay blanks output, the hook is unusable as written.",
+      "status": "pass",
+      "detail": "Fired: SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, MessageDisplay, Stop, SessionEnd | Assistant marker survived the MessageDisplay hook (empty stdout = no suppression). | Hook events in stream: 12",
+      "evidence": {
+        "exit": 0,
+        "timedOut": false,
+        "firedEvents": [
+          "SessionStart",
+          "UserPromptSubmit",
+          "PreToolUse",
+          "PostToolUse",
+          "MessageDisplay",
+          "Stop",
+          "SessionEnd"
+        ],
+        "missingCritical": [],
+        "markerSurvived": true,
+        "wroteFile": true,
+        "hookEventsInStreamCount": 12,
+        "sampleHookEvent": "{\"type\":\"system\",\"subtype\":\"hook_started\",\"hook_id\":\"632507d7-00db-4c11-91b0-7f60555fa7b0\",\"hook_name\":\"SessionStart:startup\",\"hook_event\":\"SessionStart\",\"uuid\":\"cfc3b97d-ee51-4ea6-82e4-1144c8bb1229\",\"session_id\":\"ab9a14c9-daf9-4d35-a6fa-c23e107aac4e\"}",
+        "stderr": ""
+      },
+      "ms": 7720
+    },
+    {
+      "id": "p-plugin-bundled-mcp",
+      "title": "A plugin-bundled MCP server loads, and its tools carry the plugin-scoped name",
+      "kind": "fixture-call",
+      "loadBearing": "high",
+      "claim": "An .mcp.json inside the plugin root resolves ${CLAUDE_PLUGIN_ROOT}, its tool is reachable, and the exact tool name is discoverable — the allow-list cannot be written without knowing that name.",
+      "docRefs": [
+        "ADR-003",
+        "RESEARCH-01 §5.4",
+        "ADR-007"
+      ],
+      "failureImpact": "Atlas must be passed via --mcp-config on every invocation instead of riding along with the behaviour pack; and a wrong allow-list name silently disables Atlas in every session.",
+      "status": "pass",
+      "detail": "Bundled server loads and is named `mcp__plugin_guidelane-probe_echo__guidelane_probe_echo` — BUT --strict-mcp-config also excludes plugin-bundled servers. Isolation and plugin-bundled delivery are mutually exclusive: Atlas must ship via --mcp-config so --strict-mcp-config can stay on (ADR-003 corrected).",
+      "evidence": {
+        "loose": {
+          "fixture": [
+            "mcp__plugin_guidelane-probe_echo__guidelane_probe_echo"
+          ],
+          "ambientCount": 0
+        },
+        "strict": {
+          "fixture": [],
+          "ambientCount": 0
+        },
+        "loadedLoose": true,
+        "loadedStrict": false,
+        "strictExcludesPluginServers": true,
+        "namingPattern": "mcp__plugin_<plugin-name>_<server-name>__<tool>"
+      },
+      "ms": 12846
+    },
+    {
+      "id": "p-version-readable",
+      "title": "Engine version is machine-readable for the tested-range check",
+      "kind": "observational",
+      "loadBearing": "high",
+      "claim": "Guidelane can read the CLI version programmatically to enforce a tested-version range.",
+      "docRefs": [
+        "REVIEW-01 #5",
+        "ADR-001"
+      ],
+      "failureImpact": "Version governance (REVIEW-01 #5) has no input; breakage is discovered by users.",
+      "status": "pass",
+      "detail": "Parsed version 2.1.220 from `claude --version`.",
+      "evidence": {
+        "raw": "2.1.220 (Claude Code)",
+        "parsed": "2.1.220"
+      },
+      "ms": 82
+    },
+    {
+      "id": "p-auth-mode-visibility",
+      "title": "Auth mode is inspectable without exposing a credential",
+      "kind": "observational",
+      "loadBearing": "high",
+      "claim": "Guidelane can tell whether the operator is on subscription auth or an API key — needed to explain budget-flag behaviour and to route the right guardrail story — without ever reading the credential itself.",
+      "docRefs": [
+        "REVIEW-01 C1",
+        "ADR-001",
+        "ADR-008",
+        "REVIEW-02 gap 7"
+      ],
+      "failureImpact": "The product cannot tailor guardrails or explain limits honestly; the budget-flag finding cannot be surfaced to the right users.",
+      "status": "pass",
+      "detail": "auth status --json exposes loggedIn, authMethod, subscriptionType — mode is readable without touching a credential. 4 personal field(s) in the same payload must be projected away (ADR-008).",
+      "evidence": {
+        "keys": [
+          "loggedIn",
+          "authMethod",
+          "apiProvider",
+          "email",
+          "orgId",
+          "orgName",
+          "subscriptionType"
+        ],
+        "projectable": [
+          "loggedIn",
+          "authMethod",
+          "subscriptionType"
+        ],
+        "mustNotLeak": [
+          "email",
+          "orgId",
+          "orgName",
+          "apiProvider"
+        ],
+        "loggedIn": true,
+        "authMethod": "claude.ai",
+        "subscriptionType": "max",
+        "parseFailed": false
+      },
+      "ms": 373
+    },
+    {
+      "id": "p-automode-classifier-pinned",
+      "title": "What `--permission-mode auto` means is the same on every machine",
+      "kind": "observational",
+      "loadBearing": "high",
+      "claim": "The auto-mode classifier (allow / soft_deny / hard_deny rules) on this machine is the shipped default, so ADR-007's \"auto + explicit allow-list\" contract means the same thing on a friend's laptop as on the owner's.",
+      "docRefs": [
+        "ADR-007 Finding 1",
+        "ADR-008",
+        "REVIEW-02 C1 / gap 16"
+      ],
+      "failureImpact": "The classifier is per-machine user settings (`auto-mode reset` works by removing the autoMode section from user settings) and is admin-overridable. If it drifts, `auto` silently means something different per install and the permission contract is unportable.",
+      "status": "pass",
+      "detail": "Effective classifier is byte-identical to the shipped defaults (allow:17, soft_deny:65, hard_deny:1, environment:20).",
+      "evidence": {
+        "counts": {
+          "allow": 17,
+          "soft_deny": 65,
+          "hard_deny": 1,
+          "environment": 20
+        },
+        "driftedSections": [],
+        "identical": true
+      },
+      "ms": 1598
+    },
+    {
+      "id": "p-autoupdate-governable",
+      "title": "The spawned child's auto-updater can be governed",
+      "kind": "observational",
+      "loadBearing": "high",
+      "claim": "An environment variable or setting disables the auto-updater in child sessions, so a mid-run update cannot change the engine under a running pipeline.",
+      "docRefs": [
+        "REVIEW-01 #5",
+        "ADR-001"
+      ],
+      "failureImpact": "REVIEW-01 #5 has no remedy: every user's engine can change simultaneously, mid-project.",
+      "status": "partial",
+      "detail": "No auto-update control found in help text. Harness sets DISABLE_AUTOUPDATER=1 defensively; treat governance as UNPROVEN until observed across a release.",
+      "evidence": {
+        "mentionsDisable": false,
+        "installHelpPreview": "Usage: claude install [options] [target]\n\nInstall Claude Code native build. Use [target] to specify version (stable,\nlatest, or specific version)\n\nOptions:\n  --force     Force installation even if already installed\n  -h, --help  Display help for command\n"
+      },
+      "ms": 213
+    },
+    {
+      "id": "p-rate-limit-signal",
+      "title": "The stream carries a structured rate-limit event with a reset timestamp",
+      "kind": "live-call",
+      "loadBearing": "critical",
+      "claim": "Every stream-json session emits a `rate_limit_event` carrying at least a status, a window type, and a machine-readable reset time — so the Night Shift supervisor can pause precisely and resume at the window boundary instead of blind-polling.",
+      "docRefs": [
+        "RESEARCH-02 §8.2 item 4",
+        "REVIEW-01 C1",
+        "ADR-007"
+      ],
+      "failureImpact": "Without it, unattended runs must guess: backoff-poll with capped attempts and a manual morning resume, and the morning report cannot say when capacity returns.",
+      "status": "pass",
+      "detail": "rate_limit_event present — status=allowed, window=five_hour, resetsAt=1785451200 (epoch seconds — supervisor can sleep to the boundary).",
+      "evidence": {
+        "present": true,
+        "fields": [
+          "status",
+          "resetsAt",
+          "rateLimitType",
+          "overageStatus",
+          "overageDisabledReason",
+          "isUsingOverage"
+        ],
+        "sample": {
+          "status": "allowed",
+          "resetsAt": 1785451200,
+          "rateLimitType": "five_hour",
+          "overageStatus": "rejected",
+          "overageDisabledReason": "org_level_disabled",
+          "isUsingOverage": false
+        },
+        "hasReset": true,
+        "hasStatus": true,
+        "hasType": true,
+        "note": "Only the healthy (\"allowed\") branch is observed here; the rejected branch is not provoked on purpose."
+      },
+      "ms": 3551
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "type": "object",
+  "properties": {
+    "productName": { "type": "string" },
+    "audience": { "type": "string" },
+    "invariants": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "acceptance": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "given": { "type": "string" },
+          "then": { "type": "string" }
+        },
+        "required": ["given", "then"],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    }
+  },
+  "required": ["productName", "audience", "invariants", "acceptance"],
+  "additionalProperties": false
+}
