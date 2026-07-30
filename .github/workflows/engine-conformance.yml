@@ -140,7 +140,13 @@ jobs:
         if: always()
         run: |
           set -uo pipefail
-          test -d "${RUNNER_TEMP}/probe-out" || exit 0
+          # Say so rather than exit 0 silently. "Nothing to scan" and "scanned
+          # and clean" are different facts, and only one of them is evidence —
+          # which is the entire lesson of the sprint that added this step.
+          if [ ! -d "${RUNNER_TEMP}/probe-out" ]; then
+            echo "::warning::No generated report to scan (the run step produced no output). NOT a clean result."
+            exit 0
+          fi
           if grep -rnEI -i \
                -e '/users/[a-z]' -e '/home/[a-z]' -e '/var/folders/' \
                -e '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' \
