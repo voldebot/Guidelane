@@ -8,8 +8,11 @@ and the coding. Guidelane's own code enforces the *process*: a staged pipeline,
 quality gates the model cannot open, product memory that is always present, and a
 plain-language surface with no file paths, terminals, or diffs in it.
 
-MIT licensed. Non-commercial. No Guidelane server exists — everything runs on
-your machine.
+MIT licensed, and run as a non-commercial project — no paid tiers, no hosted
+service, nothing to sell you. That is a choice about how *this* project is run,
+not a restriction in the licence: MIT lets anyone, including you, do commercial
+things with the code. No Guidelane server exists — everything runs on your
+machine.
 
 ---
 
@@ -18,7 +21,7 @@ your machine.
 Read this part before anything else.
 
 **What exists today**: research, eight architecture decisions, and one piece of
-working code — `tools/probe/`, a 27-probe conformance suite that measures what
+working code — `tools/probe/`, a 30-probe conformance suite that measures what
 the engine actually does.
 
 **What does not exist**: the cockpit, the orchestrator, the Atlas MCP server, the
@@ -79,6 +82,7 @@ and the probe suite is what caught them:
 | A spawned session starts clean | With `--strict-mcp-config` alone it inherited 4 plugins, 24 skills, 10 agents and a `bypassPermissions` default. Isolation needs `--setting-sources ''` too — and even then the CLI's built-in floor remains. |
 | Rate limits must be handled by blind backoff | Every session emits `rate_limit_event.resetsAt`. Sleep to the boundary instead of guessing. |
 | A spend ceiling is inert on a subscription | It is enforced. Measured on a session reporting `apiKeySource: none`. |
+| The init receipt can confirm a tool server is connected | It cannot. `mcp_servers[].status` races the receipt — identical runs read `pending`, then `connected`, and nothing later corrects it. Registration is assertable; reachability needs an actual call. |
 
 Details, per probe, in [`docs/research/S0-conformance-report.md`](docs/research/S0-conformance-report.md).
 
@@ -87,8 +91,8 @@ Details, per probe, in [`docs/research/S0-conformance-report.md`](docs/research/
 The only thing here you can run today. Node 22, zero dependencies.
 
 ```bash
-node tools/probe/run.mjs          # free tier: help-text + observational (10 probes)
-node tools/probe/run.mjs --live   # + 17 real engine calls (spends your quota)
+node tools/probe/run.mjs          # free tier: help-text + observational (13 probes)
+node tools/probe/run.mjs --live   # + 17 live probes (spends your quota)
 node tools/probe/run.mjs --list   # what each probe checks, and why it matters
 ```
 
@@ -119,7 +123,9 @@ Seven of its findings block the next stage.
 ## Credits
 
 Architecture and MIT-licensed code ideas from [WrongStack](https://github.com/wrongstack)
-and the taste-skill work; copied code carries its notices.
+and the taste-skill work. Nothing is vendored from either yet — see
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md), which records the obligation
+now so the first copy-paste cannot slip through unnoticed.
 
 ## License
 

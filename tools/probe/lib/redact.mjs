@@ -67,6 +67,12 @@ export function redactString(value) {
 // Key names that must never carry a value into the report, whatever the value
 // looks like. ADR-008: `claude auth status --json` returns these beside the
 // three fields Guidelane is allowed to project.
+//
+// `apiProvider` is here and NOT in the ADR's cockpit projection, which reads
+// like a contradiction and is not: this list is ARTIFACT-scoped. The cockpit
+// runs on the owner's machine and may show the provider; this report is
+// committed to a public repo, where the provider describes the owner's account
+// and says nothing about engine conformance. See ADR-008 §4, scope note.
 const DENY_KEYS = /^(email|orgId|orgName|apiProvider|token|apiKey|accessToken|refreshToken|authorization|password|secret)$/i
 
 export function redactDeep(value, seen = new WeakSet()) {

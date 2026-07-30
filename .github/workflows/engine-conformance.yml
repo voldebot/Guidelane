@@ -27,6 +27,7 @@ on:
   push:
     paths:
       - 'tools/probe/**'
+      - 'docs/research/S0-conformance-*'
       - '.github/workflows/engine-conformance.yml'
   pull_request:
   schedule:
@@ -68,7 +69,7 @@ jobs:
         with:
           # Deliberately NOT named like the baseline: this is ~10 probes with no
           # live calls, and a reviewer downloading it must not mistake it for the
-          # 27-probe conformance report.
+          # 30-probe conformance report.
           name: s0-conformance-FREE-TIER-partial
           path: ${{ runner.temp }}/probe-out/
 
@@ -86,10 +87,60 @@ jobs:
       - name: Assert the committed artifacts carry no identifiers
         run: |
           set -uo pipefail
-          if grep -nE '/Users/[a-z]|/home/[a-z]|/var/folders/|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' \
-               docs/research/S0-conformance-report.md \
-               docs/research/S0-conformance-results.json; then
+          # Case-insensitive, and over EVERY tracked text file. The previous
+          # pattern was `/Users/[a-z]`, which does not match `/Users/Talha` —
+          # the backstop was strictly weaker than the boundary it backstops, and
+          # it only scanned two files while probes now write more.
+          #
+          # Three files are excluded because their job IS to contain these
+          # patterns: the redaction rules themselves, this workflow, and the hook
+          # fixture's temp-root allowlist. Excluding them by name keeps the scan
+          # honest; widening the pattern to accommodate them would not.
+          if git ls-files -z '*.md' '*.json' '*.mjs' '*.yml' '*.sh' \
+               ':!tools/probe/lib/redact.mjs' \
+               ':!tools/probe/fixtures/plugin/hooks/log-event.sh' \
+               ':!.github/workflows/engine-conformance.yml' \
+             | xargs -0 grep -nEi '/Users/[a-z]|/home/[a-z]|/var/folders/|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'; then
             echo "::error::Identifier leaked into a committed conformance artifact."
             exit 1
           fi
           echo "No identifiers in the committed artifacts."
+
+  # REVIEW-01 #5's accepted remedy is "a nightly conformance probe against the
+  # latest CLI". The pinned job above cannot do that by construction — it always
+  # installs the version the suite was validated against, so a new release is
+  # invisible to it forever. This job is the other half: it watches for drift
+  # between the pin and what npm actually ships, and is allowed to fail loudly
+  # without blocking the pinned signal.
+  latest-drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install the latest published CLI
+        run: npm install -g @anthropic-ai/claude-code@latest
+
+      - name: Compare against the pinned version
+        run: |
+          set -uo pipefail
+          PINNED=$(grep -oE '@anthropic-ai/claude-code@[0-9]+\.[0-9]+\.[0-9]+' \
+                     .github/workflows/engine-conformance.yml | head -1 | sed 's/.*@//')
+          LATEST=$(claude --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+          echo "pinned=$PINNED latest=$LATEST"
+          if [ "$PINNED" != "$LATEST" ]; then
+            echo "::warning::CLI $LATEST is published; the suite is validated against $PINNED."
+            echo "Run the full --live suite locally against $LATEST, then bump the pin and the tested range."
+            exit 1
+          fi
+          echo "Pin is current."
+
+      # Runs regardless of the comparison, so a new release also tells us
+      # immediately whether the free tier still passes against it.
+      - name: Free tier against latest (informational)
+        if: always()
+        run: node tools/probe/run.mjs --out "${RUNNER_TEMP}/probe-out-latest"

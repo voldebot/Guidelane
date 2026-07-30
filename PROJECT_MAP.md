@@ -58,7 +58,7 @@ source (MIT), non-commercial, zero Guidelane-operated servers.
 | Atlas | MCP server: architecture-first knowledge, quality standards, task patterns; project graph + impact maps; decision ledger; corpus builder + graph indexer | `packages/atlas/` (not yet created) | active (design) |
 | Behaviour pack | Claude Code plugin: persona, interviewer, translation hooks, fail-closed guards; dual surface | `packages/plugin/` (not yet created) | active (design) |
 | Stack profile: local-web | Next.js + Tailwind + SQLite scaffold + gate harness (lint/type/test/build/smoke+axe) | `profiles/local-web/` (not yet created) | active (design) |
-| Conformance probe | The engine-contract regression suite: 27 probes, free + `--live` tiers, report generator, CI wiring. Seeds `packages/engine`'s spawn layer | `tools/probe/` — **SHIPPED (S0)** | active (built) |
+| Conformance probe | The engine-contract regression suite: 30 probes (13 free, 17 live), baseline gate, cross-process lock, report generator, CI wiring. Seeds `packages/engine`'s spawn layer | `tools/probe/` — **SHIPPED (S0)** | active (built) |
 
 ## 4. Active Decisions Index
 
@@ -113,8 +113,17 @@ source (MIT), non-commercial, zero Guidelane-operated servers.
   **Switched to**: `--strict-mcp-config` **plus** `--setting-sources ''` on every spawn ([ADR-008](docs/decisions/ADR-008-session-isolation-and-init-receipt.md)) — strict alone isolates MCP only and still inherited 4 plugins, 24 skills, 10 agents and the operator's `bypassPermissions` default.
   **Revisit trigger**: the CLI merges the two isolation surfaces into one flag.
 - **Tried**: treating the `system/init` event as telemetry (logged, never asserted).
-  **Switched to**: init as a pre-flight **gate** — Atlas connected, plugin loaded, permission mode, model, CLI version and `apiKeySource` all asserted before a stage does any work (ADR-008). The `-p` help states settings failing validation are *silently ignored*, so without a positive receipt the whole hook layer can vanish without a signal.
+  **Switched to**: init as a pre-flight **gate** — Atlas registered, plugin loaded, permission mode, model, CLI version and `apiKeySource` all asserted before a stage does any work (ADR-008). The `-p` help states settings failing validation are *silently ignored*, so without a positive receipt the whole hook layer can vanish without a signal.
   **Revisit trigger**: none — this is the cheapest failure detector the engine offers.
+- **Tried**: gating that receipt on `mcp_servers[].status === 'connected'` (ADR-008 decision 2, as first written).
+  **Switched to**: gating on **registration**, and proving connectivity with an actual Atlas tool call ([ADR-008](docs/decisions/ADR-008-session-isolation-and-init-receipt.md) §2 correction, measured 2026-07-31). The status field races the init emit: identical runs read `pending` and then `connected`, and no later event ever corrects it. The stricter-sounding gate was the flakier one.
+  **Revisit trigger**: the stream gains an `mcp_status` event — then connectivity becomes assertable without a call.
+- **Tried**: reading a session's MCP tool inventory out of `init.tools`.
+  **Switched to**: `init.mcp_servers[].name` for registration, and the measured naming rule `mcp__plugin_<plugin>_<server>__<tool>` for the allow-list entry. `init.tools` carries the ~30 built-in names and **never** an `mcp__` name; no MCP tool name appears anywhere in the stream until the tool is actually called. A probe built on `init.tools` was structurally incapable of passing and nearly got baselined red.
+  **Revisit trigger**: `init.tools` starts including MCP names — verify before trusting it.
+- **Tried**: three probes that asserted on the model's own output — "list your mcp__ tools", "describe your config", "did you dispatch the subagent?".
+  **Switched to**: engine-emitted fields only (`init.mcp_servers`, `init.agents`, `tool_result.is_error`, a `claude doctor` differential). Every one of the three was wrong, and two of them passed once before flipping — an assertion on generated prose measures the model, not the engine, and it is non-deterministic by construction.
+  **Revisit trigger**: none. This is the suite's central rule.
 - **Tried**: banning `--bare` and `--safe-mode` as *flags*.
   **Switched to**: banning the *state* — both flags merely set `CLAUDE_CODE_SIMPLE` / `CLAUDE_CODE_SAFE_MODE`, which a parent shell or a parent Claude Code session can set with no flag present. The adapter scrubs a five-key env deny-list and asserts the result on the init receipt (ADR-008).
   **Revisit trigger**: the CLI stops exposing these modes via environment.
@@ -150,7 +159,7 @@ source (MIT), non-commercial, zero Guidelane-operated servers.
 | What `total_cost_usd` actually is under subscription auth | 2026-07-30 | open — S1 | S1 | Estimated API-equivalent vs billed. Until answered, the cockpit shows token counts or a labelled figure — never a bare dollar amount (REVIEW-02 C3) |
 | Fresh-session cost premium vs long session | 2026-07-30 | open — S2 benchmark | S2 | >1.3× ⇒ session-reuse mode for consecutive phases |
 | Rate-limit signal shape from CLI | 2026-07-30 | **RESOLVED (S0)** | — | `rate_limit_event` carries `status`, `rateLimitType: five_hour`, `resetsAt` (epoch). Supervisor sleeps to the boundary (ADR-007). Only the healthy branch observed; rejected branch handled defensively |
-| Auto-updater governance in spawned children | 2026-07-30 | open — unproven | S2 | No control found in help text; harness sets `DISABLE_AUTOUPDATER=1` defensively. Confirm across a real CLI release |
+| Auto-updater governance in spawned children | 2026-07-30 | **RESOLVED (2026-07-31)** | — | Two-arm `claude doctor` differential: `Auto-updates: enabled` → `disabled (set by env: DISABLE_AUTOUPDATER)`. The engine names the variable as the source. The earlier "unproven" verdict came from grepping `--help`, which documents flags, not env vars — the control was never going to be there |
 | `PermissionRequest` hook behaviour when a tool is *not* pre-approved | 2026-07-30 | open — low priority | S4 | Did not fire under an allow-list (expected: nothing to decide). Only matters if a consent-card UX needs it |
 | Gate-ceremony tolerance of real non-coders | 2026-07-30 | open — S3-era pilot | pilot | The product's biggest empirical unknown |
 | Crew routing efficacy (quality vs token, per role) | 2026-07-30 | open — telemetry | ongoing | Presets are informed defaults, not measured optima |
@@ -174,7 +183,8 @@ source (MIT), non-commercial, zero Guidelane-operated servers.
 | **Dual surface (Çift yüzey)** | The behaviour pack works both under the cockpit and as a plain Claude Code plugin — also the vendor-moves survival strategy | RESEARCH-02 §13.7 |
 | **Isolation pair** | `--strict-mcp-config` + `--setting-sources ''` on every spawn; nothing **of the operator's** reaches a stage session that the orchestrator did not put there. The CLI's built-in floor (16 skills, 5 agents on 2.1.220) remains and is pinned by name | ADR-008 + amendment |
 | **Built-in floor** | The skills and agents no flag removes. Measured and pinned by name; a new entry in CI is a failure, not a warning. Because `loop`, `deep-research` and `general-purpose` are in it, stage allow-lists withhold `Task`/`Skill` unless a stage deliberately needs them | ADR-008 amendment |
-| **Init receipt** | The session's first `system/init` event, asserted as a pre-flight gate (Atlas connected, plugin loaded, model, permission mode, version, `apiKeySource`) before any work | ADR-008 |
+| **Init receipt** | The session's first `system/init` event, asserted as a pre-flight gate (Atlas **registered**, plugin loaded, model, permission mode, version, `apiKeySource`) before any work. Carries registration, never reachability | ADR-008 |
+| **Registration ≠ reachability** | An MCP server appearing in `init.mcp_servers` proves the engine was told about it, not that it answers. `status` races the init emit, so connectivity is proven by calling a tool | ADR-008 §2 correction |
 | **Stream surface union** | The enumerated closed set of stream-json `type`/`subtype` values the cockpit whitelist must classify `render \| ignore \| escalate`; a new value in CI is a failure, not a warning | REVIEW-02 A2 |
 
 ---
@@ -183,7 +193,7 @@ source (MIT), non-commercial, zero Guidelane-operated servers.
 
 - **ADRs**: `docs/decisions/ADR-00N-*.md`
 - **Research**: `docs/research/RESEARCH-01..04`, **`docs/research/REVIEW-01-independent-findings.md` (governs v1 scope)**, **`docs/research/REVIEW-02-runtime-gaps.md` (governs the S1 engine work list)**
-- **Measured engine behaviour**: `docs/research/S0-conformance-report.md` (+ `.json`) — 26 probes, regenerated by `node tools/probe/run.mjs --live`
+- **Measured engine behaviour**: `docs/research/S0-conformance-report.md` (+ `.json`) — 30 probes, regenerated by `node tools/probe/run.mjs --live`
 - **Code structure index**: `docs/FILEMAP.md` (auto-generated once code exists)
 - **Project constitution**: `./CLAUDE.md`
 

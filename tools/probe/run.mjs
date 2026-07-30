@@ -93,7 +93,7 @@ async function main() {
   // --out is an unvalidated write path today and this file seeds an adapter that
   // will one day take paths from a UI. Confine it now, while it costs nothing.
   // RUNNER_TEMP is GitHub Actions' scratch dir and is NOT os.tmpdir() there
-  // (/home/runner/work/_temp vs /tmp) — CI writes its report outside the working
+  // (a path under the runner's work tree, not /tmp) — CI writes its report outside the working
   // tree so the committed baseline cannot be clobbered, and that is legitimate.
   const allowedRoots = [REPO_ROOT, resolve(tmpdir())]
   if (process.env.RUNNER_TEMP) allowedRoots.push(resolve(process.env.RUNNER_TEMP))
@@ -116,7 +116,12 @@ async function main() {
   report.exercisedVersion = version
   const safe = redactDeep({ version, generatedAt, ...report })
   writeFileSync(jsonPath, JSON.stringify(safe, null, 2))
-  writeFileSync(mdPath, redactString(renderMarkdown(report, { version, generatedAt })))
+  // Render from the REDACTED object, not the raw one. `redactString` over the
+  // finished markdown applies the value-shaped rules but not the key-name
+  // deny-list — and orgName is an arbitrary string with no regex shape. Safe
+  // today only because renderMarkdown never prints evidence; the moment it does
+  // (e.g. to show a human the stream-union table) that becomes a live leak.
+  writeFileSync(mdPath, redactString(renderMarkdown(safe, { version, generatedAt })))
 
   const c = report.counts
   for (const r of report.results) {
@@ -200,11 +205,23 @@ function checkBaseline(report, opts) {
   }
 
   const drift = []
+  // REVIEW-02 C4: a version change with no re-run is a CI failure. The baseline
+  // recorded engineVersion from the start and nothing ever compared it, so an
+  // auto-update could move the engine under a clean-diffing baseline.
+  if (baseline.engineVersion && report.exercisedVersion && baseline.engineVersion !== report.exercisedVersion) {
+    drift.push({ id: '(engine version)', expected: baseline.engineVersion, actual: report.exercisedVersion })
+  }
   for (const r of judged) {
     const expected = baseline.expected[r.id]
-    // An unknown probe id is not drift: a newly added probe has no expectation
-    // until someone deliberately records one.
-    if (expected === undefined) continue
+    // An unrecorded probe IS drift. The previous `continue` here meant a newly
+    // added probe was exempt from the gate — so the way to ship a red probe was
+    // to add one, and the baseline's whole purpose is to make that impossible.
+    // Recording an expectation must be a deliberate act, including the first
+    // time.
+    if (expected === undefined) {
+      drift.push({ id: r.id, expected: '(unrecorded)', actual: r.status })
+      continue
+    }
     if (expected !== r.status) drift.push({ id: r.id, expected, actual: r.status })
   }
   // A probe that vanished from the run is only drift on a complete run.

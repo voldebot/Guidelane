@@ -88,12 +88,39 @@ the init receipt. The probe harness already does this; the product rule in
 
 **2. The init receipt is a gate, not telemetry.** Before a stage session is
 allowed to do any work, the orchestrator asserts on its init event:
-Atlas present in `mcp_servers` with a connected status; expected plugin(s) in
-`plugins`; `permissionMode` as requested; `model` as routed; `claude_code_version`
-inside the tested range; `apiKeySource` consistent with the detected auth mode.
-Any mismatch fails the phase **before** tokens are spent, with a plain-language
-cause. This single mechanism closes the silently-ignored-settings hazard, the
-silently-absent-Atlas hazard, and the stale-CLI hazard at once.
+Atlas present in `mcp_servers` (see the status caveat below); expected plugin(s)
+in `plugins`; `permissionMode` as requested; `model` as routed;
+`claude_code_version` inside the tested range; `apiKeySource` consistent with the
+detected auth mode. Any mismatch fails the phase **before** tokens are spent,
+with a plain-language cause. This single mechanism closes the
+silently-ignored-settings hazard, the silently-absent-Atlas hazard, and the
+stale-CLI hazard at once.
+
+*Correction (measured 2026-07-31, post-audit).* This decision originally read
+"Atlas present in `mcp_servers` **with a connected status**". That gate is
+unwritable as stated: `mcp_servers[].status` **races the init emit**. The same
+fixture server, same flags, read `pending` on one run and `connected` on the
+next, and **no later event ever corrected it** — the stream carries no
+`mcp_status` update. Gating on `connected` would have produced a phase that
+fails at random. The gate is therefore split in two:
+
+- **Registration** is asserted on the receipt — Atlas appears in `mcp_servers`
+  by name. Deterministic, and it is the fact that actually catches a
+  misconfigured `--mcp-config`.
+- **Connectivity** is proven by *calling* a cheap Atlas tool, not by reading a
+  field. Registration is not reachability, and the gap between them is exactly
+  where a silent Atlas failure would live.
+
+Two further measurements from the same pass, both of which invalidate an
+assertion someone would reasonably have written:
+
+- `init.tools` lists the ~30 built-in tool names and **never** an `mcp__` name.
+  An MCP tool name appears nowhere in the stream until the tool is actually
+  called, so the allow-list entry cannot be discovered by inspection — it must
+  come from the naming rule, measured as
+  `mcp__plugin_<plugin>_<server>__<tool>` for plugin-bundled servers.
+- `init.agents` **does** reflect `--agents`, so inline-agent registration is
+  assertable on the receipt even though *dispatch* is a model decision.
 
 **3. `MessageDisplay` rewriting is adopted as a real mechanism — with its fail-open
 caveat stated.** The engine emits the original text when a MessageDisplay hook
@@ -105,7 +132,18 @@ surface.
 owner's subscription session. Combined with `claude auth status --json`
 (`apiProvider`, `subscriptionType`), Guidelane can report auth mode without ever
 touching a credential, and must project only `{isSubscription, provider}` —
-never the email/org fields that sit beside them. Consequence: the earlier
+never the email/org fields that sit beside them.
+
+*Scope note (added at the S0 post-audit pass, because the ADR and the code read
+as contradicting each other).* Two different boundaries, both correct:
+`apiProvider` is projectable **into the local cockpit**, which never leaves the
+machine, and is denied **in the conformance artifact**, which is committed to a
+public repo — where it describes the owner's account setup and tells a reader
+nothing about engine conformance. `tools/probe/lib/redact.mjs`'s deny-list is
+artifact-scoped, not product-scoped; do not "reconcile" the two by widening
+either one.
+
+Consequence: the earlier
 `--max-budget-usd` result was measured **under subscription auth**
 (`apiKeySource: none`), which settles REVIEW-01's open hypothesis — the flag is
 enforced, not inert. It is promoted from "secondary guardrail" to "usable

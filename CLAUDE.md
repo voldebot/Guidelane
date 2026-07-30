@@ -76,16 +76,27 @@ service; anything commercial.
   passed green for a day while its own evidence recorded the leak it was there
   to catch.
 - **No stage does work before its init receipt passes** (ADR-008). Assert on the
-  first `system/init`: Atlas connected, expected plugin present, `permissionMode`
-  and `model` as routed, CLI version in range, `apiKeySource` as expected. A
-  mismatch fails the phase in plain language *before* tokens are spent — this is
-  the only defence against `--settings` being silently ignored in `-p`.
-- **A denied tool must be detected on a lossless channel.** The engine's
-  `permission_denied` advisory frames are droppable under load (`dropping oldest
-  permission_denied advisory frames`), so no code may treat their presence — or
-  absence — as evidence. Until REVIEW-02 A3 names the lossless signal (expected:
-  `tool_result.is_error`), a phase that produced no file changes and no denial
-  evidence fails as *unverified*, never as success.
+  first `system/init`: Atlas **registered** in `mcp_servers`, expected plugin
+  present, `permissionMode` and `model` as routed, CLI version in range,
+  `apiKeySource` as expected. A mismatch fails the phase in plain language
+  *before* tokens are spent — this is the only defence against `--settings`
+  being silently ignored in `-p`.
+- **Registration is not reachability.** `mcp_servers[].status` races the init
+  emit — measured `pending` on one run and `connected` on the next, with no
+  later event correcting it — so no gate may key on `connected` or it flakes.
+  Atlas connectivity is proven by *calling* a cheap Atlas tool. Related, same
+  measurement: `init.tools` never carries an `mcp__` name, so an MCP tool's
+  allow-list entry cannot be discovered by inspection — it comes from the
+  measured naming rule `mcp__plugin_<plugin>_<server>__<tool>`.
+- **A denied tool is detected on `tool_result.is_error`** — measured, not
+  assumed (REVIEW-02 A3a). On a denied write the `tool_result` block carries
+  `is_error: true`; the `permission_denied` advisory frame did not appear at
+  all, and the `PermissionDenied` hook did not fire. The advisory frame is
+  droppable under load (`dropping oldest permission_denied advisory frames`), so
+  no code may treat its presence — or absence — as evidence. A phase that
+  produced no file changes and no `is_error` evidence fails as *unverified*,
+  never as success. Still open (A3b): whether `is_error` itself survives
+  backpressure, which needs the reactive rig.
 - **Language dial** (ADR-006): user-facing output in the user's language;
   *everything else* — code, comments, artifacts, ADRs, commit messages — English.
 - **Review/audit sessions are read-only by construction** (`--tools` scoping),
@@ -126,12 +137,12 @@ Guidelane/
 
 ## 5. Sprint state
 
-**Current sprint**: S0 (engine conformance) — **complete**. 26 probes on disk,
+**Current sprint**: S0 (engine conformance) — **complete**. 30 probes on disk (13 free, 17 live),
 last full live run 24 pass / 0 fail / 2 partial / 0 error against CLI 2.1.220.
 ADR-007 and ADR-008 are its output; REVIEW-02 is its honest gap list.
 **Next**: S1 — cockpit + engine adapter, **gated on REVIEW-02 Tier A** (7 runtime
 unknowns; four of them can stall the activity feed silently).
-**Last sprint close**: 2026-07-30 (S0). Shipped: `tools/probe/` (27 probes),
+**Last sprint close**: 2026-07-30 (S0). Shipped: `tools/probe/` (30 probes),
 ADR-007 + ADR-008, REVIEW-02, CI wiring, LICENSE, the two vendor inquiry drafts.
 
 Memory: `~/.claude/projects/-Users-talhamac-Desktop-Projects-Guidelane/memory/`
@@ -140,8 +151,8 @@ Memory: `~/.claude/projects/-Users-talhamac-Desktop-Projects-Guidelane/memory/`
 
 ```bash
 # S0 engine conformance probe (DONE — keep it green; it gates every CLI upgrade)
-node tools/probe/run.mjs            # free tier: help-text + observational (9 probes)
-node tools/probe/run.mjs --live     # + 17 real engine calls (uses --model haiku)
+node tools/probe/run.mjs            # free tier: help-text + observational (13 probes)
+node tools/probe/run.mjs --live     # + 17 live probes (uses --model haiku)
 node tools/probe/run.mjs --list     # what it checks and why
 node tools/probe/run.mjs --only p-init-receipt,p-ambient-isolation
 node tools/probe/run.mjs --live --update-baseline   # after a deliberate status change
@@ -177,10 +188,18 @@ In addition to global gates (`~/.claude/CLAUDE.md` §6):
   Tier A + 10 Tier B unknowns in `docs/research/REVIEW-02-runtime-gaps.md` are
   the honest debt; four Tier A items can make a run go silent with no terminal
   event, which is the worst possible failure in front of a non-coder.
-- `p-autoupdate-governable` is a standing PARTIAL: no auto-update control was
-  found in help text, so `DISABLE_AUTOUPDATER=1` is defensive, not proven.
-- `p-agents-inline` is a standing PARTIAL and deliberately low-stakes: review
-  lenses run as separate top-level sessions (ADR-002), not inline subagents.
+- **No probe may assert on model output.** Three probes were written that way and
+  all three were wrong: two asked the model to describe its own tools (measures
+  the model, not the engine), and the third asked whether the model *chose* to
+  dispatch a subagent. Each now asserts on an engine-emitted field instead. The
+  suite carries **zero standing PARTIALs** as of 2026-07-31; if one reappears,
+  the first question is which surface it is reading.
+- **A probe reading the wrong surface reports a confident absence.**
+  `p-autoupdate-governable` sat at PARTIAL for its whole life because it grepped
+  `--help`, and auto-update governance is an env var — the control was never
+  going to be where it was looking. Its replacement runs a two-arm
+  `claude doctor` differential and PASSES. Before believing an absence, check
+  that the surface could have carried the thing.
 - **`spawnCapture` is a probe primitive, not an adapter.** It buffers everything
   and closes stdin immediately, so it cannot answer a control request, cannot be
   cancelled, and times out on wall-clock rather than inter-event silence. The S1

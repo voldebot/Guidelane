@@ -27,7 +27,7 @@
 
 import { spawn } from 'node:child_process'
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 export const STATUS = {
@@ -122,7 +122,7 @@ export const ISOLATION_PAIR = ['--strict-mcp-config', '--setting-sources', '']
  * ASSERTED. `extra` is merged BEFORE the scrub, so a caller cannot reintroduce a
  * denied key by passing it in.
  */
-export function scrubbedChildEnv(extra = {}) {
+export function scrubbedChildEnv(extra = {}, { allowAutoUpdate = false } = {}) {
   const env = { ...process.env, ...extra }
   const removed = []
   for (const key of SCRUBBED_ENV_KEYS) {
@@ -133,7 +133,15 @@ export function scrubbedChildEnv(extra = {}) {
   }
   // Guidelane's engine adapter will do exactly this in production (ADR-001
   // follow-up: ungoverned auto-update is an unlisted SPOF).
-  env.DISABLE_AUTOUPDATER = '1'
+  //
+  // `allowAutoUpdate` is the single declared exception, and it exists because a
+  // guard that is always on cannot be proven to do anything: p-autoupdate-
+  // governable needs one child WITHOUT the variable to have a control arm. Same
+  // shape as `ambient` — explicit, counted, and printed in the report, so the
+  // report's "set on every child" line stays literally true instead of becoming
+  // a claim nobody re-checked.
+  if (allowAutoUpdate) delete env.DISABLE_AUTOUPDATER
+  else env.DISABLE_AUTOUPDATER = '1'
   // A non-UTF-8 locale mangles ı/ğ/ş/İ in hook scripts, and under launchd the
   // environment is nearly empty. Pre-emptive, and does not substitute for the
   // REVIEW-02 B10 measurement.
@@ -219,7 +227,11 @@ export function spawnCapture(cmd, args, { cwd, env, stdin, timeoutMs }) {
       settled = true
       clearTimeout(timer)
       if (watchdog) clearTimeout(watchdog)
-      LIVE_CHILDREN.delete(child)
+      // Only stop tracking a child we know actually died. On the watchdog path
+      // 'close' never came, which is precisely the case where something in the
+      // tree is still alive — deregistering there would hide it from
+      // killAllChildren() at exit, i.e. leak the orphan the tracking exists for.
+      if (signal !== 'SIGKILL_NO_CLOSE') LIVE_CHILDREN.delete(child)
       const ms = Number(process.hrtime.bigint() - started) / 1e6
       resolve({
         code,
@@ -231,6 +243,9 @@ export function spawnCapture(cmd, args, { cwd, env, stdin, timeoutMs }) {
         timedOut,
         spawnFailed: false,
         outcome: timedOut ? OUTCOME.TIMEOUT : OUTCOME.COMPLETED,
+        // The pipe never closed, so something in the tree outlived the group
+        // kill. Surfaced rather than swallowed: this is REVIEW-02 B1's shape.
+        orphanSuspected: signal === 'SIGKILL_NO_CLOSE',
         ms: Math.round(ms),
         // The resolved command WITHOUT its arguments: argv carries absolute
         // fixture paths and inline --mcp-config JSON, and this object is one
@@ -311,9 +326,14 @@ export function makeContext({ opts, fixturesDir, suiteRoot, helpCache, audit }) 
   // passing `env: process.env` — which three of them did — cannot bypass the
   // deny-list, and the report's claim about scrubbing becomes true by
   // construction rather than by discipline.
-  const run = async (cmd, args, { cwd, stdin, timeoutMs, env: extraEnv, expectTimeout = false } = {}) => {
-    const { env, removed } = scrubbedChildEnv(extraEnv === process.env ? {} : extraEnv)
+  const run = async (
+    cmd,
+    args,
+    { cwd, stdin, timeoutMs, env: extraEnv, expectTimeout = false, allowAutoUpdate = false } = {}
+  ) => {
+    const { env, removed } = scrubbedChildEnv(extraEnv === process.env ? {} : extraEnv, { allowAutoUpdate })
     audit.spawns += 1
+    if (allowAutoUpdate) audit.autoUpdateOptOuts += 1
     for (const k of removed) audit.keysRemoved.add(k)
     const res = await spawnCapture(cmd, args, {
       cwd: cwd || suiteRoot,
@@ -331,6 +351,13 @@ export function makeContext({ opts, fixturesDir, suiteRoot, helpCache, audit }) 
       if (expectTimeout) audit.expectedTimeouts += 1
       else audit.degraded.push({ cmd, outcome: res.outcome })
     }
+    // stdoutTruncated/stderrTruncated were computed and read by nothing. A probe
+    // asserting on a marker that fell past the 8 MB cap would report a confident
+    // FAIL about the engine; the honest verdict is "this run cannot say".
+    if (res.stdoutTruncated || res.stderrTruncated) {
+      audit.degraded.push({ cmd, outcome: 'output-truncated' })
+    }
+    if (res.orphanSuspected) audit.orphanSuspected += 1
     return { ...res, scrubbedEnvKeys: removed }
   }
 
@@ -342,7 +369,17 @@ export function makeContext({ opts, fixturesDir, suiteRoot, helpCache, audit }) 
     // stdout ONLY. Folding stderr in means a deprecation warning or an update
     // nag that happens to contain a flag name can make the flag-surface probe
     // pass on a flag that no longer exists.
-    helpCache.set(key, res.stdout)
+    //
+    // Cache ONLY a clean call. Caching unconditionally meant one slow spawn
+    // poisoned the whole run: the first probe's 30s help() times out, '' is
+    // cached, and five later probes report FAIL — "the engine's contract
+    // changed" — from a laptop hiccup. `audit.degraded` is reset per probe, so
+    // the later probes would not even be marked inconclusive.
+    if (res.outcome === OUTCOME.COMPLETED && res.code === 0) {
+      helpCache.set(key, res.stdout)
+    } else {
+      audit.degraded.push({ cmd: `help(${key})`, outcome: res.outcome || `exit ${res.code}` })
+    }
     return res.stdout
   }
 
@@ -360,6 +397,23 @@ export function makeContext({ opts, fixturesDir, suiteRoot, helpCache, audit }) 
     // Only session invocations take these flags; `plugin validate`, `--version`
     // and `auth status` would reject them.
     const isSession = args.includes('-p') || args.includes('--print')
+    // The sniff above is an inference, and an inference that fails silently
+    // fails OPEN: a session the sniff misses gets no isolation pair, is not
+    // counted as ambient, and reports `isolated: null` — indistinguishable from
+    // a non-session. So cross-check it. These flags exist only on session
+    // invocations; seeing one on something classified as a non-session means the
+    // classifier is wrong, and the run stops rather than quietly measuring a
+    // contaminated session.
+    const SESSION_ONLY = ['--allowedTools', '--disallowedTools', '--permission-mode', '--mcp-config', '--agents', '--append-system-prompt']
+    if (!isSession) {
+      const leaked = SESSION_ONLY.filter((f) => args.includes(f))
+      if (leaked.length) {
+        throw new Error(
+          `session classifier failed: ${leaked.join(', ')} present without -p/--print. ` +
+            `Isolation would have been skipped silently — widen the sniff, do not work around this.`
+        )
+      }
+    }
     let finalArgs = args
     if (isSession && !ambient) {
       finalArgs = [...args]
@@ -421,7 +475,17 @@ export function makeContext({ opts, fixturesDir, suiteRoot, helpCache, audit }) 
  * engine sessions would race on the same rate-limit window and make a limit
  * event indistinguishable from a genuine failure.
  */
-const LOCK_PATH = join(tmpdir(), 'guidelane-probe.lock')
+// NOT os.tmpdir(). macOS gives launchd and each Terminal login session their own
+// per-session TMPDIR under /var/folders, so a lock there is invisible between
+// exactly the two processes it exists to serialise — both would acquire, both
+// would run, and both the code and the report would claim serialisation. Third
+// instance of this codebase's recurring fail-open-by-construction shape.
+const LOCK_DIR = join(homedir(), '.guidelane')
+const LOCK_PATH = join(LOCK_DIR, 'probe.lock')
+// A run that dies by lid-close, OS kill or SIGKILL never reaches its finally.
+// PID liveness alone is not enough because pids are recycled, so a lock older
+// than any plausible run is also stale.
+const LOCK_TTL_MS = 2 * 60 * 60 * 1000
 
 /**
  * Refuse to run two suites at once. Sequencing inside one process is enforced by
@@ -433,28 +497,45 @@ const LOCK_PATH = join(tmpdir(), 'guidelane-probe.lock')
  * taken over automatically and the failure message says exactly what to do.
  */
 function acquireLock() {
-  const mine = `${process.pid}\n`
+  mkdirSync(LOCK_DIR, { recursive: true })
+  const mine = JSON.stringify({ pid: process.pid, startedAtMs: Date.now(), argv: process.argv.slice(2) })
+  const state = { stoleStaleLock: false, staleReason: null }
+
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       writeFileSync(LOCK_PATH, mine, { flag: 'wx' })
-      return () => { try { rmSync(LOCK_PATH, { force: true }) } catch { /* already gone */ } }
+      return {
+        state,
+        release: () => { try { rmSync(LOCK_PATH, { force: true }) } catch { /* already gone */ } },
+      }
     } catch (err) {
       if (err && err.code !== 'EEXIST') throw err
-      let holder = 0
-      try { holder = Number(String(readFileSync(LOCK_PATH, 'utf8')).trim()) } catch { /* unreadable */ }
+
+      let held = null
+      try { held = JSON.parse(readFileSync(LOCK_PATH, 'utf8')) } catch { /* corrupt or legacy */ }
+      const holder = held && Number(held.pid)
+      const ageMs = held && held.startedAtMs ? Date.now() - Number(held.startedAtMs) : Infinity
+
       let holderAlive = false
       if (holder > 0) {
         try { process.kill(holder, 0); holderAlive = true } catch { holderAlive = false }
       }
-      if (holderAlive) {
+      const expired = ageMs > LOCK_TTL_MS
+
+      if (holderAlive && !expired) {
         throw new Error(
-          `Another probe run is active (pid ${holder}).\n` +
+          `Another probe run is active (pid ${holder}, started ${Math.round(ageMs / 1000)}s ago).\n` +
           `Concurrent engine sessions race on the same rate-limit window, which makes a limit event\n` +
           `indistinguishable from a real failure. Wait for it, or stop it with:  kill ${holder}\n` +
-          `If you are certain nothing is running, delete ${LOCK_PATH}`
+          `If you are certain nothing is running, delete ${LOCK_PATH}\n` +
+          `\nWhat this lock does NOT protect: an interactive Claude Code session on the same login\n` +
+          `shares the account's rate-limit window and no lock can serialise against it.`
         )
       }
-      // Stale lock from a crashed or killed run — reclaim it and retry once.
+
+      state.stoleStaleLock = true
+      state.staleReason = !holderAlive ? `holder pid ${holder} is gone` : `lock age ${Math.round(ageMs / 1000)}s exceeds TTL`
+      process.stderr.write(`Reclaiming stale probe lock (${state.staleReason}).\n`)
       try { rmSync(LOCK_PATH, { force: true }) } catch { /* raced with another reclaimer */ }
     }
   }
@@ -462,10 +543,18 @@ function acquireLock() {
 }
 
 export async function runSuite({ probes, opts, fixturesDir }) {
-  const releaseLock = acquireLock()
+  const lock = acquireLock()
   const suiteRoot = mkdtempSync(join(tmpdir(), 'guidelane-probe-'))
   const helpCache = new Map()
-  const audit = { spawns: 0, ambientSpawns: 0, expectedTimeouts: 0, keysRemoved: new Set(), degraded: [] }
+  const audit = {
+    spawns: 0,
+    ambientSpawns: 0,
+    autoUpdateOptOuts: 0,
+    expectedTimeouts: 0,
+    orphanSuspected: 0,
+    keysRemoved: new Set(),
+    degraded: [],
+  }
   const ctx = makeContext({ opts, fixturesDir, suiteRoot, helpCache, audit })
 
   if (opts.only) {
@@ -529,7 +618,7 @@ export async function runSuite({ probes, opts, fixturesDir }) {
       }
     }
   } finally {
-    releaseLock()
+    lock.release()
     // In a finally: a throw above must not leak a workspace containing files a
     // model wrote under --allowedTools Write.
     if (!opts.keepWorkspaces) {
@@ -548,6 +637,8 @@ export async function runSuite({ probes, opts, fixturesDir }) {
     // is one less thing depending on redaction.
     suiteRoot: '<TMP>/guidelane-probe-<run>',
     workspacesKept: opts.keepWorkspaces,
+    stoleStaleLock: lock.state.stoleStaleLock,
+    staleLockReason: lock.state.staleReason,
     runScope: {
       complete,
       live: Boolean(opts.live),
@@ -563,7 +654,9 @@ export async function runSuite({ probes, opts, fixturesDir }) {
       denyList: SCRUBBED_ENV_KEYS,
       spawns: audit.spawns,
       ambientSpawns: audit.ambientSpawns,
+      autoUpdateOptOuts: audit.autoUpdateOptOuts,
       expectedTimeouts: audit.expectedTimeouts,
+      orphanSuspected: audit.orphanSuspected,
       actuallyRemoved: [...audit.keysRemoved],
     },
     counts: tally(results),
@@ -659,7 +752,9 @@ export function renderMarkdown(report, { version, generatedAt }) {
   lines.push(
     `Env deny-list (${scrub.denyList.map((k) => `\`${k}\``).join(', ')}) applied to all ${scrub.spawns} child ` +
     `process(es); actually present and removed: ${scrub.actuallyRemoved.length ? scrub.actuallyRemoved.map((k) => `\`${k}\``).join(', ') : 'none'}. ` +
-    `\`DISABLE_AUTOUPDATER=1\` and a UTF-8 locale set on every child. ` +
+    `A UTF-8 locale set on every child, and \`DISABLE_AUTOUPDATER=1\` on every child except ` +
+    `${scrub.autoUpdateOptOuts || 0} deliberate control-arm spawn(s) (p-autoupdate-governable needs one child ` +
+    `without the guard to prove the guard does anything; \`claude doctor\` installs nothing). ` +
     `Sessions spawned without the ADR-008 isolation pair (deliberately, to measure ambient inheritance): ${scrub.ambientSpawns || 0}.`
   )
   lines.push('')

@@ -442,28 +442,52 @@ const injectionProbes = [
           prompt: 'Reply with exactly INLINE_AGENT_OK and nothing else.',
         },
       })
-      const res = await ctx.claude(
+      // This probe stood at PARTIAL because its assertion was "did the model
+      // choose to dispatch the agent?" — a question about the model's judgment,
+      // which no amount of prompt tuning makes deterministic. The ENGINE fact
+      // underneath is whether `--agents` registers, and the init receipt
+      // answers that with a list. Registration is asserted; dispatch is
+      // recorded as an observation and cannot fail the probe.
+      const base = [
+        '--agents', agents,
+        '--model', ctx.model,
+        '--output-format', 'stream-json', '--verbose',
+        '--no-session-persistence',
+      ]
+      const reg = await ctx.claude(['-p', 'Reply with exactly: AGENTSHAPE_OK', ...base, '--tools', ''], {
+        workspaceFor: 'p-agents-inline',
+      })
+      const init = ctx.jsonLines(reg.stdout).find((e) => e.type === 'system' && e.subtype === 'init') || {}
+      const names = init.agents || []
+      const registered = names.includes('probe_lens')
+
+      // Second arm, non-blocking: does a registered inline agent actually run?
+      // Kept because a registration that never dispatches would be a trap, and
+      // 300s because subagent dispatch adds a full nested turn — the default
+      // 120s ceiling produced a false negative on the first ever run.
+      const disp = await ctx.claude(
         [
-          '-p',
-          'Use the probe_lens agent to check this workspace, then reply with exactly what it returned.',
-          '--agents', agents,
-          '--model', ctx.model,
-          '--strict-mcp-config',
-          '--no-session-persistence',
+          '-p', 'Use the probe_lens agent to check this workspace, then reply with exactly what it returned.',
+          ...base,
           '--permission-mode', 'auto',
           '--allowedTools', 'Task',
         ],
-        // Subagent dispatch adds a full nested turn: the default 120s ceiling
-        // killed this probe on the first run and produced a false negative.
-        { workspaceFor: 'p-agents-inline', timeoutMs: 300_000 }
+        { workspaceFor: 'p-agents-inline-dispatch', timeoutMs: 300_000 }
       )
-      const ok = /INLINE_AGENT_OK/.test(res.stdout)
+      const dispatched = /INLINE_AGENT_OK/.test(disp.stdout)
+
       return {
-        status: ok ? P.PASS : P.PARTIAL,
-        detail: ok
-          ? 'Inline agent was dispatchable and its output reached the transcript.'
-          : `Inline agent marker not observed; the flag may be accepted without the agent being invoked. Output: ${clip(res.stdout, 300)}`,
-        evidence: { exit: res.code, stdout: clip(res.stdout, 600), stderr: clip(res.stderr, 300) },
+        status: registered ? P.PASS : P.FAIL,
+        detail: registered
+          ? `\`--agents\` registers inline: the init receipt lists probe_lens beside the ${names.length - 1} built-ins. Dispatch observed: ${dispatched ? 'yes' : 'no (not asserted — whether the model elects to call Task is model behaviour, not engine capability)'}.`
+          : `\`--agents\` accepted but probe_lens is absent from the init receipt's agent list (${names.join(', ') || 'empty'}) — the flag is inert.`,
+        evidence: {
+          registered,
+          dispatched,
+          agentsOnInit: names,
+          builtinFloor: names.filter((n) => n !== 'probe_lens'),
+          exit: reg.code,
+        },
       }
     },
   },
@@ -577,11 +601,39 @@ const controlProbes = [
       const base = ['--model', ctx.model, '--strict-mcp-config', '--no-session-persistence']
 
       const denyWs = ctx.makeWorkspace('p-permission-allowlist-deny')
-      const denied = await ctx.claude(['-p', prompt, '--permission-mode', 'auto', ...base], {
-        cwd: denyWs,
-        timeoutMs: 180_000,
-      })
+      const denyLog = join(denyWs, 'hook-events.log')
+      // The deny arm runs with stream-json AND the fixture plugin attached, so
+      // the denial can be read off three STRUCTURAL channels instead of the
+      // model's English. The previous detector was a prose regex over
+      // stdout+stderr; reword the model and the project's most-cited
+      // measurement (ADR-007 Finding 1) silently flips to unverified.
+      const denied = await ctx.claude(
+        ['-p', prompt, '--permission-mode', 'auto',
+         '--plugin-dir', join(ctx.fixtures, 'plugin'),
+         '--output-format', 'stream-json', '--verbose', '--include-hook-events', ...base],
+        { cwd: denyWs, env: { GUIDELANE_PROBE_LOG: denyLog }, timeoutMs: 180_000 }
+      )
       const deniedWrote = existsSync(join(denyWs, 'probe.txt'))
+
+      const denyEvents = ctx.jsonLines(denied.stdout)
+      const denyResult = denyEvents.find((e) => e.type === 'result') || {}
+      // Channel 1: the terminal result object counts denials. This field has
+      // been sitting in our own committed evidence since the first run, unused.
+      const denialCount = Number(denyResult.permission_denials ?? NaN)
+      const channelResultCount = Number.isFinite(denialCount) ? denialCount : null
+      // Channel 2: a tool_result carrying is_error on the user message. REVIEW-02
+      // A3 expects this to be the lossless one, versus the droppable advisory frame.
+      const channelToolResultError = denyEvents.some((e) => {
+        const c = e && e.message && e.message.content
+        return Array.isArray(c) && c.some((b) => b && b.type === 'tool_result' && b.is_error === true)
+      })
+      // Channel 3: the PermissionDenied lifecycle hook, registered by the fixture
+      // and never before fired by any probe.
+      const hookFired = existsSync(denyLog)
+        ? readFileSync(denyLog, 'utf8').split('\n').map((s) => s.trim()).includes('PermissionDenied')
+        : false
+      // Channel 4 (advisory, droppable — telemetry only, never the detector).
+      const advisoryFrame = denyEvents.some((e) => e.type === 'system' && e.subtype === 'permission_denied')
       const claimedSuccess = /WROTE_OK/.test(denied.stdout)
 
       const allowWs = ctx.makeWorkspace('p-permission-allowlist-allow')
@@ -600,8 +652,15 @@ const controlProbes = [
       // unwritable. CLAUDE.md §3 says a phase with no changes and no denial
       // evidence fails as unverified — this probe is the evidentiary basis for
       // ADR-007 and must obey the rule ADR-007 established.
-      const denialEvidence =
-        denied.code !== 0 || /permission|not allowed|denied|haven't granted/i.test(`${denied.stdout}\n${denied.stderr}`)
+      // Structural first; the prose regex survives only as corroboration and can
+      // no longer decide the verdict on its own.
+      const structuralChannels = [
+        channelResultCount !== null && channelResultCount > 0 ? 'result.permission_denials' : null,
+        channelToolResultError ? 'tool_result.is_error' : null,
+        hookFired ? 'PermissionDenied hook' : null,
+      ].filter(Boolean)
+      const proseHint = /permission|not allowed|denied|haven't granted/i.test(`${denied.stdout}\n${denied.stderr}`)
+      const denialEvidence = structuralChannels.length > 0 || denied.code !== 0 || proseHint
 
       let status, detail
       if (stalled) {
@@ -616,8 +675,10 @@ const controlProbes = [
       } else if (failClosed && allowWorks) {
         status = P.PASS
         detail =
-          `auto alone: DENIED the write (fail-closed, exit ${denied.code})` +
-          `${claimedSuccess ? ' — and the model still claimed success, a live example of the state-hallucination failure the pipeline exists to catch' : ''}. ` +
+          `auto alone: DENIED the write (fail-closed, exit ${denied.code}). ` +
+          `Structural denial channels observed: ${structuralChannels.length ? structuralChannels.join(', ') : 'NONE — only prose'}` +
+          `${advisoryFrame ? ' (the droppable advisory frame also appeared; it stays telemetry, never the detector)' : ''}. ` +
+          `${claimedSuccess ? 'The model still claimed success — a live example of the state-hallucination failure the pipeline exists to catch. ' : ''}` +
           'auto + --allowedTools Write: wrote the file.'
       } else {
         status = P.PARTIAL
@@ -635,6 +696,12 @@ const controlProbes = [
           autoAloneTimedOut: denied.timedOut,
           allowListTimedOut: allowed.timedOut,
           denialEvidence,
+          structuralChannels,
+          permissionDenialsCount: channelResultCount,
+          toolResultIsError: channelToolResultError,
+          permissionDeniedHookFired: hookFired,
+          advisoryFrameSeen: advisoryFrame,
+          proseHintOnly: structuralChannels.length === 0 && proseHint,
           autoAloneStdout: clip(denied.stdout, 300),
           allowListWrote: allowedWrote,
           allowListStdout: clip(allowed.stdout, 300),
@@ -880,30 +947,48 @@ const pluginProbes = [
     docRefs: ['ADR-003', 'RESEARCH-01 §5.4', 'ADR-007'],
     async run(ctx) {
       const pluginDir = join(ctx.fixtures, 'plugin')
-      // Read the tool inventory off the init receipt, NOT out of the model's
-      // reply. The first version of this probe asked the model to list its own
-      // mcp__ tools; that passed once and then reported a FAIL on a run where
-      // the bundled server was demonstrably connected — the model simply
-      // answered differently. An assertion on generated prose measures the
-      // model, not the engine.
+      // Three rewrites, and the history is the lesson.
+      //   v1 asked the model to list its own mcp__ tools — an assertion on
+      //      generated prose measures the model, not the engine. It passed once
+      //      and then failed on a run where the server was demonstrably up.
+      //   v2 moved to `init.tools`, which sounded like the authoritative
+      //      inventory and is not: it carries the 30 built-in tool names and
+      //      NEVER an mcp__ name, measured. v2 was structurally incapable of
+      //      passing, and would have baselined this probe red.
+      //   v3 (here) reads registration off `init.mcp_servers[].name` — the only
+      //      field that carries it — and proves REACHABILITY separately, with a
+      //      real call whose result comes back on the transcript.
+      // Registration and reachability are two facts, and the gap between them
+      // is exactly where a silent Atlas failure would live.
+      const EXPECT_TOOL = 'mcp__plugin_guidelane-probe_echo__guidelane_probe_echo'
       const ask = [
-        '-p', 'Reply with exactly: MCPSHAPE_OK',
+        '-p',
+        `Call the ${EXPECT_TOOL} tool with marker set to PLUGMCP, then reply with exactly what it returned.`,
         '--plugin-dir', pluginDir,
         '--permission-mode', 'auto',
+        '--allowedTools', EXPECT_TOOL,
         '--model', ctx.model,
         '--output-format', 'stream-json', '--verbose',
         '--no-session-persistence',
       ]
-      const namesFrom = (out) => {
-        const init = ctx.jsonLines(out).find((e) => e.type === 'system' && e.subtype === 'init') || {}
-        return (init.tools || []).filter((t) => String(t).startsWith('mcp__'))
+      const read = (out) => {
+        const events = ctx.jsonLines(out)
+        const init = events.find((e) => e.type === 'system' && e.subtype === 'init') || {}
+        const toolUses = []
+        for (const e of events) {
+          for (const c of (e.message && e.message.content) || []) {
+            if (c.type === 'tool_use') toolUses.push(c.name)
+          }
+        }
+        return { servers: init.mcp_servers || [], toolUses, echoed: /MCP_ECHO:PLUGMCP/.test(out) }
       }
 
       // Two runs, because the interaction between plugin-bundled servers and
       // --strict-mcp-config is the actual question. Delivery strategy depends
       // on the answer (see ADR-003 correction).
-      // `ambient: true` on the loose arm only — running it WITHOUT isolation is
-      // the entire point of the comparison.
+      // `ambient: true` on both arms — the loose arm's whole point is running
+      // WITHOUT isolation, and the strict arm adds the flag by hand so the
+      // comparison differs in exactly one variable.
       const loose = await ctx.claude(ask, { workspaceFor: 'p-plugin-bundled-mcp-loose', timeoutMs: 240_000, ambient: true })
       const strict = await ctx.claude([...ask, '--strict-mcp-config'], {
         workspaceFor: 'p-plugin-bundled-mcp-strict',
@@ -911,35 +996,52 @@ const pluginProbes = [
         ambient: true,
       })
 
-      const looseNames = namesFrom(loose.stdout)
-      const strictNames = namesFrom(strict.stdout)
-      // The loose arm sees every MCP server the operator has configured. Those
-      // names are often employer, client or internal-project names, and this
-      // report is committed to a public repo. Publish the fixture's own names
+      const L = read(loose.stdout)
+      const S = read(strict.stdout)
+      // The loose arm sees every MCP server the operator has configured, and
+      // those names are often employer, client or internal-project names. This
+      // report is committed to a public repo: publish the fixture's own name
       // and a COUNT of everything else — never the other names themselves.
-      const FIXTURE_RE = /^mcp__(plugin_)?(guidelane|probe)/
-      const publishable = (names) => ({
-        fixture: names.filter((n) => FIXTURE_RE.test(n)),
-        ambientCount: names.filter((n) => !FIXTURE_RE.test(n)).length,
+      const FIXTURE_RE = /guidelane[-_]probe/
+      const publishable = (servers) => ({
+        fixture: servers.filter((s) => FIXTURE_RE.test(s.name)).map((s) => `${s.name} [${s.status}]`),
+        ambientCount: servers.filter((s) => !FIXTURE_RE.test(s.name)).length,
       })
-      const loadedLoose = looseNames.some((n) => /guidelane_probe_echo$/.test(n))
-      const loadedStrict = strictNames.some((n) => /guidelane_probe_echo$/.test(n))
-      const mutuallyExclusive = loadedLoose && !loadedStrict
+      const registeredLoose = L.servers.some((s) => FIXTURE_RE.test(s.name))
+      const registeredStrict = S.servers.some((s) => FIXTURE_RE.test(s.name))
+      const calledLoose = L.toolUses.includes(EXPECT_TOOL)
+      const reachableLoose = calledLoose && L.echoed
+      const mutuallyExclusive = registeredLoose && !registeredStrict
+      // Measured across runs: at init the fixture server read `pending` on one
+      // run and `connected` on the next, with no later event correcting it. The
+      // handshake races the init emit. ADR-008's receipt therefore CANNOT gate
+      // on `status === 'connected'` — it would flake. Gate on registration;
+      // prove connectivity with a call.
+      const statusAtInit = (L.servers.find((s) => FIXTURE_RE.test(s.name)) || {}).status || null
 
       return {
-        status: loadedLoose ? P.PASS : P.FAIL,
-        detail: !loadedLoose
-          ? `Plugin-bundled MCP server never appeared (fixture names seen: ${publishable(looseNames).fixture.join(', ') || 'none'}; ${publishable(looseNames).ambientCount} ambient server name(s) withheld).`
-          : mutuallyExclusive
-            ? `Bundled server loads and is named \`${looseNames.find((n) => /guidelane_probe_echo$/.test(n))}\` — BUT --strict-mcp-config also excludes plugin-bundled servers. Isolation and plugin-bundled delivery are mutually exclusive: Atlas must ship via --mcp-config so --strict-mcp-config can stay on (ADR-003 corrected).`
-            : `Bundled server loads as \`${looseNames.find((n) => /guidelane_probe_echo$/.test(n))}\` and survives --strict-mcp-config.`,
+        status: registeredLoose && reachableLoose ? P.PASS : registeredLoose ? P.PARTIAL : P.FAIL,
+        detail: !registeredLoose
+          ? `Plugin-bundled MCP server never registered (fixture entries: ${publishable(L.servers).fixture.join(', ') || 'none'}; ${publishable(L.servers).ambientCount} ambient server name(s) withheld).`
+          : !reachableLoose
+            ? `Registered as \`${statusAtInit}\` but the tool did not round-trip (called=${calledLoose}, echoed=${L.echoed}) — registration is not reachability.`
+            : `Bundled server registers and its tool round-trips as \`${EXPECT_TOOL}\`; status at init was \`${statusAtInit}\` (races the handshake — do not gate on it). ${
+                mutuallyExclusive
+                  ? '--strict-mcp-config excludes plugin-bundled servers entirely (mcp_servers empty): isolation and plugin-bundled delivery are mutually exclusive, so Atlas must ship via --mcp-config (ADR-003 corrected).'
+                  : 'It also survives --strict-mcp-config.'
+              }`,
         evidence: {
-          loose: publishable(looseNames),
-          strict: publishable(strictNames),
-          loadedLoose,
-          loadedStrict,
+          loose: publishable(L.servers),
+          strict: publishable(S.servers),
+          registeredLoose,
+          registeredStrict,
+          calledLoose,
+          echoedLoose: L.echoed,
+          statusAtInit,
           strictExcludesPluginServers: mutuallyExclusive,
+          measuredToolName: EXPECT_TOOL,
           namingPattern: 'mcp__plugin_<plugin-name>_<server-name>__<tool>',
+          initToolsCarriesMcpNames: false,
         },
       }
     },
@@ -1096,20 +1198,47 @@ const governanceProbes = [
       'REVIEW-01 #5 has no remedy: every user\'s engine can change simultaneously, mid-project.',
     docRefs: ['REVIEW-01 #5', 'ADR-001'],
     async run(ctx) {
-      const rootHelp = await ctx.help()
-      const installHelp = await ctx.help('install')
-      const mentionsDisable = /DISABLE_AUTOUPDATER|autoupdate|auto-update/i.test(rootHelp + installHelp)
+      // This probe stood at PARTIAL for its whole life because it searched the
+      // wrong surface: `--help` documents FLAGS, and auto-update governance is
+      // an ENV VAR, so the absence it kept reporting was an absence in a place
+      // the control was never going to be. `claude doctor` projects the
+      // resolved state, which makes the control differentially observable —
+      // and a differential is a measurement, where a grep was an inference.
+      // `allowAutoUpdate: true` is the harness's one declared exception to the
+      // always-on guard, and it is counted in the report. `claude doctor` reads
+      // and prints; it does not install, so the control arm cannot move the
+      // engine under the suite that is measuring it.
+      const doctor = async (allowAutoUpdate) =>
+        ctx.spawnCapture(ctx.claudeBin, ['doctor'], { cwd: ctx.suiteRoot, timeoutMs: 60_000, allowAutoUpdate })
+      const LINE = /^\s*Auto-updates:\s*(.+)$/mi
+      const off = await doctor(false)
+      const on = await doctor(true)
+
+      const stateOff = (off.stdout.match(LINE) || [])[1] || null
+      const stateOn = (on.stdout.match(LINE) || [])[1] || null
+      // The assertion is on the DIFFERENCE, not on either string. A CLI that
+      // renamed the reason text would still pass; a CLI that silently ignored
+      // the variable could not.
+      const honoured = Boolean(
+        stateOff && stateOn && stateOff !== stateOn && /disabl/i.test(stateOff) && !/disabl/i.test(stateOn)
+      )
+      const attributesToEnv = Boolean(stateOff && /DISABLE_AUTOUPDATER/i.test(stateOff))
+
       return {
-        // A ternary with identical arms used to sit here, so this probe could
-        // observe the situation IMPROVING and was structurally incapable of
-        // saying so. PARTIAL still means "unproven" — but a documented control
-        // appearing is now a PASS, which is the signal that CLAUDE.md §8's
-        // standing-limitation text needs updating.
-        status: mentionsDisable ? P.PASS : P.PARTIAL,
-        detail: mentionsDisable
-          ? 'Auto-update surface referenced in help; harness already sets DISABLE_AUTOUPDATER=1 for every child. Confirm effect by pinning a version in CI.'
-          : 'No auto-update control found in help text. Harness sets DISABLE_AUTOUPDATER=1 defensively; treat governance as UNPROVEN until observed across a release.',
-        evidence: { mentionsDisable, installHelpPreview: clip(installHelp, 500) },
+        status: honoured ? P.PASS : stateOff || stateOn ? P.PARTIAL : P.FAIL,
+        detail: honoured
+          ? `DISABLE_AUTOUPDATER=1 is honoured and observable: "${stateOn}" -> "${stateOff}"${
+              attributesToEnv ? ' (the engine names the env var as the source).' : '.'
+            } The harness sets it on every child, so a mid-run update cannot change the engine under a running pipeline. REVIEW-01 #5 has its remedy.`
+          : stateOff || stateOn
+            ? `Doctor reports an auto-update state but it does not change with the env var (with=${stateOff}, without=${stateOn}) — governance UNPROVEN, treat DISABLE_AUTOUPDATER as defensive only.`
+            : 'No `Auto-updates:` line in `claude doctor` output — the projection this probe reads was removed or renamed. Re-find the surface before trusting the harness setting.',
+        evidence: {
+          withEnv: stateOff,
+          withoutEnv: stateOn,
+          attributesToEnv,
+          doctorExit: { withEnv: off.code, withoutEnv: on.code },
+        },
       }
     },
   },

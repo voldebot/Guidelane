@@ -146,6 +146,82 @@ The critic also named eight probes as overreach. Accepted, with reasons — cost
 | 23 | UTF-8 / Turkish integrity | medium | **B10** — invisible to English tests; pilot-critical |
 | 24 | Long-idle survival | medium | **B9** — gates S3b design |
 
+## 12. Addendum — A3a answered: the denial channel is `tool_result.is_error` (2026-07-31)
+
+A third audit — four adversarial lenses against the plan for closing these gaps —
+pointed out that the detector in `p-permission-allowlist` was a prose regex over
+model-generated text, and that the structural answer was **already sitting unused
+in our own committed evidence**: `p-usage-accounting` had recorded
+`permission_denials` among the terminal result's 21 field names while discarding
+every value.
+
+The deny arm now runs with `--output-format stream-json --verbose
+--include-hook-events` and the fixture plugin attached, and asserts on four
+channels. Measured on CLI 2.1.220:
+
+| Channel | Fired |
+|---|---|
+| `tool_result.is_error` on the user message | **yes** |
+| `result.permission_denials` | absent on this run |
+| `PermissionDenied` lifecycle hook | no |
+| `permission_denied` advisory system frame | **no — did not appear at all** |
+
+Three consequences:
+
+1. **`tool_result.is_error` is the detector.** CLAUDE.md §3 is updated from a
+   prediction to a measurement.
+2. **The advisory frame is worse than droppable — it did not appear even in the
+   uncontended case.** Any design keyed on it would have been detecting nothing,
+   quietly, from day one.
+3. **The `PermissionDenied` hook not firing is worth its own note**: the fixture
+   registers it, so a consent-card UX cannot be built on that event without
+   first finding out what actually triggers it.
+
+**A3b remains open**: this proves the channel exists and fires, not that it is
+lossless under load. Provoking the frame-drop condition needs sustained denials
+plus backpressure — i.e. the reactive rig — so the S1 activity feed stays gated
+on A3b, not on this.
+
+## 13. Addendum — three gaps partly answered while fixing something else (2026-07-31)
+
+Retiring the two standing PARTIALs (rev 17) required reading the init receipt and
+a full stream carefully, and that paid out on three open items without a probe
+being written for any of them. Recorded here because a measurement nobody writes
+down gets re-measured.
+
+**A2 (stream surface union) — a first enumerated sample, not the closed set.** One
+plugin-attached session with hook events on produced exactly these
+`type`/`subtype` pairs:
+
+| Pair | Count in one short session |
+|---|---|
+| `system/init` | 1 |
+| `system/hook_started` | 4 |
+| `system/hook_response` | 4 |
+| `system/hook_progress` | 2 |
+| `system/thinking_tokens` | 7 |
+| `assistant` (no subtype) | 2 |
+| `rate_limit_event` (no subtype) | 1 |
+| `result/success` | 1 |
+
+That is a *sample from one configuration*, not the union — a session that uses
+tools, streams partials, compacts, or errors will add pairs this run could not
+produce. A2 stays open, but the whitelist now has a seed and the CI check that
+fails on an unseen pair has something to start from.
+
+**A6 (thinking deltas) — thinking surfaces as a running COUNT, not content.**
+`system/thinking_tokens` carries `estimated_tokens` and `estimated_tokens_delta`
+and no text. For the cockpit that is close to ideal: a live "still thinking"
+signal with nothing to leak or mis-render. Still open: whether a model configured
+for visible reasoning also emits content blocks, and what the feed does then.
+
+**A1 (control channel) — one negative result.** No `mcp_status`, no
+connection-state event of any kind, appeared after `init` in any run. Servers
+listed `pending` at init and were simply never mentioned again, including the one
+that answered a tool call moments later. Whatever the control channel turns out
+to be, *server connection state is not published on it* — so the S1 adapter
+cannot wait for a "ready" signal that does not exist.
+
 ## 11. Addendum — the logged-out shape, measured for free (2026-07-30)
 
 The first CI run doubled as a B5 probe nobody had to pay for: a GitHub runner has

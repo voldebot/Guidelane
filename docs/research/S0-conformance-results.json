@@ -1,8 +1,10 @@
 {
   "version": "2.1.220 (Claude Code)",
-  "generatedAt": "2026-07-30T21:02:17.356Z",
+  "generatedAt": "2026-07-30T21:36:04.223Z",
   "suiteRoot": "<TMP>/guidelane-probe-<run>",
   "workspacesKept": false,
+  "stoleStaleLock": false,
+  "staleLockReason": null,
   "runScope": {
     "complete": true,
     "live": true,
@@ -24,9 +26,11 @@
       "CLAUDE_CODE_SIMPLE",
       "CLAUDE_CODE_SAFE_MODE"
     ],
-    "spawns": 33,
+    "spawns": 35,
     "ambientSpawns": 4,
+    "autoUpdateOptOuts": 1,
     "expectedTimeouts": 2,
+    "orphanSuspected": 1,
     "actuallyRemoved": [
       "CLAUDECODE",
       "CLAUDE_CODE_ENTRYPOINT",
@@ -34,9 +38,9 @@
     ]
   },
   "counts": {
-    "pass": 28,
+    "pass": 30,
     "fail": 0,
-    "partial": 2,
+    "partial": 0,
     "skip": 0,
     "error": 0,
     "inconclusive": 0
@@ -60,7 +64,7 @@
         "required": 33,
         "missing": []
       },
-      "ms": 710
+      "ms": 1861
     },
     {
       "id": "p-bare-forbidden",
@@ -80,7 +84,7 @@
         "hasOAuthClause": true,
         "hasKeyClause": true
       },
-      "ms": 1
+      "ms": 11
     },
     {
       "id": "p-safe-mode-forbidden",
@@ -103,7 +107,7 @@
           "MCP servers"
         ]
       },
-      "ms": 2
+      "ms": 1
     },
     {
       "id": "p-doctor-exists",
@@ -121,7 +125,7 @@
       "evidence": {
         "present": true
       },
-      "ms": 1
+      "ms": 0
     },
     {
       "id": "p-plugin-eval-exists",
@@ -140,7 +144,7 @@
         "hasValidate": true,
         "hasEval": true
       },
-      "ms": 467
+      "ms": 1010
     },
     {
       "id": "p-plugin-validate-fixture",
@@ -160,7 +164,7 @@
         "stdout": "Validating plugin manifest: <HOME>/Desktop/Projects/Guidelane/tools/probe/fixtures/plugin/.claude-plugin/plugin.json\n\n✔ Validation passed\n",
         "stderr": ""
       },
-      "ms": 592
+      "ms": 1928
     },
     {
       "id": "p-kill-reaps-process-group",
@@ -181,7 +185,7 @@
         "grandchildSurvived": false,
         "settleMs": 4019
       },
-      "ms": 4025
+      "ms": 4031
     },
     {
       "id": "p-watchdog-settles-on-escaped-child",
@@ -196,14 +200,14 @@
       ],
       "failureImpact": "The single worst outcome the product can have: a run that stops with no output, no error, and no terminal event. In the nightly job it burns to the CI cap; in front of a non-coder it is \"the computer froze\".",
       "status": "pass",
-      "detail": "Escaped grandchild held the pipe open and 'close' never came, yet the call settled in 8022ms via the watchdog. A stuck session degrades into evidence instead of a silent hang. As designed, the escapee outlived the group kill — the probe reaped it itself.",
+      "detail": "Escaped grandchild held the pipe open and 'close' never came, yet the call settled in 8041ms via the watchdog. A stuck session degrades into evidence instead of a silent hang. As designed, the escapee outlived the group kill — the probe reaped it itself.",
       "evidence": {
-        "elapsedMs": 8022,
+        "elapsedMs": 8041,
         "timedOut": true,
         "escapeeOutlivedGroupKill": true,
-        "settleMs": 8020
+        "settleMs": 8038
       },
-      "ms": 8033
+      "ms": 8056
     },
     {
       "id": "p-version-in-tested-range",
@@ -227,7 +231,7 @@
         },
         "inRange": true
       },
-      "ms": 211
+      "ms": 1292
     },
     {
       "id": "p-init-receipt",
@@ -275,7 +279,7 @@
         "permissionMode": "default",
         "version": "2.1.220"
       },
-      "ms": 5310
+      "ms": 4774
     },
     {
       "id": "p-ambient-isolation",
@@ -335,7 +339,7 @@
         "excessBeyondFloor": [],
         "bothFlagsRequired": true
       },
-      "ms": 12415
+      "ms": 14019
     },
     {
       "id": "p-messagedisplay-rewrite",
@@ -358,7 +362,7 @@
         "resultText": "REWRITTEN_BY_HOOK",
         "rewritten": true
       },
-      "ms": 7178
+      "ms": 4686
     },
     {
       "id": "p-stream-json-roundtrip",
@@ -372,15 +376,15 @@
       ],
       "failureImpact": "The cockpit cannot render a live activity feed; the entire event-translation layer (R3 mechanism 3) has no input.",
       "status": "pass",
-      "detail": "Full round-trip. Event types: system, rate_limit_event, user, stream_event, assistant, result.",
+      "detail": "Full round-trip. Event types: system, user, stream_event, rate_limit_event, assistant, result.",
       "evidence": {
         "exit": 0,
-        "eventCount": 24,
+        "eventCount": 30,
         "types": [
           "system",
-          "rate_limit_event",
           "user",
           "stream_event",
+          "rate_limit_event",
           "assistant",
           "result"
         ],
@@ -418,7 +422,7 @@
         ],
         "stderr": ""
       },
-      "ms": 6090
+      "ms": 4933
     },
     {
       "id": "p-usage-accounting",
@@ -459,39 +463,39 @@
         ],
         "usage": {
           "input_tokens": 10,
-          "cache_creation_input_tokens": 6415,
+          "cache_creation_input_tokens": 6419,
           "cache_read_input_tokens": 0,
-          "output_tokens": 48,
+          "output_tokens": 49,
           "server_tool_use": {
             "web_search_requests": 0,
             "web_fetch_requests": 0
           },
           "service_tier": "standard",
           "cache_creation": {
-            "ephemeral_1h_input_tokens": 6415,
+            "ephemeral_1h_input_tokens": 6419,
             "ephemeral_5m_input_tokens": 0
           },
           "inference_geo": "not_available",
           "iterations": [
             {
               "input_tokens": 10,
-              "output_tokens": 48,
+              "output_tokens": 49,
               "cache_read_input_tokens": 0,
-              "cache_creation_input_tokens": 6415,
+              "cache_creation_input_tokens": 6419,
               "cache_creation": {
                 "ephemeral_5m_input_tokens": 0,
-                "ephemeral_1h_input_tokens": 6415
+                "ephemeral_1h_input_tokens": 6419
               },
               "type": "message"
             }
           ],
           "speed": "standard"
         },
-        "cost": 0.013663999999999999,
-        "durationMs": 1786,
+        "cost": 0.013677,
+        "durationMs": 2507,
         "numTurns": 1
       },
-      "ms": 4619
+      "ms": 4419
     },
     {
       "id": "p-json-schema",
@@ -532,10 +536,10 @@
           "duration_ms",
           "uuid"
         ],
-        "payloadPreview": "{\"productName\":\"Shopping List\",\"audience\":\"A single person managing their household shopping needs\",\"invariants\":[\"Each item has a name and optional quantity\",\"Items have one of two states: completed or not completed\",\"Completed items remain in the list until deleted\",\"List persists across app sessions\",\"Only the item creator can delete items from the list\"],\"acceptance\":[{\"given\":\"the app is open and empty\",\"then\":\"the user can add a new item and see it appear in the list\"},{\"given\":\"an item exists in the list\",\"then\":\"the user can mark it complete with a single tap/click\"},{\"given\":\"an item is marked complete\",\"then\":\"it displays visually distinct (e.g., strikethrough) from incomplete item…[930 chars]",
+        "payloadPreview": "{\"productName\":\"HomeCart\",\"audience\":\"One person shopping and cooking at home\",\"invariants\":[\"All items persist after app closes\",\"Completed items stay visible but marked as done\",\"List operations (add, check off, delete) complete instantly with no latency\",\"Exactly one list exists at any time\"],\"acceptance\":[{\"given\":\"user types an item name and taps add\",\"then\":\"item appears in the list immediately with a checkbox\"},{\"given\":\"user taps checkbox on an item\",\"then\":\"item is marked done (strikethrough or dimmed) and stays in the list\"},{\"given\":\"user swipes or taps delete on an item\",\"then\":\"item is removed from the list permanently\"},{\"given\":\"user closes and reopens the app\",\"then\":\"all ite…[839 chars]",
         "stderr": ""
       },
-      "ms": 12183
+      "ms": 11057
     },
     {
       "id": "p-append-system-prompt",
@@ -555,7 +559,7 @@
         "stdout": "PERSONA_OK\n",
         "stderr": ""
       },
-      "ms": 6215
+      "ms": 5956
     },
     {
       "id": "p-agents-inline",
@@ -568,14 +572,29 @@
         "RESEARCH-02 §4 G5"
       ],
       "failureImpact": "None structural. Lenses ship as plugin agents (proven by p-plugin-skill-headless) or as separate sessions, which is the actual design.",
-      "status": "partial",
-      "detail": "Inline agent marker not observed; the flag may be accepted without the agent being invoked. Output: ## Workspace Findings\n\n**Directory Location:** `<TMP>/guidelane-probe-fxhiet/p-agents-inline`\n\n**Status:** The workspace directory is **empty**\n\n### Key Observations:\n- **Directory Size:** 0 bytes (no files)\n- **Directory Permissions:** `drwxr-xr-x`…[825 chars]",
+      "status": "pass",
+      "detail": "`--agents` registers inline: the init receipt lists probe_lens beside the 5 built-ins. Dispatch observed: no (not asserted — whether the model elects to call Task is model behaviour, not engine capability).",
       "evidence": {
-        "exit": 0,
-        "stdout": "## Workspace Findings\n\n**Directory Location:** `<TMP>/guidelane-probe-fxhiet/p-agents-inline`\n\n**Status:** The workspace directory is **empty**\n\n### Key Observations:\n- **Directory Size:** 0 bytes (no files)\n- **Directory Permissions:** `drwxr-xr-x` (755 - standard read/write/execute permissions for owner)\n- **Owner:** <USER> (staff group)\n- **Created:** July 31, 2026 at 00:00\n- **Git Status:** Not a git repository\n- **Hidden Files:** None detected\n\n### Summary:\nThis is a temporary directory (located in `/T/` which is typically macOS temp st…[825 chars]",
-        "stderr": ""
+        "registered": true,
+        "dispatched": false,
+        "agentsOnInit": [
+          "claude",
+          "Explore",
+          "general-purpose",
+          "Plan",
+          "probe_lens",
+          "statusline-setup"
+        ],
+        "builtinFloor": [
+          "claude",
+          "Explore",
+          "general-purpose",
+          "Plan",
+          "statusline-setup"
+        ],
+        "exit": 0
       },
-      "ms": 28580
+      "ms": 39563
     },
     {
       "id": "p-max-budget-subscription",
@@ -598,10 +617,10 @@
         "terminalSubtype": "error_max_budget_usd",
         "budgetSubtype": true,
         "stderrMentionsBudget": false,
-        "stdout": "{\"is_error\":true,\"duration_api_ms\":1157,\"num_turns\":1,\"stop_reason\":null,\"session_id\":\"4a968c11-eac3-4760-9c25-25b85f5c144b\",\"total_cost_usd\":0.000592,\"usage\":{\"input_tokens\":0,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"output_tokens\":0,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"modelUsage\":{\"cla…[1059 chars]",
+        "stdout": "{\"is_error\":true,\"duration_api_ms\":1814,\"num_turns\":1,\"stop_reason\":null,\"session_id\":\"610288dd-990f-40c2-8461-a41f64c3df55\",\"total_cost_usd\":0.000597,\"usage\":{\"input_tokens\":0,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"output_tokens\":0,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"modelUsage\":{\"cla…[1059 chars]",
         "stderr": ""
       },
-      "ms": 5751
+      "ms": 12899
     },
     {
       "id": "p-effort-model-fallback",
@@ -621,7 +640,7 @@
         "modelReported": null,
         "stderr": ""
       },
-      "ms": 3820
+      "ms": 7306
     },
     {
       "id": "p-permission-allowlist",
@@ -636,14 +655,22 @@
       ],
       "failureImpact": "If auto alone permitted everything, safety would rest solely on our PreToolUse hook. If the allow-list did not work either, no autonomous stage could touch the filesystem at all and the pipeline could not build anything.",
       "status": "pass",
-      "detail": "auto alone: DENIED the write (fail-closed, exit 0). auto + --allowedTools Write: wrote the file.",
+      "detail": "auto alone: DENIED the write (fail-closed, exit 0). Structural denial channels observed: tool_result.is_error. The model still claimed success — a live example of the state-hallucination failure the pipeline exists to catch. auto + --allowedTools Write: wrote the file.",
       "evidence": {
         "autoAloneWrote": false,
-        "autoAloneClaimedSuccess": false,
+        "autoAloneClaimedSuccess": true,
         "autoAloneTimedOut": false,
         "allowListTimedOut": false,
         "denialEvidence": true,
-        "autoAloneStdout": "I need permission to write to the file. The system is asking for authorization to create probe.txt in the current directory. Please grant permission so I can proceed.\n",
+        "structuralChannels": [
+          "tool_result.is_error"
+        ],
+        "permissionDenialsCount": null,
+        "toolResultIsError": true,
+        "permissionDeniedHookFired": false,
+        "advisoryFrameSeen": false,
+        "proseHintOnly": false,
+        "autoAloneStdout": "{\"type\":\"system\",\"subtype\":\"hook_started\",\"hook_id\":\"6bd4d128-6f02-4e93-bb15-1125c90ae367\",\"hook_name\":\"SessionStart:startup\",\"hook_event\":\"SessionStart\",\"uuid\":\"c60a1e99-af39-49c5-9a75-25704d2276ad\",\"session_id\":\"65698fc7-fdec-4d52-b10a-d46e4aad1167\"}\n{\"type\":\"system\",\"subtype\":\"hook_response\",\"hoo…[19691 chars]",
         "allowListWrote": true,
         "allowListStdout": "WROTE_OK\n",
         "exits": {
@@ -651,7 +678,7 @@
           "allowed": 0
         }
       },
-      "ms": 20605
+      "ms": 25204
     },
     {
       "id": "p-session-identity",
@@ -667,16 +694,16 @@
       "status": "pass",
       "detail": "Session id honoured, resume kept context, fork produced a new id.",
       "evidence": {
-        "suppliedId": "52a96c3e-2fdd-4376-a825-be5785520fdf",
+        "suppliedId": "44ac5f5a-a8d5-40fd-b73e-cf0e050ab980",
         "resumeRecalled": true,
-        "forkedId": "c14494c2-8545-4cb2-bbd1-6cb7919adbf9",
+        "forkedId": "08832002-f3f8-4f05-b246-7087d08e1a86",
         "exits": {
           "first": 0,
           "second": 0,
           "forked": 0
         }
       },
-      "ms": 25921
+      "ms": 20459
     },
     {
       "id": "p-mcp-strict-load",
@@ -693,10 +720,10 @@
       "detail": "MCP server loaded from the command line and its tool was callable under a fail-closed allow-list (mcp__<server>__<tool>).",
       "evidence": {
         "exit": 0,
-        "stdout": "{\"is_error\":false,\"duration_api_ms\":7949,\"num_turns\":3,\"stop_reason\":\"end_turn\",\"session_id\":\"6b70c8cf-73f7-4a06-b776-b9f8cde2a807\",\"total_cost_usd\":0.0229132,\"usage\":{\"input_tokens\":28,\"cache_creation_input_tokens\":7089,\"cache_read_input_tokens\":66252,\"output_tokens\":293,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":7089,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"not_available\",\"iterations\":[{\"input_tokens\":8,\"output_tokens\":43,\"cache_read_input_tokens\":24501,\"cache_creation_input_tokens\":124,\"cache_creation\":{\"ephemeral_5m_input_tokens\":0,\"ephemeral_1h_input_tokens\":124},\"type\":\"message\"}],\"sp…[1352 chars]",
+        "stdout": "{\"is_error\":false,\"duration_api_ms\":26324,\"num_turns\":9,\"stop_reason\":\"end_turn\",\"session_id\":\"f661efde-1977-4bae-81ef-238b6150ad35\",\"total_cost_usd\":0.04739700000000001,\"usage\":{\"input_tokens\":90,\"cache_creation_input_tokens\":9093,\"cache_read_input_tokens\":220490,\"output_tokens\":1291,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":9093,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"not_available\",\"iterations\":[{\"input_tokens\":10,\"output_tokens\":83,\"cache_read_input_tokens\":26356,\"cache_creation_input_tokens\":273,\"cache_creation\":{\"ephemeral_5m_input_tokens\":0,\"ephemeral_1h_input_tokens\":273},\"type\":\"…[1380 chars]",
         "stderr": ""
       },
-      "ms": 10523
+      "ms": 29368
     },
     {
       "id": "p-plugin-skill-headless",
@@ -716,7 +743,7 @@
         "stdout": "SKILL_LOADED_OK\n",
         "stderr": ""
       },
-      "ms": 5178
+      "ms": 9246
     },
     {
       "id": "p-hook-events-headless",
@@ -748,10 +775,10 @@
         "markerSurvived": true,
         "wroteFile": true,
         "hookEventsInStreamCount": 12,
-        "sampleHookEvent": "{\"type\":\"system\",\"subtype\":\"hook_started\",\"hook_id\":\"1917f1f2-2421-4609-9a9c-ecee17cd8feb\",\"hook_name\":\"SessionStart:startup\",\"hook_event\":\"SessionStart\",\"uuid\":\"7e896aec-cb71-4f20-be40-aa731addb7d8\",\"session_id\":\"f98108df-e956-4df7-b964-445ead1b8e24\"}",
+        "sampleHookEvent": "{\"type\":\"system\",\"subtype\":\"hook_started\",\"hook_id\":\"43e72ac3-c52f-4f9f-a71c-a98ee0744a32\",\"hook_name\":\"SessionStart:startup\",\"hook_event\":\"SessionStart\",\"uuid\":\"f5a2d1f0-b6a9-4472-87bd-8506cc8f9fcd\",\"session_id\":\"c1699fad-6861-4f2a-9ffa-074169b4ced2\"}",
         "stderr": ""
       },
-      "ms": 9268
+      "ms": 14169
     },
     {
       "id": "p-plugin-bundled-mcp",
@@ -766,24 +793,29 @@
       ],
       "failureImpact": "Atlas must be passed via --mcp-config on every invocation instead of riding along with the behaviour pack; and a wrong allow-list name silently disables Atlas in every session.",
       "status": "pass",
-      "detail": "Bundled server loads and is named `mcp__plugin_guidelane-probe_echo__guidelane_probe_echo` — BUT --strict-mcp-config also excludes plugin-bundled servers. Isolation and plugin-bundled delivery are mutually exclusive: Atlas must ship via --mcp-config so --strict-mcp-config can stay on (ADR-003 corrected).",
+      "detail": "Bundled server registers and its tool round-trips as `mcp__plugin_guidelane-probe_echo__guidelane_probe_echo`; status at init was `pending` (races the handshake — do not gate on it). --strict-mcp-config excludes plugin-bundled servers entirely (mcp_servers empty): isolation and plugin-bundled delivery are mutually exclusive, so Atlas must ship via --mcp-config (ADR-003 corrected).",
       "evidence": {
         "loose": {
           "fixture": [
-            "mcp__plugin_guidelane-probe_echo__guidelane_probe_echo"
+            "plugin:guidelane-probe:echo [pending]"
           ],
-          "ambientCount": 0
+          "ambientCount": 6
         },
         "strict": {
           "fixture": [],
           "ambientCount": 0
         },
-        "loadedLoose": true,
-        "loadedStrict": false,
+        "registeredLoose": true,
+        "registeredStrict": false,
+        "calledLoose": true,
+        "echoedLoose": true,
+        "statusAtInit": "pending",
         "strictExcludesPluginServers": true,
-        "namingPattern": "mcp__plugin_<plugin-name>_<server-name>__<tool>"
+        "measuredToolName": "mcp__plugin_guidelane-probe_echo__guidelane_probe_echo",
+        "namingPattern": "mcp__plugin_<plugin-name>_<server-name>__<tool>",
+        "initToolsCarriesMcpNames": false
       },
-      "ms": 20696
+      "ms": 52980
     },
     {
       "id": "p-version-readable",
@@ -802,7 +834,7 @@
         "raw": "2.1.220 (Claude Code)",
         "parsed": "2.1.220"
       },
-      "ms": 85
+      "ms": 3270
     },
     {
       "id": "p-auth-mode-visibility",
@@ -845,7 +877,7 @@
         "subscriptionType": "max",
         "parseFailed": false
       },
-      "ms": 335
+      "ms": 2706
     },
     {
       "id": "p-automode-classifier-pinned",
@@ -871,7 +903,7 @@
         "driftedSections": [],
         "identical": true
       },
-      "ms": 1174
+      "ms": 7831
     },
     {
       "id": "p-autoupdate-governable",
@@ -884,13 +916,18 @@
         "ADR-001"
       ],
       "failureImpact": "REVIEW-01 #5 has no remedy: every user's engine can change simultaneously, mid-project.",
-      "status": "partial",
-      "detail": "No auto-update control found in help text. Harness sets DISABLE_AUTOUPDATER=1 defensively; treat governance as UNPROVEN until observed across a release.",
+      "status": "pass",
+      "detail": "DISABLE_AUTOUPDATER=1 is honoured and observable: \"enabled\" -> \"disabled (set by env: DISABLE_AUTOUPDATER)\" (the engine names the env var as the source). The harness sets it on every child, so a mid-run update cannot change the engine under a running pipeline. REVIEW-01 #5 has its remedy.",
       "evidence": {
-        "mentionsDisable": false,
-        "installHelpPreview": "Usage: claude install [options] [target]\n\nInstall Claude Code native build. Use [target] to specify version (stable,\nlatest, or specific version)\n\nOptions:\n  --force     Force installation even if already installed\n  -h, --help  Display help for command\n"
+        "withEnv": "disabled (set by env: DISABLE_AUTOUPDATER)",
+        "withoutEnv": "enabled",
+        "attributesToEnv": true,
+        "doctorExit": {
+          "withEnv": 0,
+          "withoutEnv": 0
+        }
       },
-      "ms": 183
+      "ms": 13437
     },
     {
       "id": "p-rate-limit-signal",
@@ -929,7 +966,7 @@
         "hasType": true,
         "note": "Only the healthy (\"allowed\") branch is observed here; the rejected branch is not provoked on purpose."
       },
-      "ms": 3402
+      "ms": 6314
     }
   ],
   "exercisedVersion": "2.1.220 (Claude Code)"
