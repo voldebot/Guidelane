@@ -22,7 +22,7 @@ The critic audited the *proposed* 24-probe matrix, not the harness actually on d
 | `--json-schema` "entirely absent" (gap 6) | `p-json-schema` exists and passes, including nested arrays. **The bounded-retry failure branch is genuinely untested** — that half stands. |
 | `rate_limit_event` coverage "dropped" (gap 15) | `p-rate-limit-signal` exists and passes. **Only the healthy branch is observed** — that half stands. |
 | Usage accounting "dropped" (gap 19) | `p-usage-accounting` exists. **The semantic question (billed dollars vs estimate) stands.** |
-| Version + auto-update governance "dropped" (gap 20) | `p-version-readable` and `p-autoupdate-governable` both exist; the latter is the suite's standing PARTIAL. Nothing was retired. |
+| Version + auto-update governance "dropped" (gap 20) | `p-version-readable` and `p-autoupdate-governable` both exist; the latter was the suite's standing PARTIAL and **passed on 2026-07-31** once it stopped grepping `--help` for an env var (§13, C4). Nothing was retired. |
 | Persona/skill probes "lost" (gap 22) | `p-append-system-prompt` and `p-plugin-skill-headless` both exist and pass. |
 
 One further correction, and it is load-bearing. The critic inferred from binary strings ("Display-only: the stored message and what the model sees are untouched") that a `MessageDisplay` rewrite cannot reach the product surface, and concluded R3 mechanism 4 is dead. **Measured on 2.1.220: the rewrite does reach `--output-format stream-json`** — the assistant text block and `result.result` both came back as `REWRITTEN_BY_HOOK` (`p-messagedisplay-rewrite`). Both statements are true at once: for a headless consumer, the stream *is* the display, while the stored transcript and the model's own context keep the original text.

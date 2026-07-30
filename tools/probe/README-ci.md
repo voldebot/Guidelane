@@ -63,10 +63,18 @@ the project's only automated drift detector.
 `tools/probe/baseline.json` records the expected status of every probe. The run
 compares against it and **fails on drift in either direction**.
 
-Both directions matter. Gating only on `fail`+`error` means the suite's steady
-state — two standing PARTIALs — quietly absorbs a third probe degrading from
-PASS to PARTIAL. And a probe *improving* is news too: it means a documented
-limitation lifted and the prose in `CLAUDE.md` §8 or an ADR is now stale.
+Both directions matter. Gating only on `fail`+`error` lets any non-green steady
+state quietly absorb a further probe degrading from PASS to PARTIAL — which is
+exactly what the suite's two former standing PARTIALs would have done had they
+survived (they were retired on 2026-07-31; the expectation is now 30 × `pass`,
+and any PARTIAL entry appearing here again should be argued for in the commit
+message, not absorbed). And a probe *improving* is news too: it means a
+documented limitation lifted and the prose in `CLAUDE.md` §8 or an ADR is now
+stale.
+
+A probe with **no** baseline entry is also drift. Recording an expectation is a
+deliberate act including the first time — otherwise "add a new probe" is the way
+to ship a red one.
 
 ```bash
 node tools/probe/run.mjs --live --update-baseline   # regenerate (full runs only)

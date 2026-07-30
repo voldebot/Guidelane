@@ -138,7 +138,7 @@ Guidelane/
 ## 5. Sprint state
 
 **Current sprint**: S0 (engine conformance) — **complete**. 30 probes on disk (13 free, 17 live),
-last full live run 24 pass / 0 fail / 2 partial / 0 error against CLI 2.1.220.
+last full live run **30 pass / 0 fail / 0 partial / 0 inconclusive / 0 error** against CLI 2.1.220.
 ADR-007 and ADR-008 are its output; REVIEW-02 is its honest gap list.
 **Next**: S1 — cockpit + engine adapter, **gated on REVIEW-02 Tier A** (7 runtime
 unknowns; four of them can stall the activity feed silently).
