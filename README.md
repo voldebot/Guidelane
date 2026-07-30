@@ -84,6 +84,15 @@ and the probe suite is what caught them:
 | A spend ceiling is inert on a subscription | It is enforced. Measured on a session reporting `apiKeySource: none`. |
 | The init receipt can confirm a tool server is connected | It cannot. `mcp_servers[].status` races the receipt — identical runs read `pending`, then `connected`, and nothing later corrects it. Registration is assertable; reachability needs an actual call. |
 
+The suite is also audited against itself, because a conformance suite that is
+wrong is worse than none. Two independent reviews of it in one sprint found
+eleven instances of a single bug shape — **the harness inferred something where
+it should have asserted it, and every inference failed open**. A guard that
+could never throw; a session that could be spawned with no isolation while the
+report said otherwise; two probes that reported "the engine denied it" from a
+session that had crashed before reaching the engine. Those are fixed and named
+in [`CLAUDE.md`](CLAUDE.md) §8 so the next one is recognised faster.
+
 Details, per probe, in [`docs/research/S0-conformance-report.md`](docs/research/S0-conformance-report.md).
 
 ## Running the probe

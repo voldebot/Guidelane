@@ -16,12 +16,48 @@
 //   - No probe deliberately triggers a rate limit, and none uses --bare/--safe-mode
 //     except to read their documented semantics out of help text.
 
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { STATUS } from './lib/runner.mjs'
 
 const P = STATUS
+
+/**
+ * A stable, non-reversible stand-in for a name this repo must not publish.
+ *
+ * Several probes enumerate skills, agents and MCP servers. On a clean run those
+ * are the CLI's own; on the isolation failure the probes exist to detect, they
+ * are the OPERATOR'S — employer, client and internal-project names. Those are
+ * not path-shaped or email-shaped, so `redactString` cannot match them and the
+ * CI grep has no pattern for them; both layers miss, and the artifact is public.
+ *
+ * A fingerprint keeps the finding diffable run-to-run ("the same unexpected
+ * thing is still there") while naming nothing.
+ */
+const fingerprint = (s) => createHash('sha256').update(String(s)).digest('hex').slice(0, 8)
+
+/**
+ * Split a name list into what is ours to publish and what is not.
+ * `floor` is the pinned set of names that belong to the CLI, not the operator.
+ */
+const publishableNames = (names, floor) => ({
+  known: names.filter((n) => floor.includes(n)).sort(),
+  unknownCount: names.filter((n) => !floor.includes(n)).length,
+  unknownFingerprints: names.filter((n) => !floor.includes(n)).map(fingerprint).sort(),
+})
+
+// The CLI's built-in floor as measured on 2.1.220 — the skills and agents that
+// survive `--strict-mcp-config` + `--setting-sources ''` (ADR-008 amendment).
+// Module-scoped because three probes need it and two sources of truth for a
+// pinned baseline is how a pin drifts. Re-pin DELIBERATELY on a CLI upgrade;
+// never widen it to make a red probe green.
+const BUILTIN_SKILL_FLOOR = [
+  'batch', 'claude-api', 'code-review', 'dataviz', 'debug', 'deep-research',
+  'design-sync', 'doctor', 'fewer-permission-prompts', 'loop', 'run',
+  'run-skill-generator', 'schedule', 'simplify', 'update-config', 'verify',
+]
+const BUILTIN_AGENT_FLOOR = ['Explore', 'Plan', 'claude', 'general-purpose', 'statusline-setup']
 
 /** Truncate captured output so the JSON report stays readable. */
 const clip = (s, n = 1200) => {
@@ -472,7 +508,13 @@ const injectionProbes = [
           '--permission-mode', 'auto',
           '--allowedTools', 'Task',
         ],
-        { workspaceFor: 'p-agents-inline-dispatch', timeoutMs: 300_000 }
+        // `observationOnly` makes the non-blocking claim TRUE. Without it this
+        // arm still routed through run()'s degradation path, so a slow subagent
+        // dispatch would override the probe's own PASS with INCONCLUSIVE and
+        // take the whole suite's exit code to 3 — on an arm whose comment says
+        // it cannot fail the probe. The 120s default already produced one false
+        // negative here, so this ceiling is empirically near the edge.
+        { workspaceFor: 'p-agents-inline-dispatch', timeoutMs: 300_000, observationOnly: true }
       )
       const dispatched = /INLINE_AGENT_OK/.test(disp.stdout)
 
@@ -480,12 +522,16 @@ const injectionProbes = [
         status: registered ? P.PASS : P.FAIL,
         detail: registered
           ? `\`--agents\` registers inline: the init receipt lists probe_lens beside the ${names.length - 1} built-ins. Dispatch observed: ${dispatched ? 'yes' : 'no (not asserted — whether the model elects to call Task is model behaviour, not engine capability)'}.`
-          : `\`--agents\` accepted but probe_lens is absent from the init receipt's agent list (${names.join(', ') || 'empty'}) — the flag is inert.`,
+          : `\`--agents\` accepted but probe_lens is absent from the init receipt's agent list (${names.length} agent(s) present, names withheld — on this failure they may be the operator's) — the flag is inert.`,
         evidence: {
           registered,
           dispatched,
-          agentsOnInit: names,
-          builtinFloor: names.filter((n) => n !== 'probe_lens'),
+          // Same reasoning as p-ambient-isolation: on a clean run these are the
+          // CLI's five built-ins plus our fixture, and publishing them is the
+          // point. If isolation ever regresses they are the operator's, so the
+          // safe projection is applied unconditionally rather than "when we
+          // think it might leak".
+          agentsOnInit: publishableNames(names, [...BUILTIN_AGENT_FLOOR, 'probe_lens']),
           exit: reg.code,
         },
       }
@@ -523,15 +569,26 @@ const controlProbes = [
         const parsed = JSON.parse(res.stdout)
         terminal = parsed && (parsed.subtype || parsed.stop_reason || null)
       } catch {
-        const ev = ctx.jsonLines(res.stdout).find((e) => e.type === 'result')
+        // strict:false — this arm feeds a pretty-printed `--output-format json`
+        // document through a JSONL parser on purpose, so its unparseable lines
+        // are expected and must not degrade the probe.
+        const ev = ctx.jsonLines(res.stdout, { strict: false }).find((e) => e.type === 'result')
         terminal = ev ? ev.subtype || ev.stop_reason || null : null
       }
       const budgetSubtype = typeof terminal === 'string' && /budget/i.test(terminal)
       const proseHint = /budget/i.test(res.stderr)
-      const refused = res.code !== 0 || budgetSubtype
+      // Same correction as p-permission-allowlist: `res.code !== 0` alone used
+      // to mean "enforced", so ANY non-zero exit — a network blip, a model
+      // unavailable, a rejected flag on a new CLI — produced a confident
+      // `enforced` verdict on a probe whose result PROJECT_MAP records as
+      // having refuted REVIEW-01's hypothesis. A budget refusal must name the
+      // budget somewhere: the terminal subtype, or at minimum the stderr.
+      const budgetNamed = budgetSubtype || proseHint
+      const refused = budgetNamed && res.code !== 0
       let verdict
       if (refused && !answered) verdict = 'enforced (call refused or halted by the budget ceiling)'
       else if (answered) verdict = 'accepted but INERT under current auth (call completed despite a ~zero ceiling)'
+      else if (res.code !== 0) verdict = `inconclusive — exit ${res.code} with no budget signal in the terminal event or stderr; the session failed for some other reason`
       else verdict = 'inconclusive'
       return {
         // Either answer is a legitimate finding; only "inconclusive" is a problem.
@@ -660,7 +717,22 @@ const controlProbes = [
         hookFired ? 'PermissionDenied hook' : null,
       ].filter(Boolean)
       const proseHint = /permission|not allowed|denied|haven't granted/i.test(`${denied.stdout}\n${denied.stderr}`)
-      const denialEvidence = structuralChannels.length > 0 || denied.code !== 0 || proseHint
+      // STRUCTURAL ONLY. The previous form was
+      //   structuralChannels.length > 0 || denied.code !== 0 || proseHint
+      // which meant prose alone decided the verdict, and so did a bare non-zero
+      // exit — while the comment above claimed the opposite and the PASS string
+      // printed "Structural denial channels observed: NONE — only prose".
+      //
+      // The failure that form permits: a CLI upgrade tightens plugin-manifest
+      // validation, the deny arm (the only arm carrying --plugin-dir) exits 1
+      // during plugin load before the model ever runs, no file is written, and
+      // the probe reports PASS — "auto alone DENIED the write" — from a session
+      // that never reached the engine's permission layer at all. This probe is
+      // ADR-007 Finding 1's evidentiary basis.
+      //
+      // Exit code and prose are still recorded. They corroborate; they never count.
+      const denialEvidence = structuralChannels.length > 0
+      const denyArmRanCleanly = denied.code === 0
 
       let status, detail
       if (stalled) {
@@ -671,20 +743,34 @@ const controlProbes = [
         detail = 'A session TIMED OUT or failed to spawn — UNVERIFIED, not a denial. Headless mode may be waiting on an approval that can never arrive.'
       } else if (!deniedWrote && !denialEvidence) {
         status = P.PARTIAL
-        detail = 'No file written AND no denial evidence on any channel: cannot distinguish "the engine denied it" from "the model never tried". UNVERIFIED.'
-      } else if (failClosed && allowWorks) {
+        detail =
+          `No file written and NO structural denial channel fired ` +
+          `(result.permission_denials / tool_result.is_error / PermissionDenied hook). ` +
+          `Deny arm exited ${denied.code}; prose hint ${proseHint}. Cannot distinguish "the engine ` +
+          `denied it" from "the deny arm broke before the model ran". UNVERIFIED.`
+      } else if (deniedWrote) {
+        status = P.PARTIAL
+        detail =
+          `auto alone PERMITTED the write — the engine is not fail-closed here. ` +
+          `auto + --allowedTools Write: ${allowWorks ? 'wrote the file' : 'still blocked'}.`
+      } else if (!denyArmRanCleanly) {
+        status = P.PARTIAL
+        detail =
+          `Denial proven on ${structuralChannels.join(', ')}, but the deny arm exited ${denied.code} — ` +
+          `something else also went wrong in that session, so treat the measurement with suspicion.`
+      } else if (allowWorks) {
         status = P.PASS
         detail =
           `auto alone: DENIED the write (fail-closed, exit ${denied.code}). ` +
-          `Structural denial channels observed: ${structuralChannels.length ? structuralChannels.join(', ') : 'NONE — only prose'}` +
+          `Structural denial channels observed: ${structuralChannels.join(', ')}` +
           `${advisoryFrame ? ' (the droppable advisory frame also appeared; it stays telemetry, never the detector)' : ''}. ` +
           `${claimedSuccess ? 'The model still claimed success — a live example of the state-hallucination failure the pipeline exists to catch. ' : ''}` +
           'auto + --allowedTools Write: wrote the file.'
       } else {
         status = P.PARTIAL
         detail =
-          `auto alone: ${failClosed ? 'denied' : 'PERMITTED the write'}. ` +
-          `auto + --allowedTools Write: ${allowWorks ? 'wrote the file' : 'still blocked'}.`
+          `auto alone denied (${structuralChannels.join(', ')}), but auto + --allowedTools Write did NOT ` +
+          `write — the allow-list is not permitting, so the fail-closed half is unusable on its own.`
       }
 
       return {
@@ -903,6 +989,21 @@ const pluginProbes = [
       const critical = ['SessionStart', 'PreToolUse', 'PostToolUse', 'MessageDisplay', 'Stop']
       const missingCritical = critical.filter((e) => !fired.includes(e))
 
+      // The fixture refuses a log path outside its temp-root allowlist. On a
+      // machine where TMPDIR sits elsewhere that produces zero fired events —
+      // and reporting FAIL there would be a confident claim about the ENGINE
+      // sourced entirely from the fixture's own path policy.
+      const fixtureRefused = /refusing log path/.test(res.stderr)
+      if (fired.length === 0 && fixtureRefused) {
+        return {
+          status: P.PARTIAL,
+          detail:
+            'The hook fixture refused its log path (TMPDIR outside its allowlist), so no events could be ' +
+            'recorded. This says nothing about whether the engine fires hooks. UNVERIFIED.',
+          evidence: { fixtureRefused: true, stderr: clip(res.stderr, 300) },
+        }
+      }
+
       let status = P.PASS
       if (fired.length === 0) status = P.FAIL
       else if (missingCritical.length || !markerSurvived) status = P.PARTIAL
@@ -1011,7 +1112,18 @@ const pluginProbes = [
       const registeredStrict = S.servers.some((s) => FIXTURE_RE.test(s.name))
       const calledLoose = L.toolUses.includes(EXPECT_TOOL)
       const reachableLoose = calledLoose && L.echoed
-      const mutuallyExclusive = registeredLoose && !registeredStrict
+      // `registeredStrict` is false whenever the strict arm's server list is
+      // empty — INCLUDING when that arm never produced an init event at all. A
+      // timeout would degrade the probe, but a clean non-zero exit passes
+      // straight through as COMPLETED, and the probe would then publish
+      // "--strict-mcp-config excludes plugin-bundled servers entirely" — the
+      // sentence ADR-003's correction rests on — from a session that never
+      // started. An absence only means something if the arm could have spoken.
+      const strictProducedInit = ctx
+        .jsonLines(strict.stdout)
+        .some((e) => e.type === 'system' && e.subtype === 'init')
+      const strictUsable = strict.code === 0 && strictProducedInit
+      const mutuallyExclusive = strictUsable && registeredLoose && !registeredStrict
       // Measured across runs: at init the fixture server read `pending` on one
       // run and `connected` on the next, with no later event correcting it. The
       // handshake races the init emit. ADR-008's receipt therefore CANNOT gate
@@ -1028,13 +1140,17 @@ const pluginProbes = [
             : `Bundled server registers and its tool round-trips as \`${EXPECT_TOOL}\`; status at init was \`${statusAtInit}\` (races the handshake — do not gate on it). ${
                 mutuallyExclusive
                   ? '--strict-mcp-config excludes plugin-bundled servers entirely (mcp_servers empty): isolation and plugin-bundled delivery are mutually exclusive, so Atlas must ship via --mcp-config (ADR-003 corrected).'
-                  : 'It also survives --strict-mcp-config.'
+                  : strictUsable
+                    ? 'It also survives --strict-mcp-config.'
+                    : `The strict arm produced no init receipt (exit ${strict.code}) — the strict/bundled interaction is UNMEASURED on this run, and ADR-003's correction gets no evidence from it.`
               }`,
         evidence: {
           loose: publishable(L.servers),
           strict: publishable(S.servers),
           registeredLoose,
           registeredStrict,
+          strictUsable,
+          strictExit: strict.code,
           calledLoose,
           echoedLoose: L.echoed,
           statusAtInit,
@@ -1313,17 +1429,41 @@ const isolationProbes = [
       }
       const required = ['session_id', 'cwd', 'tools', 'mcp_servers', 'model', 'permissionMode', 'plugins', 'skills', 'agents', 'apiKeySource', 'claude_code_version']
       const missing = required.filter((k) => !(k in init))
+
+      // `apiKeySource` was read into evidence and asserted NOWHERE. Every
+      // headline finding this suite produced — ADR-007's permission contract,
+      // ADR-008's budget-enforced-under-subscription result — is a claim about
+      // the SUBSCRIPTION path specifically, and none of them meant anything
+      // unless the child actually ran on it. The harness now scrubs the backend
+      // env vars too, so this should be structurally true; asserting it is what
+      // turns "should be" into "was".
+      const EXPECT_API_KEY_SOURCE = process.env.GUIDELANE_EXPECT_API_KEY_SOURCE || 'none'
+      if (!missing.length && init.apiKeySource !== EXPECT_API_KEY_SOURCE) {
+        return {
+          status: P.FAIL,
+          detail:
+            `Session ran with apiKeySource=${init.apiKeySource}, expected ${EXPECT_API_KEY_SOURCE}. ` +
+            `This run measures a different auth path than the one ADR-007/008 document, so it is not ` +
+            `conformance evidence for them. Set GUIDELANE_EXPECT_API_KEY_SOURCE to probe another path deliberately.`,
+          evidence: { apiKeySource: init.apiKeySource, expected: EXPECT_API_KEY_SOURCE },
+        }
+      }
+
       return {
         status: missing.length === 0 ? P.PASS : P.PARTIAL,
         detail: missing.length
           ? `init present but missing assertable fields: ${missing.join(', ')}.`
-          : `init carries every field the orchestrator needs to assert on. apiKeySource=${init.apiKeySource} (the auth-mode discriminator), version=${init.claude_code_version}.`,
+          : `init carries every field the orchestrator needs to assert on, and apiKeySource is ASSERTED (=${init.apiKeySource}, the auth-mode discriminator) rather than merely recorded. version=${init.claude_code_version}.`,
         evidence: {
           keys: Object.keys(init),
           missing,
           toolCount: (init.tools || []).length,
-          mcpServers: init.mcp_servers || [],
+          // Names withheld: with the isolation pair on, this list should be
+          // empty, and anything in it is a server the OPERATOR configured —
+          // often an employer or client name, and this artifact is public.
+          mcpServers: publishableNames((init.mcp_servers || []).map((s) => (s && s.name) || String(s)), []),
           apiKeySource: init.apiKeySource,
+          apiKeySourceAsserted: EXPECT_API_KEY_SOURCE,
           permissionMode: init.permissionMode,
           version: init.claude_code_version,
         },
@@ -1361,16 +1501,13 @@ const isolationProbes = [
       const partial = shape(mcpOnlyInit)
       const isolated = shape(isolatedInit)
 
-      // The CLI's own built-in floor, pinned BY NAME on 2.1.220. No flag removes
-      // these; `--setting-sources ''` removes the operator's, not the CLI's.
-      // ADR-008 originally claimed "nothing reaches a stage session that the
-      // orchestrator did not put there" — this baseline is the correction.
-      const BUILTIN_SKILLS = [
-        'batch', 'claude-api', 'code-review', 'dataviz', 'debug', 'deep-research',
-        'design-sync', 'doctor', 'fewer-permission-prompts', 'loop', 'run',
-        'run-skill-generator', 'schedule', 'simplify', 'update-config', 'verify',
-      ]
-      const BUILTIN_AGENTS = ['Explore', 'Plan', 'claude', 'general-purpose', 'statusline-setup']
+      // The CLI's own built-in floor, pinned BY NAME on 2.1.220 at module scope.
+      // No flag removes these; `--setting-sources ''` removes the operator's,
+      // not the CLI's. ADR-008 originally claimed "nothing reaches a stage
+      // session that the orchestrator did not put there" — this is the
+      // correction.
+      const BUILTIN_SKILLS = BUILTIN_SKILL_FLOOR
+      const BUILTIN_AGENTS = BUILTIN_AGENT_FLOOR
 
       const isoSkills = (isolatedInit.skills || []).map(nameOf).sort()
       const isoAgents = (isolatedInit.agents || []).map(nameOf).sort()
@@ -1388,15 +1525,31 @@ const isolationProbes = [
       // passed green while its own evidence recorded 16 skills still present.
       // Assert equality against a pinned baseline instead.
       const leaks = partial.plugins > isolated.plugins || partial.skills > isolated.skills || partial.agents > isolated.agents
-      const excess = [...excessSkills.map((n) => `skill:${n}`), ...excessAgents.map((n) => `agent:${n}`), ...excessOther]
+      // Names beyond the floor are, by definition, the OPERATOR'S — employer,
+      // client and internal-project names. They are not path-shaped or
+      // email-shaped, so redactString cannot see them and the CI grep has no
+      // pattern for them: both layers miss. Publishing them here would leak
+      // exactly on the failure this probe exists to detect, and that has
+      // already happened once in this repo's history.
+      //
+      // A short hash keeps the finding diffable across runs (did the same
+      // unexpected thing appear again?) without naming anything.
+      const excess = [
+        ...excessSkills.map((n) => `skill:${fingerprint(n)}`),
+        ...excessAgents.map((n) => `agent:${fingerprint(n)}`),
+        ...excessOther,
+      ]
 
       let status, detail
       if (excess.length) {
         status = P.FAIL
         detail =
           `The isolation pair did NOT produce the expected clean room — beyond the CLI's built-in floor, ` +
-          `the isolated session still carried: ${excess.join(', ')}. Either these are new built-ins (re-pin the ` +
-          `baseline in this probe) or --setting-sources '' leaks and ADR-008's guarantee must be weakened in writing.`
+          `the isolated session still carried ${excessSkills.length} skill(s) and ${excessAgents.length} agent(s) ` +
+          `not on the pinned list, fingerprinted: ${excess.join(', ')}. Names are withheld because on this exact ` +
+          `failure they are the operator's, and this report is public — run the probe locally and read ` +
+          `evidence.localOnlyHint to see them. Either these are new built-ins (re-pin the baseline in this probe) ` +
+          `or --setting-sources '' leaks and ADR-008's guarantee must be weakened in writing.`
       } else if (!leaks) {
         status = P.PARTIAL
         detail =
@@ -1419,10 +1572,18 @@ const isolationProbes = [
         evidence: {
           mcpOnly: partial,
           isolated,
-          isolatedSkillNames: isoSkills,
-          isolatedAgentNames: isoAgents,
+          // Only names ON the pinned floor are ours to publish — they are the
+          // CLI's, not the operator's, and seeing which of them are present is
+          // the whole point of the assertion. Anything else is a count.
+          floorSkillsPresent: isoSkills.filter((n) => BUILTIN_SKILLS.includes(n)),
+          floorAgentsPresent: isoAgents.filter((n) => BUILTIN_AGENTS.includes(n)),
+          beyondFloorCount: { skills: excessSkills.length, agents: excessAgents.length },
           builtinFloorPinnedFor: '2.1.220',
           excessBeyondFloor: excess,
+          localOnlyHint:
+            excess.length > 0
+              ? 'Names withheld from the public artifact. Re-run this probe locally and inspect the init event directly.'
+              : null,
           bothFlagsRequired: true,
         },
       }

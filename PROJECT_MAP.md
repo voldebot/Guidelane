@@ -2,7 +2,7 @@
 context_priority: high
 project: "Guidelane"
 created: "2026-07-30"
-last_sprint_close: "2026-07-30 (S0 — engine conformance)"
+last_sprint_close: "2026-07-31 (S0 — engine conformance, post-audit hardening)"
 ---
 
 # Guidelane — Project Map
@@ -71,7 +71,7 @@ source (MIT), non-commercial, zero Guidelane-operated servers.
 | [ADR-005](docs/decisions/ADR-005-v1-scope-per-review-01.md) | v1 scope ratified per independent review | 2026-07-30 | pre | REVISE-FIRST accepted: single Local profile, owner-installed pilot, desktop package post-S4, 2-class proportionality, separate content track, 2.5–4 month honest calendar |
 | [ADR-006](docs/decisions/ADR-006-language-dial.md) | Language dial | 2026-07-30 | pre | User-facing in user's language; all internal artifacts/code English; blueprint = English canonical + rendered approval view |
 | [ADR-007](docs/decisions/ADR-007-headless-engine-contract.md) | Headless engine contract, as measured (S0) | 2026-07-30 | s0 | Permissions = `auto` + explicit per-stage allow-list (engine is fail-closed); Atlas ships via `--mcp-config` so `--strict-mcp-config` isolation survives; Night Shift sleeps to `rate_limit_event.resetsAt`. Corrects RESEARCH-01 §4.3 mech. 2 and ADR-003 delivery |
-| [ADR-008](docs/decisions/ADR-008-session-isolation-and-init-receipt.md) | Session isolation + the init receipt | 2026-07-30 | s0 | `--strict-mcp-config` **and** `--setting-sources ''` on every spawn (strict alone leaks the operator's plugins/skills/agents/permission mode); `system/init` asserted as a pre-flight gate, not telemetry; `--bare`/`--safe-mode` ban restated as a state ban with an env deny-list; MessageDisplay rewrite confirmed to reach stream-json; `apiKeySource` is the auth discriminator |
+| [ADR-008](docs/decisions/ADR-008-session-isolation-and-init-receipt.md) | Session isolation + the init receipt | 2026-07-30 *(amended 2026-07-31)* | s0 | `--strict-mcp-config` **and** `--setting-sources ''` on every spawn (strict alone leaks the operator's plugins/skills/agents/permission mode); `system/init` asserted as a pre-flight gate, not telemetry; `--bare`/`--safe-mode` ban restated as a state ban with an env deny-list; MessageDisplay rewrite confirmed to reach stream-json; `apiKeySource` is the auth discriminator. **Two dated in-place corrections**: the built-in floor (§Amendment) and registration-vs-reachability (§2), the latter replacing a `status === 'connected'` gate that would have flaked |
 
 ## 5. Superseded & Rejected (Do-Not-Revisit)
 
@@ -121,6 +121,15 @@ source (MIT), non-commercial, zero Guidelane-operated servers.
 - **Tried**: reading a session's MCP tool inventory out of `init.tools`.
   **Switched to**: `init.mcp_servers[].name` for registration, and the measured naming rule `mcp__plugin_<plugin>_<server>__<tool>` for the allow-list entry. `init.tools` carries the ~30 built-in names and **never** an `mcp__` name; no MCP tool name appears anywhere in the stream until the tool is actually called. A probe built on `init.tools` was structurally incapable of passing and nearly got baselined red.
   **Revisit trigger**: `init.tools` starts including MCP names — verify before trusting it.
+- **Tried**: scrubbing only the five `CLAUDE_CODE_*` nesting markers from a child's environment.
+  **Switched to**: also scrubbing the nine **backend-routing** variables (`ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_API_KEY`, `CLAUDE_CODE_USE_BEDROCK`, …), and **asserting `init.apiKeySource`** instead of merely recording it. Those variables change *which engine answers*, and `ANTHROPIC_BASE_URL` + `ANTHROPIC_AUTH_TOKEN` is precisely how z.ai's coding plan points `claude` at GLM — a plan this project intends to ship. Left in the owner's shell, a full `--live` run would have measured GLM, printed `2.1.220`, satisfied the version gate, and been committed as ADR-007/008 evidence about Anthropic's engine.
+  **Revisit trigger**: probing a non-subscription auth path deliberately — set `GUIDELANE_EXPECT_API_KEY_SOURCE`, never widen the scrub.
+- **Tried**: asserting the env deny-list inside `scrubbedChildEnv`, immediately after the delete loop.
+  **Switched to**: asserting at the **spawn site**. The original was a tautology — it iterated the same constant the delete loop had just iterated, in the same function, with nothing in between; there was no execution path on which it could throw, while its comment claimed it would catch "a caller defeating the deny-list". The boundary with an adversary is `spawnCapture`, which accepted any `env` and asserted nothing (an omitted `env` inherits the parent's environment in full, forbidden state included).
+  **Revisit trigger**: none. A guard that cannot fail is decoration.
+- **Tried**: applying the isolation pair inside `claude()`, the intended session entry point.
+  **Switched to**: applying it in `run()`, the single spawn chokepoint, with `--setting-sources` checked by **value** rather than presence. `ctx.spawnCapture` was documented "for non-session tools" — a convention, not a constraint — so a probe could spawn a fully un-isolated session that incremented no counter while the report still printed "Sessions spawned without the isolation pair: 4".
+  **Revisit trigger**: none — this is the same fail-closed-by-construction principle as the env deny-list.
 - **Tried**: three probes that asserted on the model's own output — "list your mcp__ tools", "describe your config", "did you dispatch the subagent?".
   **Switched to**: engine-emitted fields only (`init.mcp_servers`, `init.agents`, `tool_result.is_error`, a `claude doctor` differential). Every one of the three was wrong, and two of them passed once before flipping — an assertion on generated prose measures the model, not the engine, and it is non-deterministic by construction.
   **Revisit trigger**: none. This is the suite's central rule.
@@ -164,6 +173,10 @@ source (MIT), non-commercial, zero Guidelane-operated servers.
 | Gate-ceremony tolerance of real non-coders | 2026-07-30 | open — S3-era pilot | pilot | The product's biggest empirical unknown |
 | Crew routing efficacy (quality vs token, per role) | 2026-07-30 | open — telemetry | ongoing | Presets are informed defaults, not measured optima |
 | R5f corpus disk budget confirmation (~500 MB proposed, now largely moot after mirror cut) | 2026-07-30 | open | owner | Patterns tier <20 MB; confirm at K3 sign-off |
+| `p-flag-surface` matches flags as substrings of the whole flattened help text | 2026-07-31 | **open — deliberately deferred** | S1 | A removed flag mentioned in another flag's description keeps the probe green, on a `critical` probe whose whole job is catching removals. The obvious fix (parse the option column) depends on the help formatter's column layout, i.e. it swaps one silent failure mode for another. Wants a `declaredCount` sanity floor so a parser break is distinguishable from an engine change — do it with thought, not in a fix batch |
+| One baseline asserted in two materially different environments | 2026-07-31 | **open — needs a decision** | owner/S1 | `baseline.json` is generated on macOS with the owner signed in and then asserted verbatim by the free tier on `ubuntu-latest`, logged out. The 13 free probes must produce byte-identical statuses in both. First divergence forces a choice between weakening a probe and a permanently red CI. Options: `baseline.free.json` / `baseline.live.json`, or a per-probe `expectedByTier` |
+| Harness module boundaries will not survive extraction into `packages/engine` as-is | 2026-07-31 | open — S1 | S1 | Three named issues: `LIVE_CHILDREN` is a process-wide singleton (Night Shift needs a per-supervisor `SessionRegistry`); `audit` is shared mutable state whose per-probe reset works only because every push site re-reads the property; and `spawnCapture` names two different functions depending on the importing module. Fold into task #17, not before |
+| Two residual lifecycle nits accepted as unfixable-in-kind | 2026-07-31 | **accepted** | — | A freed pgid retained in `LIVE_CHILDREN` could in principle be reused before the exit-time group kill (POSIX will not recycle while the group has members, so the window is narrow and cannot be closed airtight). And `p-session-identity` deliberately omits `--no-session-persistence`, leaving two transcripts per `--live` run in `~/.claude` — bounded growth, cleanup is cosmetic |
 
 ## 7. Glossary
 

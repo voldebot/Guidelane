@@ -142,8 +142,10 @@ last full live run **30 pass / 0 fail / 0 partial / 0 inconclusive / 0 error** a
 ADR-007 and ADR-008 are its output; REVIEW-02 is its honest gap list.
 **Next**: S1 — cockpit + engine adapter, **gated on REVIEW-02 Tier A** (7 runtime
 unknowns; four of them can stall the activity feed silently).
-**Last sprint close**: 2026-07-30 (S0). Shipped: `tools/probe/` (30 probes),
-ADR-007 + ADR-008, REVIEW-02, CI wiring, LICENSE, the two vendor inquiry drafts.
+**Last sprint close**: 2026-07-31 (S0, post-audit hardening). Shipped: `tools/probe/`
+(30 probes, all green), ADR-007 + ADR-008 with two dated corrections, REVIEW-02
+(+§13 free Tier A answers), CI wiring, LICENSE, THIRD-PARTY-NOTICES, the two
+vendor inquiry drafts.
 
 Memory: `~/.claude/projects/-Users-talhamac-Desktop-Projects-Guidelane/memory/`
 
@@ -200,13 +202,46 @@ In addition to global gates (`~/.claude/CLAUDE.md` §6):
   going to be where it was looking. Its replacement runs a two-arm
   `claude doctor` differential and PASSES. Before believing an absence, check
   that the surface could have carried the thing.
+- **One bug shape, found eleven times: the harness inferred where it should have
+  asserted, and every inference failed open.** A sprint-close audit by two
+  independent agents found seven more instances after the suite was already
+  green. The generalisation worth carrying into S1: *a guard that cannot fail is
+  decoration; a counter with no pinned expectation cannot falsify anything; and
+  a convention is not a constraint.* Concretely — the env deny-list assertion was
+  a tautology (same constant, same function, no path between); `ctx.spawnCapture`
+  could spawn an un-isolated session while the report said otherwise;
+  `--setting-sources` was checked by presence, not value; and both
+  `p-permission-allowlist` and `p-max-budget-subscription` — the evidentiary
+  basis for ADR-007 Finding 1 and for refuting REVIEW-01's budget hypothesis —
+  returned PASS on a bare non-zero exit, so a session that broke before reaching
+  the model looked identical to one the engine had denied.
+- **The conformance suite must control which backend answers.** Nine
+  backend-routing env vars are now scrubbed and `init.apiKeySource` is asserted,
+  not merely recorded. `ANTHROPIC_BASE_URL` + `ANTHROPIC_AUTH_TOKEN` in the
+  operator's shell — how z.ai's coding plan points `claude` at GLM, a plan this
+  project intends to ship — would have made a full run measure GLM while
+  `claude --version` still printed 2.1.220 and the report was committed as
+  Anthropic evidence.
+- **Names in the evidence are the operator's on exactly the failure the probe
+  detects.** Skill, agent and MCP-server names beyond the pinned floor belong to
+  the operator (employer, client, internal-project names); they are not
+  path-shaped or email-shaped, so neither `redact.mjs` nor the CI grep can see
+  them. Probes publish the floor by name and everything else as a count plus a
+  short fingerprint.
 - **`spawnCapture` is a probe primitive, not an adapter.** It buffers everything
   and closes stdin immediately, so it cannot answer a control request, cannot be
   cancelled, and times out on wall-clock rather than inter-event silence. The S1
   adapter needs a live session handle — a replacement, not an extension.
 - **Anything written to `docs/research/` must go through `lib/redact.mjs`.** The
   first committed report carried the owner's home path and username; the fix is
-  a boundary, and boundaries only hold if nothing writes around them.
+  a boundary, and boundaries only hold if nothing writes around them. Two later
+  gaps in that same boundary, both found by audit rather than by the boundary:
+  its rules were case-**sensitive** while the CI backstop greps `-i` (so the
+  boundary was strictly weaker than the thing backstopping it, on a
+  case-insensitive filesystem), and stripping only `$HOME` published
+  `Desktop/Projects/Guidelane` — harmless here, a client's name for a pilot user
+  checked out under `~/work/<client>/`. Both fixed; the rule is that the
+  boundary must be at least as strong as its backstop, always.
 - Two written confirmations pending: z.ai (GLM allowlist) and Anthropic (headless
   subscription use) — both are S0/S1 exit criteria; GLM/Codex engines stay unshipped
   until answered/accepted.

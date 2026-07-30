@@ -2,7 +2,8 @@
 // MAP: CLI entry for the Guidelane S0 engine-conformance probe.
 // USAGE: node tools/probe/run.mjs [--live] [--only id,id] [--kind k,k] [--model m] [--out dir]
 // EXIT: 0 green · 1 the engine's contract changed · 2 the harness broke ·
-//       3 inconclusive (stall/capacity — says nothing about the engine).
+//       3 inconclusive (stall/capacity — says nothing about the engine) ·
+//       4 an expected operator condition (another run holds the lock).
 // WHY: ADR-001 makes this a standing obligation — it runs nightly against the
 //      latest CLI so engine breakage is discovered by the project, not by a user.
 
@@ -13,6 +14,7 @@ import { fileURLToPath } from 'node:url'
 
 import {
   parseArgs, runSuite, renderMarkdown, spawnCapture, scrubbedChildEnv, killAllChildren,
+  activeLock,
 } from './lib/runner.mjs'
 import { redactDeep, redactString } from './lib/redact.mjs'
 import { probes } from './probes.mjs'
@@ -133,8 +135,14 @@ async function main() {
       `Report: ${mdPath}\nRaw:    ${jsonPath}\n`
   )
   if (!report.runScope.complete) {
+    const why = [
+      !opts.live ? 'no --live' : null,
+      opts.only ? `--only ${opts.only.join(',')}` : null,
+      opts.kinds ? `--kind ${opts.kinds.join(',')}` : null,
+      ...(report.runScope.nonDefault || []),
+    ].filter(Boolean)
     process.stderr.write(
-      `\nPartial run — wrote *${suffix}* files, left the canonical report untouched.\n` +
+      `\nPartial run (${why.join('; ')}) — wrote *${suffix}* files, left the canonical report untouched.\n` +
         `Finish with a full \`--live\` run before committing.\n`
     )
   }
@@ -199,17 +207,37 @@ function checkBaseline(report, opts) {
   let baseline
   try {
     baseline = JSON.parse(readFileSync(path, 'utf8'))
-  } catch {
-    process.stderr.write(`No ${BASELINE_REL} yet — run with --update-baseline after a full --live run.\n`)
-    return []
+  } catch (err) {
+    if (err && err.code === 'ENOENT') {
+      process.stderr.write(`No ${BASELINE_REL} yet — run with --update-baseline after a full --live run.\n`)
+      return []
+    }
+    // Unreadable or corrupt is NOT "absent". One catch used to cover ENOENT,
+    // EACCES and a SyntaxError alike, so a merge conflict left in this file
+    // printed "No baseline yet", returned no drift, and exited 0 green — the
+    // one file whose job is to make a red build unshippable, silently inert.
+    throw new Error(
+      `${BASELINE_REL} is unreadable (${err.code || err.name}: ${err.message}). ` +
+      `The drift gate cannot run; refusing to report a gated result.`
+    )
+  }
+  if (!baseline || typeof baseline.expected !== 'object' || baseline.expected === null) {
+    throw new Error(`${BASELINE_REL} has no \`expected\` map — the drift gate cannot run.`)
   }
 
   const drift = []
   // REVIEW-02 C4: a version change with no re-run is a CI failure. The baseline
   // recorded engineVersion from the start and nothing ever compared it, so an
   // auto-update could move the engine under a clean-diffing baseline.
-  if (baseline.engineVersion && report.exercisedVersion && baseline.engineVersion !== report.exercisedVersion) {
-    drift.push({ id: '(engine version)', expected: baseline.engineVersion, actual: report.exercisedVersion })
+  // Compare the semver triple, not the whole `--version` line. A cosmetic
+  // change to the parenthetical ("(Claude Code)" -> "(Claude Code CLI)") would
+  // otherwise fire the loudest gate the suite has, for a version that did not
+  // change — which is exactly the alarm fatigue the exit codes exist to avoid.
+  const semverOf = (s) => (String(s || '').match(/(\d+\.\d+\.\d+)/) || [])[1] || null
+  const expectedV = semverOf(baseline.engineVersion)
+  const actualV = semverOf(report.exercisedVersion)
+  if (expectedV && actualV && expectedV !== actualV) {
+    drift.push({ id: '(engine version)', expected: expectedV, actual: actualV })
   }
   for (const r of judged) {
     const expected = baseline.expected[r.id]
@@ -237,26 +265,46 @@ function checkBaseline(report, opts) {
 // process group) so they no longer receive the terminal's Ctrl-C; without these
 // handlers a cancelled run leaves an authenticated `claude` burning quota.
 let shuttingDown = false
+
+// Every hard exit bypasses runSuite's `finally`, so Ctrl-C used to leave the
+// cross-process lockfile behind on every single interrupt. It only ever
+// self-healed because the lock ALSO used to steal from a live holder past its
+// TTL — two defects propping each other up, where fixing either alone would
+// have exposed the other.
+const bail = (code) => {
+  try { activeLock?.release() } catch { /* best effort */ }
+  killAllChildren()
+  process.exit(code)
+}
+
 for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
   process.on(sig, () => {
     if (shuttingDown) process.exit(130)
     shuttingDown = true
     process.stderr.write(`\nReceived ${sig} — killing engine children.\n`)
-    killAllChildren()
-    process.exit(130)
+    bail(130)
   })
 }
 process.on('uncaughtException', (err) => {
-  killAllChildren()
   process.stderr.write(`Harness crashed: ${(err && err.stack) || err}\n`)
-  process.exit(2)
+  bail(2)
 })
 
 main().then(
-  (code) => process.exit(code),
+  // killAllChildren() was justified in a comment as running "at exit" and had
+  // no normal-path caller at all: a retained child on the SIGKILL_NO_CLOSE path
+  // survived a green run, still authenticated, still spending quota.
+  (code) => bail(code),
   (err) => {
-    killAllChildren()
+    // An expected operator condition is not a harness fault. Printing it as
+    // `Harness crashed:` + a stack under exit 2 made the launchd job unable to
+    // tell "someone else is running" from "the suite is broken", and buried the
+    // guidance the message carries.
+    if (err && err.name === 'ProbeUsageError') {
+      process.stderr.write(`${err.message}\n`)
+      bail(err.exitCode || 4)
+    }
     process.stderr.write(`Harness crashed: ${(err && err.stack) || err}\n`)
-    process.exit(2)
+    bail(2)
   }
 )

@@ -18,10 +18,25 @@ LOG="${GUIDELANE_PROBE_LOG:-}"
 # is ever inherited from somewhere unexpected. Harmless inside the harness, but
 # this file is copy-paste bait for the production behaviour pack — so it fails
 # closed to temp roots only.
+# `/tmp/../Users/<user>/.zshrc` matches `/tmp/*`, so the allowlist has to reject
+# traversal explicitly before matching prefixes.
+#
+# And the rejection is LOUD. Silently blanking LOG meant that on any machine
+# whose TMPDIR sits outside these roots (a CI runner with a custom RUNNER_TEMP,
+# a hardened image), no log file appeared and `p-hook-events-headless` reported
+# FAIL — "hook lifecycle events do not fire in headless mode" — a confident,
+# wrong claim about the ENGINE, manufactured by this fixture's own path policy.
+# That is the p-autoupdate-governable bug verbatim: an absence reported from a
+# surface that could never have carried the thing.
 case "$LOG" in
   "") ;;
-  /var/folders/*|/private/var/folders/*|/tmp/*) : ;;
-  *) LOG="" ;;
+  *..*)
+    printf 'log-event.sh: refusing log path containing .. (%s)\n' "$LOG" >&2
+    LOG="" ;;
+  /var/folders/*|/private/var/folders/*|/tmp/*|/private/tmp/*) : ;;
+  *)
+    printf 'log-event.sh: refusing log path outside the temp-root allowlist (%s)\n' "$LOG" >&2
+    LOG="" ;;
 esac
 
 # Drain stdin so the caller never blocks on a full pipe.

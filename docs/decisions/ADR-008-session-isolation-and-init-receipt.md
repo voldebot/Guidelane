@@ -134,6 +134,18 @@ owner's subscription session. Combined with `claude auth status --json`
 touching a credential, and must project only `{isSubscription, provider}` —
 never the email/org fields that sit beside them.
 
+*Enforcement note (added 2026-07-31).* `apiKeySource` was read into the probe
+report and **asserted nowhere**, which made this decision a description rather
+than a control. Two changes give it teeth: the harness scrubs nine
+backend-routing environment variables (`ANTHROPIC_BASE_URL`,
+`ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_API_KEY`, `CLAUDE_CODE_USE_BEDROCK`, …) from
+every child, and `p-init-receipt` now FAILS when `apiKeySource` is not the
+expected value. Both matter because every headline finding in this suite —
+ADR-007's permission contract, the `--max-budget-usd` result below — is a claim
+about the **subscription path specifically**, and none of them meant anything
+unless the child actually ran on it. The escape hatch for deliberately probing
+another path is `GUIDELANE_EXPECT_API_KEY_SOURCE`, which is explicit and printed.
+
 *Scope note (added at the S0 post-audit pass, because the ADR and the code read
 as contradicting each other).* Two different boundaries, both correct:
 `apiProvider` is projectable **into the local cockpit**, which never leaves the
