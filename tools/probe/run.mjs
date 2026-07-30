@@ -6,7 +6,7 @@
 // WHY: ADR-001 makes this a standing obligation — it runs nightly against the
 //      latest CLI so engine breakage is discovered by the project, not by a user.
 
-import { writeFileSync, mkdirSync } from 'node:fs'
+import { writeFileSync, readFileSync, mkdirSync } from 'node:fs'
 import { dirname, join, resolve, sep } from 'node:path'
 import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
@@ -35,6 +35,7 @@ Options:
   --timeout <seconds>  Per-probe timeout (default: 120).
   --out <dir>          Where to write the report (default: docs/research).
   --keep-workspaces    Leave temp workspaces on disk for inspection.
+  --update-baseline    Rewrite tools/probe/baseline.json from this run (full --live only).
   --list               List probes and exit.
   -h, --help           This text.
 
@@ -112,6 +113,7 @@ async function main() {
 
   // The single redaction boundary. Everything a child process said passes
   // through here before it can reach a file destined for a public repository.
+  report.exercisedVersion = version
   const safe = redactDeep({ version, generatedAt, ...report })
   writeFileSync(jsonPath, JSON.stringify(safe, null, 2))
   writeFileSync(mdPath, redactString(renderMarkdown(report, { version, generatedAt })))
@@ -132,14 +134,86 @@ async function main() {
     )
   }
 
-  // Three distinct exit codes, because a nightly job that cannot tell "the
-  // engine changed" from "my laptop slept" earns alarm fatigue and then gets
-  // ignored — and it is the project's only automated drift detector.
-  //   0 = green · 1 = the engine's contract changed · 2 = the harness broke
-  //   3 = inconclusive; this run says nothing about the engine
+  // Baseline gate. Gating only on fail+error means the suite's steady state
+  // (two standing PARTIALs) hides any third probe degrading PASS -> PARTIAL.
+  // Drift is checked in BOTH directions: a probe improving is also news, because
+  // it means a documented limitation lifted and the ADR text is now stale.
+  const drift = checkBaseline(report, opts)
+  if (drift.length) {
+    process.stderr.write('\nBASELINE DRIFT — expected status changed:\n')
+    for (const d of drift) process.stderr.write(`  ${d.id}: ${d.expected} -> ${d.actual}\n`)
+    process.stderr.write(
+      `\nIf this is a real regression, fix it. If the new status is correct, re-run with\n` +
+      `--update-baseline and commit ${BASELINE_REL} on its own so the change is reviewable.\n`
+    )
+  }
+
+  // Distinct exit codes, because a nightly job that cannot tell "the engine
+  // changed" from "my laptop slept" earns alarm fatigue and then gets ignored —
+  // and it is the project's only automated drift detector.
+  //   0 = green · 1 = the engine's contract changed (or drifted from baseline)
+  //   2 = the harness broke · 3 = inconclusive; says nothing about the engine
   if (c.fail + c.error > 0) return 1
+  if (drift.length) return 1
   if (c.inconclusive > 0) return 3
   return 0
+}
+
+const BASELINE_REL = 'tools/probe/baseline.json'
+
+/**
+ * Compare this run's statuses against the committed expectation.
+ *
+ * Only a COMPLETE run may rewrite the baseline: a filtered run knows nothing
+ * about the probes it skipped, and letting it write would silently shrink the
+ * expectation set. Skipped and inconclusive probes are ignored — they carry no
+ * verdict about the engine.
+ */
+function checkBaseline(report, opts) {
+  const path = join(REPO_ROOT, BASELINE_REL)
+  const judged = report.results.filter((r) => r.status !== 'skip' && r.status !== 'inconclusive')
+
+  if (opts.updateBaseline) {
+    if (!report.runScope.complete) {
+      process.stderr.write('Refusing to update the baseline from a partial run — use a full `--live` run.\n')
+      return []
+    }
+    const next = {
+      _comment:
+        'Expected probe statuses. Regenerate ONLY with `node tools/probe/run.mjs --live --update-baseline`, ' +
+        'and commit this file on its own so the change is reviewable. Editing it by hand to silence a red ' +
+        'build defeats the point.',
+      engineVersion: report.exercisedVersion || null,
+      expected: Object.fromEntries(judged.map((r) => [r.id, r.status])),
+    }
+    writeFileSync(path, JSON.stringify(next, null, 2) + '\n')
+    process.stderr.write(`Baseline updated: ${BASELINE_REL} (${judged.length} probes)\n`)
+    return []
+  }
+
+  let baseline
+  try {
+    baseline = JSON.parse(readFileSync(path, 'utf8'))
+  } catch {
+    process.stderr.write(`No ${BASELINE_REL} yet — run with --update-baseline after a full --live run.\n`)
+    return []
+  }
+
+  const drift = []
+  for (const r of judged) {
+    const expected = baseline.expected[r.id]
+    // An unknown probe id is not drift: a newly added probe has no expectation
+    // until someone deliberately records one.
+    if (expected === undefined) continue
+    if (expected !== r.status) drift.push({ id: r.id, expected, actual: r.status })
+  }
+  // A probe that vanished from the run is only drift on a complete run.
+  if (report.runScope.complete) {
+    for (const id of Object.keys(baseline.expected)) {
+      if (!report.results.some((r) => r.id === id)) drift.push({ id, expected: baseline.expected[id], actual: 'missing' })
+    }
+  }
+  return drift
 }
 
 // Reap the tree on every exit route. Children are spawned detached (their own

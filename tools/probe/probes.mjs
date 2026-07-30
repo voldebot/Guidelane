@@ -490,7 +490,21 @@ const controlProbes = [
         { workspaceFor: 'p-max-budget-subscription' }
       )
       const answered = /BUDGET_PROBE_OK/.test(res.stdout)
-      const refused = res.code !== 0 || /budget/i.test(res.stderr)
+      // Key on the machine-readable terminal event, not on English error prose.
+      // The binary carries a dedicated result subtype for this; a wording change
+      // in the CLI's stderr must not be able to flip a `critical` verdict.
+      // The stderr match survives only as corroboration.
+      let terminal = null
+      try {
+        const parsed = JSON.parse(res.stdout)
+        terminal = parsed && (parsed.subtype || parsed.stop_reason || null)
+      } catch {
+        const ev = ctx.jsonLines(res.stdout).find((e) => e.type === 'result')
+        terminal = ev ? ev.subtype || ev.stop_reason || null : null
+      }
+      const budgetSubtype = typeof terminal === 'string' && /budget/i.test(terminal)
+      const proseHint = /budget/i.test(res.stderr)
+      const refused = res.code !== 0 || budgetSubtype
       let verdict
       if (refused && !answered) verdict = 'enforced (call refused or halted by the budget ceiling)'
       else if (answered) verdict = 'accepted but INERT under current auth (call completed despite a ~zero ceiling)'
@@ -503,6 +517,9 @@ const controlProbes = [
           verdict,
           exit: res.code,
           answered,
+          terminalSubtype: terminal,
+          budgetSubtype,
+          stderrMentionsBudget: proseHint,
           stdout: clip(res.stdout, 500),
           stderr: clip(res.stderr, 500),
         },
@@ -1320,8 +1337,166 @@ const isolationProbes = [
   },
 ]
 
+// The harness measuring itself. Everything here is free — no engine call, no
+// quota — and every probe exercises a defence that was added on reasoning and
+// had never actually fired. REVIEW-02 B1's orphan half lives here.
+const lifecycleProbes = [
+  {
+    id: 'p-kill-reaps-process-group',
+    title: 'A timed-out child takes its whole process tree with it',
+    kind: 'observational',
+    loadBearing: 'critical',
+    claim:
+      'When the harness times out a child, the process-group kill reaps its grandchildren too — so a stuck engine session cannot leave an authenticated `claude`, a stdio MCP server, or a Bash grandchild running against the user\'s quota.',
+    failureImpact:
+      "Orphaned engine processes keep spending a friend's subscription after a crash, with nobody reading their output. This is the S2 exit gate's core question, and it is invisible to every happy-path probe.",
+    docRefs: ['REVIEW-02 B1', 'ADR-001'],
+    async run(ctx) {
+      const ws = ctx.makeWorkspace('p-kill-reaps-process-group')
+      const pidfile = join(ws, 'pids.txt')
+      const fixture = join(ctx.fixtures, 'hang', 'hang.mjs')
+
+      const res = await ctx.spawnCapture(process.execPath, [fixture, 'grouped'], {
+        cwd: ws,
+        env: { GUIDELANE_HANG_PIDFILE: pidfile },
+        timeoutMs: 4_000,
+        expectTimeout: true,
+      })
+
+      if (!existsSync(pidfile)) {
+        return {
+          status: P.FAIL,
+          detail: `Fixture never reported its pids — cannot judge reaping. stdout=${clip(res.stdout, 120)} stderr=${clip(res.stderr, 120)}`,
+          evidence: { timedOut: res.timedOut, stdout: clip(res.stdout, 200) },
+        }
+      }
+      const [parentPid, childPid] = readFileSync(pidfile, 'utf8')
+        .split('\n').map((s) => Number(s.trim())).filter(Boolean)
+
+      // kill(pid, 0) signals nothing; it only asks "may I signal this process".
+      // ESRCH means the process is gone, which is what we want to see.
+      const alive = (pid) => {
+        try { process.kill(pid, 0); return true } catch { return false }
+      }
+      const parentAlive = alive(parentPid)
+      const childAlive = alive(childPid)
+
+      // Never leak a real process because a probe failed.
+      for (const pid of [childPid, parentPid]) {
+        if (alive(pid)) { try { process.kill(pid, 'SIGKILL') } catch { /* raced */ } }
+      }
+
+      const ok = res.timedOut && !parentAlive && !childAlive
+      return {
+        status: ok ? P.PASS : P.FAIL,
+        detail: ok
+          ? `Timeout killed the whole group: the direct child AND its grandchild were both gone afterwards. The process-group kill added at S0 close does what it claims.`
+          : `Reaping incomplete — timedOut=${res.timedOut}, parent alive=${parentAlive}, grandchild alive=${childAlive}. ` +
+            `A surviving grandchild is an authenticated process spending quota with nobody reading it.`,
+        evidence: { timedOut: res.timedOut, parentSurvived: parentAlive, grandchildSurvived: childAlive, settleMs: res.ms },
+      }
+    },
+  },
+
+  {
+    id: 'p-watchdog-settles-on-escaped-child',
+    title: 'A grandchild that escapes the process group cannot hang the suite',
+    kind: 'observational',
+    loadBearing: 'critical',
+    claim:
+      "When a grandchild in its own process group holds the stdout pipe open, the child's 'close' event never fires — and the settle watchdog resolves the call anyway, so the run continues instead of hanging forever.",
+    failureImpact:
+      'The single worst outcome the product can have: a run that stops with no output, no error, and no terminal event. In the nightly job it burns to the CI cap; in front of a non-coder it is "the computer froze".',
+    docRefs: ['REVIEW-02 B1', 'REVIEW-02 A5', 'sprint-close architecture review'],
+    async run(ctx) {
+      const ws = ctx.makeWorkspace('p-watchdog-settles')
+      const pidfile = join(ws, 'pids.txt')
+      const fixture = join(ctx.fixtures, 'hang', 'hang.mjs')
+
+      const started = Date.now()
+      // 'escaped' puts the grandchild in its OWN group, so the harness's group
+      // kill provably cannot reach it. Only the watchdog can end this call.
+      const res = await ctx.spawnCapture(process.execPath, [fixture, 'escaped'], {
+        cwd: ws,
+        env: { GUIDELANE_HANG_PIDFILE: pidfile },
+        timeoutMs: 3_000,
+        expectTimeout: true,
+      })
+      const elapsed = Date.now() - started
+
+      const pids = existsSync(pidfile)
+        ? readFileSync(pidfile, 'utf8').split('\n').map((s) => Number(s.trim())).filter(Boolean)
+        : []
+      const alive = (pid) => {
+        try { process.kill(pid, 0); return true } catch { return false }
+      }
+      const escapee = pids[1]
+      const escapeeSurvived = escapee ? alive(escapee) : null
+
+      // This probe DELIBERATELY creates a process the harness cannot reap, so
+      // cleaning it up is the probe's own responsibility.
+      for (const pid of pids) {
+        if (alive(pid)) { try { process.kill(pid, 'SIGKILL') } catch { /* raced */ } }
+      }
+
+      // Settled at all == the promise resolved == we are executing this line.
+      // The question is whether it settled promptly rather than at some much
+      // later accident.
+      const settledPromptly = elapsed < 3_000 + 5_000 + 4_000
+      const ok = res.timedOut && settledPromptly
+      return {
+        status: ok ? P.PASS : P.FAIL,
+        detail: ok
+          ? `Escaped grandchild held the pipe open and 'close' never came, yet the call settled in ${elapsed}ms via the watchdog. ` +
+            `A stuck session degrades into evidence instead of a silent hang.` +
+            (escapeeSurvived ? ' As designed, the escapee outlived the group kill — the probe reaped it itself.' : '')
+          : `Settled in ${elapsed}ms with timedOut=${res.timedOut}. If this ever fails, the suite can hang with no output — treat it as urgent.`,
+        evidence: { elapsedMs: elapsed, timedOut: res.timedOut, escapeeOutlivedGroupKill: escapeeSurvived, settleMs: res.ms },
+      }
+    },
+  },
+
+  {
+    id: 'p-version-in-tested-range',
+    title: 'The exercised CLI version is inside the tested range',
+    kind: 'observational',
+    loadBearing: 'high',
+    claim:
+      'Every run states the engine version it exercised and refuses to present its results as conformance evidence when that version is outside the range the suite has actually been validated against.',
+    failureImpact:
+      "REVIEW-01 #5's remedy is a tested version range plus a nightly probe. CI pins the version; the local launchd run does not, so an auto-update could silently move the engine under a green report and nobody would notice.",
+    docRefs: ['REVIEW-01 #5', 'ADR-001', 'CLAUDE.md §3'],
+    async run(ctx) {
+      // Widen deliberately, with a commit, when a new version has been validated
+      // by a full --live run. Never widen to make a red build go away.
+      const TESTED = { min: '2.1.220', max: '2.1.999' }
+      const res = await ctx.spawnCapture(ctx.claudeBin, ['--version'], { cwd: ctx.suiteRoot, timeoutMs: 30_000 })
+      const m = res.stdout.match(/(\d+)\.(\d+)\.(\d+)/)
+      if (!m) {
+        return { status: P.FAIL, detail: `Unparseable version: ${clip(res.stdout, 120)}`, evidence: { raw: clip(res.stdout, 200) } }
+      }
+      const cmp = (a, b) => {
+        const pa = a.split('.').map(Number)
+        const pb = b.split('.').map(Number)
+        for (let i = 0; i < 3; i++) { if (pa[i] !== pb[i]) return pa[i] - pb[i] }
+        return 0
+      }
+      const version = `${m[1]}.${m[2]}.${m[3]}`
+      const inRange = cmp(version, TESTED.min) >= 0 && cmp(version, TESTED.max) <= 0
+      return {
+        status: inRange ? P.PASS : P.FAIL,
+        detail: inRange
+          ? `Engine ${version} is inside the tested range ${TESTED.min}–${TESTED.max}.`
+          : `Engine ${version} is OUTSIDE the tested range ${TESTED.min}–${TESTED.max}. This report is not conformance evidence until the suite is re-validated against it and the range is widened deliberately.`,
+        evidence: { version, testedRange: TESTED, inRange },
+      }
+    },
+  },
+]
+
 export const probes = [
   ...helpProbes,
+  ...lifecycleProbes,
   ...isolationProbes,
   ...protocolProbes,
   ...structuredOutputProbes,

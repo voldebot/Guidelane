@@ -144,7 +144,12 @@ node tools/probe/run.mjs            # free tier: help-text + observational (9 pr
 node tools/probe/run.mjs --live     # + 17 real engine calls (uses --model haiku)
 node tools/probe/run.mjs --list     # what it checks and why
 node tools/probe/run.mjs --only p-init-receipt,p-ambient-isolation
-# Writes docs/research/S0-conformance-report.md (+ .json). Exit 1 on fail/error.
+node tools/probe/run.mjs --live --update-baseline   # after a deliberate status change
+# Writes docs/research/S0-conformance-report.md (+ .json) — only on a FULL --live
+# run; anything filtered writes *.partial.* and leaves the baseline report alone.
+# Exit: 0 green · 1 contract changed or drifted from baseline · 2 harness broke
+#       · 3 inconclusive (stall/capacity — says nothing about the engine).
+# One run at a time: a lockfile stops a manual run from racing the 04:00 job.
 # Probes run SEQUENTIALLY on purpose: concurrent sessions race on the same
 # rate-limit window and make a limit event indistinguishable from a failure.
 

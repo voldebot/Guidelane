@@ -58,6 +58,39 @@ Codes 1 and 3 are separate on purpose. A nightly job that reports "engine broken
 every time a laptop sleeps mid-run teaches its owner to ignore it, and this is
 the project's only automated drift detector.
 
+## The baseline gate
+
+`tools/probe/baseline.json` records the expected status of every probe. The run
+compares against it and **fails on drift in either direction**.
+
+Both directions matter. Gating only on `fail`+`error` means the suite's steady
+state — two standing PARTIALs — quietly absorbs a third probe degrading from
+PASS to PARTIAL. And a probe *improving* is news too: it means a documented
+limitation lifted and the prose in `CLAUDE.md` §8 or an ADR is now stale.
+
+```bash
+node tools/probe/run.mjs --live --update-baseline   # regenerate (full runs only)
+```
+
+A partial run may never rewrite it — it knows nothing about the probes it
+skipped, and letting it write would silently shrink the expectation set. Commit
+the file on its own so the diff is reviewable. Hand-editing it to silence a red
+build defeats the entire mechanism; that failure mode is human, not technical,
+and nothing in the code can stop it.
+
+## One run at a time
+
+The suite takes a lockfile in the temp dir. A second run refuses to start and
+names the pid holding it. This is not tidiness: concurrent engine sessions race
+on the same five-hour rate-limit window, which makes a limit event
+indistinguishable from a real failure — and REVIEW-02 B7 flags that concurrent
+`claude -p` may contend on `~/.claude.json`, whose corruption a non-coder cannot
+recover from.
+
+A lock left behind by a crashed run is reclaimed automatically: the holder pid is
+liveness-checked, and a dead holder loses the lock. A lock that can strand its
+owner would be worse than no lock at all.
+
 ## Things that will bite
 
 - **The live tier spends real quota.** 17 engine calls on `--model haiku` is

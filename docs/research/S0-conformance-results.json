@@ -1,6 +1,6 @@
 {
   "version": "2.1.220 (Claude Code)",
-  "generatedAt": "2026-07-30T20:25:07.384Z",
+  "generatedAt": "2026-07-30T21:02:17.356Z",
   "suiteRoot": "<TMP>/guidelane-probe-<run>",
   "workspacesKept": false,
   "runScope": {
@@ -8,8 +8,8 @@
     "live": true,
     "only": null,
     "kinds": null,
-    "probesDefined": 27,
-    "probesRun": 27
+    "probesDefined": 30,
+    "probesRun": 30
   },
   "options": {
     "live": true,
@@ -24,8 +24,9 @@
       "CLAUDE_CODE_SIMPLE",
       "CLAUDE_CODE_SAFE_MODE"
     ],
-    "spawns": 30,
+    "spawns": 33,
     "ambientSpawns": 4,
+    "expectedTimeouts": 2,
     "actuallyRemoved": [
       "CLAUDECODE",
       "CLAUDE_CODE_ENTRYPOINT",
@@ -33,7 +34,7 @@
     ]
   },
   "counts": {
-    "pass": 25,
+    "pass": 28,
     "fail": 0,
     "partial": 2,
     "skip": 0,
@@ -59,7 +60,7 @@
         "required": 33,
         "missing": []
       },
-      "ms": 319
+      "ms": 710
     },
     {
       "id": "p-bare-forbidden",
@@ -102,7 +103,7 @@
           "MCP servers"
         ]
       },
-      "ms": 1
+      "ms": 2
     },
     {
       "id": "p-doctor-exists",
@@ -120,7 +121,7 @@
       "evidence": {
         "present": true
       },
-      "ms": 0
+      "ms": 1
     },
     {
       "id": "p-plugin-eval-exists",
@@ -139,7 +140,7 @@
         "hasValidate": true,
         "hasEval": true
       },
-      "ms": 206
+      "ms": 467
     },
     {
       "id": "p-plugin-validate-fixture",
@@ -159,7 +160,74 @@
         "stdout": "Validating plugin manifest: <HOME>/Desktop/Projects/Guidelane/tools/probe/fixtures/plugin/.claude-plugin/plugin.json\n\n✔ Validation passed\n",
         "stderr": ""
       },
-      "ms": 1617
+      "ms": 592
+    },
+    {
+      "id": "p-kill-reaps-process-group",
+      "title": "A timed-out child takes its whole process tree with it",
+      "kind": "observational",
+      "loadBearing": "critical",
+      "claim": "When the harness times out a child, the process-group kill reaps its grandchildren too — so a stuck engine session cannot leave an authenticated `claude`, a stdio MCP server, or a Bash grandchild running against the user's quota.",
+      "docRefs": [
+        "REVIEW-02 B1",
+        "ADR-001"
+      ],
+      "failureImpact": "Orphaned engine processes keep spending a friend's subscription after a crash, with nobody reading their output. This is the S2 exit gate's core question, and it is invisible to every happy-path probe.",
+      "status": "pass",
+      "detail": "Timeout killed the whole group: the direct child AND its grandchild were both gone afterwards. The process-group kill added at S0 close does what it claims.",
+      "evidence": {
+        "timedOut": true,
+        "parentSurvived": false,
+        "grandchildSurvived": false,
+        "settleMs": 4019
+      },
+      "ms": 4025
+    },
+    {
+      "id": "p-watchdog-settles-on-escaped-child",
+      "title": "A grandchild that escapes the process group cannot hang the suite",
+      "kind": "observational",
+      "loadBearing": "critical",
+      "claim": "When a grandchild in its own process group holds the stdout pipe open, the child's 'close' event never fires — and the settle watchdog resolves the call anyway, so the run continues instead of hanging forever.",
+      "docRefs": [
+        "REVIEW-02 B1",
+        "REVIEW-02 A5",
+        "sprint-close architecture review"
+      ],
+      "failureImpact": "The single worst outcome the product can have: a run that stops with no output, no error, and no terminal event. In the nightly job it burns to the CI cap; in front of a non-coder it is \"the computer froze\".",
+      "status": "pass",
+      "detail": "Escaped grandchild held the pipe open and 'close' never came, yet the call settled in 8022ms via the watchdog. A stuck session degrades into evidence instead of a silent hang. As designed, the escapee outlived the group kill — the probe reaped it itself.",
+      "evidence": {
+        "elapsedMs": 8022,
+        "timedOut": true,
+        "escapeeOutlivedGroupKill": true,
+        "settleMs": 8020
+      },
+      "ms": 8033
+    },
+    {
+      "id": "p-version-in-tested-range",
+      "title": "The exercised CLI version is inside the tested range",
+      "kind": "observational",
+      "loadBearing": "high",
+      "claim": "Every run states the engine version it exercised and refuses to present its results as conformance evidence when that version is outside the range the suite has actually been validated against.",
+      "docRefs": [
+        "REVIEW-01 #5",
+        "ADR-001",
+        "CLAUDE.md §3"
+      ],
+      "failureImpact": "REVIEW-01 #5's remedy is a tested version range plus a nightly probe. CI pins the version; the local launchd run does not, so an auto-update could silently move the engine under a green report and nobody would notice.",
+      "status": "pass",
+      "detail": "Engine 2.1.220 is inside the tested range 2.1.220–2.1.999.",
+      "evidence": {
+        "version": "2.1.220",
+        "testedRange": {
+          "min": "2.1.220",
+          "max": "2.1.999"
+        },
+        "inRange": true
+      },
+      "ms": 211
     },
     {
       "id": "p-init-receipt",
@@ -207,7 +275,7 @@
         "permissionMode": "default",
         "version": "2.1.220"
       },
-      "ms": 2993
+      "ms": 5310
     },
     {
       "id": "p-ambient-isolation",
@@ -267,7 +335,7 @@
         "excessBeyondFloor": [],
         "bothFlagsRequired": true
       },
-      "ms": 33136
+      "ms": 12415
     },
     {
       "id": "p-messagedisplay-rewrite",
@@ -290,7 +358,7 @@
         "resultText": "REWRITTEN_BY_HOOK",
         "rewritten": true
       },
-      "ms": 19571
+      "ms": 7178
     },
     {
       "id": "p-stream-json-roundtrip",
@@ -350,7 +418,7 @@
         ],
         "stderr": ""
       },
-      "ms": 12656
+      "ms": 6090
     },
     {
       "id": "p-usage-accounting",
@@ -391,39 +459,39 @@
         ],
         "usage": {
           "input_tokens": 10,
-          "cache_creation_input_tokens": 6419,
+          "cache_creation_input_tokens": 6415,
           "cache_read_input_tokens": 0,
-          "output_tokens": 50,
+          "output_tokens": 48,
           "server_tool_use": {
             "web_search_requests": 0,
             "web_fetch_requests": 0
           },
           "service_tier": "standard",
           "cache_creation": {
-            "ephemeral_1h_input_tokens": 6419,
+            "ephemeral_1h_input_tokens": 6415,
             "ephemeral_5m_input_tokens": 0
           },
           "inference_geo": "not_available",
           "iterations": [
             {
               "input_tokens": 10,
-              "output_tokens": 50,
+              "output_tokens": 48,
               "cache_read_input_tokens": 0,
-              "cache_creation_input_tokens": 6419,
+              "cache_creation_input_tokens": 6415,
               "cache_creation": {
                 "ephemeral_5m_input_tokens": 0,
-                "ephemeral_1h_input_tokens": 6419
+                "ephemeral_1h_input_tokens": 6415
               },
               "type": "message"
             }
           ],
           "speed": "standard"
         },
-        "cost": 0.013682,
-        "durationMs": 4423,
+        "cost": 0.013663999999999999,
+        "durationMs": 1786,
         "numTurns": 1
       },
-      "ms": 17479
+      "ms": 4619
     },
     {
       "id": "p-json-schema",
@@ -464,10 +532,10 @@
           "duration_ms",
           "uuid"
         ],
-        "payloadPreview": "{\"productName\":\"ShopList\",\"audience\":\"One person managing groceries and household shopping from home or while out\",\"invariants\":[\"Items persist between sessions\",\"A checked item can always be unchecked\",\"The list is never lost due to app refresh\",\"Adding an item takes no more than 2 taps\",\"No authentication required\"],\"acceptance\":[{\"given\":\"I open the app\",\"then\":\"I see my existing items in the same state as last time\"},{\"given\":\"I add a new item\",\"then\":\"It appears at the bottom of the list immediately\"},{\"given\":\"I tap an item\",\"then\":\"It's marked done with a visual indicator (strikethrough or grayed)\"},{\"given\":\"I tap a checked item\",\"then\":\"It returns to unchecked state\"},{\"given\":\"I de…[887 chars]",
+        "payloadPreview": "{\"productName\":\"Shopping List\",\"audience\":\"A single person managing their household shopping needs\",\"invariants\":[\"Each item has a name and optional quantity\",\"Items have one of two states: completed or not completed\",\"Completed items remain in the list until deleted\",\"List persists across app sessions\",\"Only the item creator can delete items from the list\"],\"acceptance\":[{\"given\":\"the app is open and empty\",\"then\":\"the user can add a new item and see it appear in the list\"},{\"given\":\"an item exists in the list\",\"then\":\"the user can mark it complete with a single tap/click\"},{\"given\":\"an item is marked complete\",\"then\":\"it displays visually distinct (e.g., strikethrough) from incomplete item…[930 chars]",
         "stderr": ""
       },
-      "ms": 13794
+      "ms": 12183
     },
     {
       "id": "p-append-system-prompt",
@@ -487,7 +555,7 @@
         "stdout": "PERSONA_OK\n",
         "stderr": ""
       },
-      "ms": 12141
+      "ms": 6215
     },
     {
       "id": "p-agents-inline",
@@ -501,13 +569,13 @@
       ],
       "failureImpact": "None structural. Lenses ship as plugin agents (proven by p-plugin-skill-headless) or as separate sessions, which is the actual design.",
       "status": "partial",
-      "detail": "Inline agent marker not observed; the flag may be accepted without the agent being invoked. Output: Here's exactly what the probe_lens agent returned:\n\n---\n\nI'm unable to complete the conformance check at this moment due to permission restrictions on Bash access. Let me explain what I've found:\n\n**Current Situation:**\n- Working directory: `<TMP>/g…[1423 chars]",
+      "detail": "Inline agent marker not observed; the flag may be accepted without the agent being invoked. Output: ## Workspace Findings\n\n**Directory Location:** `<TMP>/guidelane-probe-fxhiet/p-agents-inline`\n\n**Status:** The workspace directory is **empty**\n\n### Key Observations:\n- **Directory Size:** 0 bytes (no files)\n- **Directory Permissions:** `drwxr-xr-x`…[825 chars]",
       "evidence": {
         "exit": 0,
-        "stdout": "Here's exactly what the probe_lens agent returned:\n\n---\n\nI'm unable to complete the conformance check at this moment due to permission restrictions on Bash access. Let me explain what I've found:\n\n**Current Situation:**\n- Working directory: `<TMP>/guidelane-probe-NpUvZi/p-agents-inline`\n- The workspace appears to be empty (no files detected)\n- The directory name suggests this is a Guidelane probe instance\n\n**To proceed with the conformance check using the probe lens, I need:**\n\n1. **Bash permissions** - to run conformance analysis tools and pr…[1423 chars]",
+        "stdout": "## Workspace Findings\n\n**Directory Location:** `<TMP>/guidelane-probe-fxhiet/p-agents-inline`\n\n**Status:** The workspace directory is **empty**\n\n### Key Observations:\n- **Directory Size:** 0 bytes (no files)\n- **Directory Permissions:** `drwxr-xr-x` (755 - standard read/write/execute permissions for owner)\n- **Owner:** <USER> (staff group)\n- **Created:** July 31, 2026 at 00:00\n- **Git Status:** Not a git repository\n- **Hidden Files:** None detected\n\n### Summary:\nThis is a temporary directory (located in `/T/` which is typically macOS temp st…[825 chars]",
         "stderr": ""
       },
-      "ms": 60389
+      "ms": 28580
     },
     {
       "id": "p-max-budget-subscription",
@@ -527,10 +595,13 @@
         "verdict": "enforced (call refused or halted by the budget ceiling)",
         "exit": 1,
         "answered": false,
-        "stdout": "{\"is_error\":true,\"duration_api_ms\":1953,\"num_turns\":1,\"stop_reason\":null,\"session_id\":\"9389367a-f0ea-4a65-9c18-8f3cc9e90efc\",\"total_cost_usd\":0.0005870000000000001,\"usage\":{\"input_tokens\":0,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"output_tokens\":0,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"mode…[1085 chars]",
+        "terminalSubtype": "error_max_budget_usd",
+        "budgetSubtype": true,
+        "stderrMentionsBudget": false,
+        "stdout": "{\"is_error\":true,\"duration_api_ms\":1157,\"num_turns\":1,\"stop_reason\":null,\"session_id\":\"4a968c11-eac3-4760-9c25-25b85f5c144b\",\"total_cost_usd\":0.000592,\"usage\":{\"input_tokens\":0,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"output_tokens\":0,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"modelUsage\":{\"cla…[1059 chars]",
         "stderr": ""
       },
-      "ms": 6706
+      "ms": 5751
     },
     {
       "id": "p-effort-model-fallback",
@@ -550,7 +621,7 @@
         "modelReported": null,
         "stderr": ""
       },
-      "ms": 4625
+      "ms": 3820
     },
     {
       "id": "p-permission-allowlist",
@@ -572,7 +643,7 @@
         "autoAloneTimedOut": false,
         "allowListTimedOut": false,
         "denialEvidence": true,
-        "autoAloneStdout": "I need your permission to write the file. Please approve the Write operation in the prompt that should appear in your Claude Code interface.\n",
+        "autoAloneStdout": "I need permission to write to the file. The system is asking for authorization to create probe.txt in the current directory. Please grant permission so I can proceed.\n",
         "allowListWrote": true,
         "allowListStdout": "WROTE_OK\n",
         "exits": {
@@ -580,7 +651,7 @@
           "allowed": 0
         }
       },
-      "ms": 17526
+      "ms": 20605
     },
     {
       "id": "p-session-identity",
@@ -596,16 +667,16 @@
       "status": "pass",
       "detail": "Session id honoured, resume kept context, fork produced a new id.",
       "evidence": {
-        "suppliedId": "22f37e6e-ee84-44b7-8088-9e6ade4d938a",
+        "suppliedId": "52a96c3e-2fdd-4376-a825-be5785520fdf",
         "resumeRecalled": true,
-        "forkedId": "1331c330-18fb-408c-a6ab-750f675dfa2e",
+        "forkedId": "c14494c2-8545-4cb2-bbd1-6cb7919adbf9",
         "exits": {
           "first": 0,
           "second": 0,
           "forked": 0
         }
       },
-      "ms": 19473
+      "ms": 25921
     },
     {
       "id": "p-mcp-strict-load",
@@ -622,10 +693,10 @@
       "detail": "MCP server loaded from the command line and its tool was callable under a fail-closed allow-list (mcp__<server>__<tool>).",
       "evidence": {
         "exit": 0,
-        "stdout": "{\"is_error\":false,\"duration_api_ms\":8331,\"num_turns\":3,\"stop_reason\":\"end_turn\",\"session_id\":\"31364fcd-8c57-47e6-ad36-28225eacc93d\",\"total_cost_usd\":0.0229215,\"usage\":{\"input_tokens\":28,\"cache_creation_input_tokens\":7090,\"cache_read_input_tokens\":66265,\"output_tokens\":294,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":7090,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"not_available\",\"iterations\":[{\"input_tokens\":8,\"output_tokens\":47,\"cache_read_input_tokens\":24510,\"cache_creation_input_tokens\":116,\"cache_creation\":{\"ephemeral_5m_input_tokens\":0,\"ephemeral_1h_input_tokens\":116},\"type\":\"message\"}],\"sp…[1352 chars]",
+        "stdout": "{\"is_error\":false,\"duration_api_ms\":7949,\"num_turns\":3,\"stop_reason\":\"end_turn\",\"session_id\":\"6b70c8cf-73f7-4a06-b776-b9f8cde2a807\",\"total_cost_usd\":0.0229132,\"usage\":{\"input_tokens\":28,\"cache_creation_input_tokens\":7089,\"cache_read_input_tokens\":66252,\"output_tokens\":293,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":7089,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"not_available\",\"iterations\":[{\"input_tokens\":8,\"output_tokens\":43,\"cache_read_input_tokens\":24501,\"cache_creation_input_tokens\":124,\"cache_creation\":{\"ephemeral_5m_input_tokens\":0,\"ephemeral_1h_input_tokens\":124},\"type\":\"message\"}],\"sp…[1352 chars]",
         "stderr": ""
       },
-      "ms": 8122
+      "ms": 10523
     },
     {
       "id": "p-plugin-skill-headless",
@@ -645,7 +716,7 @@
         "stdout": "SKILL_LOADED_OK\n",
         "stderr": ""
       },
-      "ms": 3867
+      "ms": 5178
     },
     {
       "id": "p-hook-events-headless",
@@ -677,10 +748,10 @@
         "markerSurvived": true,
         "wroteFile": true,
         "hookEventsInStreamCount": 12,
-        "sampleHookEvent": "{\"type\":\"system\",\"subtype\":\"hook_started\",\"hook_id\":\"632507d7-00db-4c11-91b0-7f60555fa7b0\",\"hook_name\":\"SessionStart:startup\",\"hook_event\":\"SessionStart\",\"uuid\":\"cfc3b97d-ee51-4ea6-82e4-1144c8bb1229\",\"session_id\":\"ab9a14c9-daf9-4d35-a6fa-c23e107aac4e\"}",
+        "sampleHookEvent": "{\"type\":\"system\",\"subtype\":\"hook_started\",\"hook_id\":\"1917f1f2-2421-4609-9a9c-ecee17cd8feb\",\"hook_name\":\"SessionStart:startup\",\"hook_event\":\"SessionStart\",\"uuid\":\"7e896aec-cb71-4f20-be40-aa731addb7d8\",\"session_id\":\"f98108df-e956-4df7-b964-445ead1b8e24\"}",
         "stderr": ""
       },
-      "ms": 7720
+      "ms": 9268
     },
     {
       "id": "p-plugin-bundled-mcp",
@@ -712,7 +783,7 @@
         "strictExcludesPluginServers": true,
         "namingPattern": "mcp__plugin_<plugin-name>_<server-name>__<tool>"
       },
-      "ms": 12846
+      "ms": 20696
     },
     {
       "id": "p-version-readable",
@@ -731,7 +802,7 @@
         "raw": "2.1.220 (Claude Code)",
         "parsed": "2.1.220"
       },
-      "ms": 82
+      "ms": 85
     },
     {
       "id": "p-auth-mode-visibility",
@@ -774,7 +845,7 @@
         "subscriptionType": "max",
         "parseFailed": false
       },
-      "ms": 373
+      "ms": 335
     },
     {
       "id": "p-automode-classifier-pinned",
@@ -800,7 +871,7 @@
         "driftedSections": [],
         "identical": true
       },
-      "ms": 1598
+      "ms": 1174
     },
     {
       "id": "p-autoupdate-governable",
@@ -819,7 +890,7 @@
         "mentionsDisable": false,
         "installHelpPreview": "Usage: claude install [options] [target]\n\nInstall Claude Code native build. Use [target] to specify version (stable,\nlatest, or specific version)\n\nOptions:\n  --force     Force installation even if already installed\n  -h, --help  Display help for command\n"
       },
-      "ms": 213
+      "ms": 183
     },
     {
       "id": "p-rate-limit-signal",
@@ -858,7 +929,8 @@
         "hasType": true,
         "note": "Only the healthy (\"allowed\") branch is observed here; the rejected branch is not provoked on purpose."
       },
-      "ms": 3551
+      "ms": 3402
     }
-  ]
+  ],
+  "exercisedVersion": "2.1.220 (Claude Code)"
 }

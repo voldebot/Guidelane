@@ -56,11 +56,15 @@ function handle(msg) {
 
   switch (method) {
     case 'initialize': {
-      // Echo the client's protocol version when it supplies one: the probe cares
-      // about transport reachability, not about pinning a revision.
+      // Reflect the client's protocol version only if it is one we actually
+      // know. Echoing an arbitrary client-supplied string back as our own
+      // declared version is how a server ends up "supporting" a revision it has
+      // never implemented — harmless in a fixture, not harmless in Atlas, and
+      // this file is the shape Atlas's transport will be modelled on.
       const requested = params && params.protocolVersion
+      const KNOWN = new Set(['2024-11-05', '2025-03-26', '2025-06-18'])
       reply(id, {
-        protocolVersion: typeof requested === 'string' ? requested : PROTOCOL_FALLBACK,
+        protocolVersion: typeof requested === 'string' && KNOWN.has(requested) ? requested : PROTOCOL_FALLBACK,
         capabilities: { tools: {}, resources: {} },
         serverInfo: SERVER_INFO,
       })
@@ -111,7 +115,15 @@ function handle(msg) {
 
 const rl = createInterface({ input: process.stdin, crlfDelay: Infinity })
 
+// A single unterminated line buffers without bound in readline. One megabyte is
+// far above any real MCP frame and far below anything that threatens the process.
+const MAX_LINE_BYTES = 1_000_000
+
 rl.on('line', (line) => {
+  if (line.length > MAX_LINE_BYTES) {
+    process.stderr.write(`[fixture] dropped oversized line (${line.length} bytes)\n`)
+    return
+  }
   const trimmed = line.trim()
   if (!trimmed) return
   let msg

@@ -26,7 +26,7 @@
 // extension; see task "S1 Tier A". This file is the probe harness, not the adapter.
 
 import { spawn } from 'node:child_process'
-import { mkdtempSync, mkdirSync, rmSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -65,6 +65,7 @@ export function parseArgs(argv) {
     outDir: null,
     keepWorkspaces: false,
     listOnly: false,
+    updateBaseline: false,
   }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
@@ -93,6 +94,7 @@ export function parseArgs(argv) {
       opts.timeoutMs = n * 1000
     } else if (a === '--out') opts.outDir = need()
     else if (a === '--keep-workspaces') opts.keepWorkspaces = true
+    else if (a === '--update-baseline') opts.updateBaseline = true
     else if (a === '--list') opts.listOnly = true
     else if (a === '--help' || a === '-h') opts.help = true
     else throw new Error(`Unknown argument: ${a}`)
@@ -309,7 +311,7 @@ export function makeContext({ opts, fixturesDir, suiteRoot, helpCache, audit }) 
   // passing `env: process.env` — which three of them did — cannot bypass the
   // deny-list, and the report's claim about scrubbing becomes true by
   // construction rather than by discipline.
-  const run = async (cmd, args, { cwd, stdin, timeoutMs, env: extraEnv } = {}) => {
+  const run = async (cmd, args, { cwd, stdin, timeoutMs, env: extraEnv, expectTimeout = false } = {}) => {
     const { env, removed } = scrubbedChildEnv(extraEnv === process.env ? {} : extraEnv)
     audit.spawns += 1
     for (const k of removed) audit.keysRemoved.add(k)
@@ -319,7 +321,16 @@ export function makeContext({ opts, fixturesDir, suiteRoot, helpCache, audit }) 
       stdin,
       timeoutMs: timeoutMs || opts.timeoutMs,
     })
-    if (res.outcome !== OUTCOME.COMPLETED) audit.degraded.push({ cmd, outcome: res.outcome })
+    // A timed-out call normally makes its probe INCONCLUSIVE, because a probe
+    // cannot say anything about the engine from a call that never finished.
+    // `expectTimeout` is the declared exception for probes whose SUBJECT is the
+    // timeout path itself — without it, the two probes that verify the kill and
+    // watchdog machinery can never report their own result. Same shape as
+    // `ambient: true`: an opt-out that is explicit and counted, not implicit.
+    if (res.outcome !== OUTCOME.COMPLETED) {
+      if (expectTimeout) audit.expectedTimeouts += 1
+      else audit.degraded.push({ cmd, outcome: res.outcome })
+    }
     return { ...res, scrubbedEnvKeys: removed }
   }
 
@@ -410,10 +421,51 @@ export function makeContext({ opts, fixturesDir, suiteRoot, helpCache, audit }) 
  * engine sessions would race on the same rate-limit window and make a limit
  * event indistinguishable from a genuine failure.
  */
+const LOCK_PATH = join(tmpdir(), 'guidelane-probe.lock')
+
+/**
+ * Refuse to run two suites at once. Sequencing inside one process is enforced by
+ * the await loop; across processes it was enforced by nothing, so the 04:00
+ * launchd run and a manual `--live` could interleave, race the same rate-limit
+ * window, and contend on ~/.claude.json (REVIEW-02 B7).
+ *
+ * A lock that can strand its owner is worse than no lock, so a dead holder is
+ * taken over automatically and the failure message says exactly what to do.
+ */
+function acquireLock() {
+  const mine = `${process.pid}\n`
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      writeFileSync(LOCK_PATH, mine, { flag: 'wx' })
+      return () => { try { rmSync(LOCK_PATH, { force: true }) } catch { /* already gone */ } }
+    } catch (err) {
+      if (err && err.code !== 'EEXIST') throw err
+      let holder = 0
+      try { holder = Number(String(readFileSync(LOCK_PATH, 'utf8')).trim()) } catch { /* unreadable */ }
+      let holderAlive = false
+      if (holder > 0) {
+        try { process.kill(holder, 0); holderAlive = true } catch { holderAlive = false }
+      }
+      if (holderAlive) {
+        throw new Error(
+          `Another probe run is active (pid ${holder}).\n` +
+          `Concurrent engine sessions race on the same rate-limit window, which makes a limit event\n` +
+          `indistinguishable from a real failure. Wait for it, or stop it with:  kill ${holder}\n` +
+          `If you are certain nothing is running, delete ${LOCK_PATH}`
+        )
+      }
+      // Stale lock from a crashed or killed run — reclaim it and retry once.
+      try { rmSync(LOCK_PATH, { force: true }) } catch { /* raced with another reclaimer */ }
+    }
+  }
+  throw new Error(`Could not acquire ${LOCK_PATH} after reclaiming a stale lock. Delete it manually and retry.`)
+}
+
 export async function runSuite({ probes, opts, fixturesDir }) {
+  const releaseLock = acquireLock()
   const suiteRoot = mkdtempSync(join(tmpdir(), 'guidelane-probe-'))
   const helpCache = new Map()
-  const audit = { spawns: 0, ambientSpawns: 0, keysRemoved: new Set(), degraded: [] }
+  const audit = { spawns: 0, ambientSpawns: 0, expectedTimeouts: 0, keysRemoved: new Set(), degraded: [] }
   const ctx = makeContext({ opts, fixturesDir, suiteRoot, helpCache, audit })
 
   if (opts.only) {
@@ -477,6 +529,7 @@ export async function runSuite({ probes, opts, fixturesDir }) {
       }
     }
   } finally {
+    releaseLock()
     // In a finally: a throw above must not leak a workspace containing files a
     // model wrote under --allowedTools Write.
     if (!opts.keepWorkspaces) {
@@ -510,6 +563,7 @@ export async function runSuite({ probes, opts, fixturesDir }) {
       denyList: SCRUBBED_ENV_KEYS,
       spawns: audit.spawns,
       ambientSpawns: audit.ambientSpawns,
+      expectedTimeouts: audit.expectedTimeouts,
       actuallyRemoved: [...audit.keysRemoved],
     },
     counts: tally(results),
