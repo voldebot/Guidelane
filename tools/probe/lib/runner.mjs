@@ -43,10 +43,20 @@ export const STATUS = {
   INCONCLUSIVE: 'inconclusive',
 }
 
+// How the child ended. This has to be a closed set the caller switches on,
+// because the alternative — inferring from `code`/`signal` — collapses
+// "the engine answered" into "the engine never ran".
 export const OUTCOME = {
   COMPLETED: 'completed',
   TIMEOUT: 'timeout',
+  // The synchronous throw from spawn(): almost nothing lands here, because Node
+  // reports nearly every spawn failure asynchronously.
   SPAWN_FAILED: 'spawn-failed',
+  // ...asynchronously, as a 'error' event on the child — ENOENT, EACCES, a
+  // binary that is not executable. This used to resolve through the normal exit
+  // path as COMPLETED with `code: null`, so a probe could conclude "the engine
+  // did not print the marker" about a child that was never born.
+  CHILD_ERROR: 'child-error',
 }
 
 const VALID_STATUS = new Set(Object.values(STATUS))
@@ -222,7 +232,7 @@ export function spawnCapture(cmd, args, { cwd, env, stdin, timeoutMs }) {
     }
     LIVE_CHILDREN.add(child)
 
-    const finish = (code, signal) => {
+    const finish = (code, signal, outcomeOverride) => {
       if (settled) return
       settled = true
       clearTimeout(timer)
@@ -241,8 +251,8 @@ export function spawnCapture(cmd, args, { cwd, env, stdin, timeoutMs }) {
         stdoutTruncated,
         stderrTruncated,
         timedOut,
-        spawnFailed: false,
-        outcome: timedOut ? OUTCOME.TIMEOUT : OUTCOME.COMPLETED,
+        spawnFailed: outcomeOverride === OUTCOME.CHILD_ERROR,
+        outcome: outcomeOverride || (timedOut ? OUTCOME.TIMEOUT : OUTCOME.COMPLETED),
         // The pipe never closed, so something in the tree outlived the group
         // kill. Surfaced rather than swallowed: this is REVIEW-02 B1's shape.
         orphanSuspected: signal === 'SIGKILL_NO_CLOSE',
@@ -297,7 +307,10 @@ export function spawnCapture(cmd, args, { cwd, env, stdin, timeoutMs }) {
     })
     child.on('error', (err) => {
       stderr += `\n[spawn error] ${err && err.message}`
-      finish(null, null)
+      // Explicitly CHILD_ERROR, not the exit path. A child that never ran must
+      // not resolve as COMPLETED — a probe reading `code !== 0` or an absent
+      // marker would report a confident finding about the engine.
+      finish(null, null, OUTCOME.CHILD_ERROR)
     })
     child.on('close', finish)
 
@@ -348,7 +361,11 @@ export function makeContext({ opts, fixturesDir, suiteRoot, helpCache, audit }) 
     // watchdog machinery can never report their own result. Same shape as
     // `ambient: true`: an opt-out that is explicit and counted, not implicit.
     if (res.outcome !== OUTCOME.COMPLETED) {
-      if (expectTimeout) audit.expectedTimeouts += 1
+      // `expectTimeout` excuses a TIMEOUT and nothing else. A probe whose
+      // subject is the timeout path still cannot draw a conclusion from a child
+      // that failed to launch, so CHILD_ERROR and SPAWN_FAILED degrade
+      // regardless of what the probe declared it was expecting.
+      if (expectTimeout && res.outcome === OUTCOME.TIMEOUT) audit.expectedTimeouts += 1
       else audit.degraded.push({ cmd, outcome: res.outcome })
     }
     // stdoutTruncated/stderrTruncated were computed and read by nothing. A probe
