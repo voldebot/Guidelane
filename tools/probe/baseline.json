@@ -18,7 +18,7 @@
     "p-usage-accounting": "pass",
     "p-json-schema": "pass",
     "p-append-system-prompt": "pass",
-    "p-agents-inline": "partial",
+    "p-agents-inline": "pass",
     "p-max-budget-subscription": "pass",
     "p-effort-model-fallback": "pass",
     "p-permission-allowlist": "pass",
@@ -30,7 +30,7 @@
     "p-version-readable": "pass",
     "p-auth-mode-visibility": "pass",
     "p-automode-classifier-pinned": "pass",
-    "p-autoupdate-governable": "partial",
+    "p-autoupdate-governable": "pass",
     "p-rate-limit-signal": "pass"
   }
 }
