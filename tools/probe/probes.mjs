@@ -1370,27 +1370,29 @@ const governanceProbes = [
       const counts = Object.fromEntries(sections.map((s) => [s, Array.isArray(a[s]) ? a[s].length : null]))
       const drifted = sections.filter((s) => JSON.stringify(a[s]) !== JSON.stringify(b[s]))
 
-      // A machine with no user settings satisfies `config == defaults`
-      // VACUOUSLY — there is nothing that could have drifted. That is the state
-      // of a fresh CI runner, so a green here in CI means strictly less than a
-      // green on a machine that actually has configuration. Say so, rather than
-      // let one green stand in for the other: this probe's whole point is that
-      // the classifier is per-machine, and the environment least likely to have
-      // a per-machine classifier is the one asserting it nightly.
+      // A "vacuous pass" detector (`totalRules === 0`) briefly lived here, on the
+      // theory that a fresh CI runner has no classifier rules and so satisfies
+      // `config == defaults` trivially. THE CI LOGS FALSIFIED IT WITHIN THE HOUR:
+      // the runner reports allow:17, soft_deny:65, hard_deny:1 — identical to
+      // macOS — because `auto-mode config` returns the merged EFFECTIVE
+      // classifier, which is the shipped defaults when nothing overrides them,
+      // not an empty set. The branch could never have fired. Removed rather than
+      // left in place: a guard that cannot fire is decoration, and this file has
+      // now produced that same mistake three times.
+      //
+      // What remains true and worth stating: this probe measures the machine it
+      // runs on. A pass in CI is a real measurement of the runner, and a real
+      // measurement of the owner's laptop is a separate run. Neither substitutes
+      // for the other, and nothing here pretends otherwise.
       const totalRules = sections.reduce((n, s) => n + (Array.isArray(a[s]) ? a[s].length : 0), 0)
-      const vacuous = totalRules === 0
 
       return {
         status: drifted.length === 0 ? P.PASS : P.PARTIAL,
         detail: drifted.length !== 0
           ? `Classifier DRIFTS from defaults in: ${drifted.join(', ')}. G0 doctor must surface this — \`auto\` does not mean the same thing here.`
-          : vacuous
-            ? `Effective classifier matches the shipped defaults, but VACUOUSLY — this machine has 0 classifier ` +
-              `rules at all, so there was nothing that could have drifted. A pass here is evidence the command ` +
-              `works, NOT evidence that the classifier is portable. The load-bearing run is one on a machine with ` +
-              `real user settings.`
-            : `Effective classifier is byte-identical to the shipped defaults (${sections.map((s) => `${s}:${counts[s]}`).join(', ')}).`,
-        evidence: { counts, driftedSections: drifted, identical: drifted.length === 0, vacuous, totalRules },
+          : `Effective classifier is byte-identical to the shipped defaults (${sections.map((s) => `${s}:${counts[s]}`).join(', ')}). ` +
+            `Measures THIS machine only — the same assertion on a friend's laptop is a different run, which is the whole reason the probe exists.`,
+        evidence: { counts, driftedSections: drifted, identical: drifted.length === 0, totalRules },
       }
     },
   },
