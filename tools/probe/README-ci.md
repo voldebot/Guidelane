@@ -6,7 +6,7 @@ only run where a human is already signed in.
 
 | Tier | Probes | Needs a login? | Where it runs | Catches |
 |---|---|---|---|---|
-| free | 10 | no | GitHub Actions (`.github/workflows/engine-conformance.yml`) | a CLI release changing a flag, a subcommand, or a help-text contract |
+| free | 13 | no | GitHub Actions (`.github/workflows/engine-conformance.yml`) | a CLI release changing a flag, a subcommand, or a help-text contract |
 | `--live` | +17 | **yes** | the owner's laptop, on a local schedule | a change in what the engine actually *does* |
 
 ## The live tier, locally (macOS, launchd)
@@ -14,7 +14,18 @@ only run where a human is already signed in.
 `launchd` is the right tool here rather than `cron`: it survives sleep by running
 the job at the next wake, which matters on a laptop that is closed at 04:00.
 
-Write `~/Library/LaunchAgents/com.guidelane.conformance.plist`:
+**Use the installer, not the block below**: `./tools/probe/install-nightly.sh install`.
+It derives the repo path from its own location and passes no flags the harness
+does not already default to — the hand-copied plist hardcoded both, so the repo
+path and the pinned `--model haiku` could drift away from reality without anyone
+noticing. `… status` reports honestly whether anything is scheduled; `… uninstall`
+removes it.
+
+**Nothing is scheduled by default.** A 04:00 job makes 17 real engine calls a
+night on the owner's subscription — a standing cost, and therefore an explicit
+decision rather than a side effect of cloning the repo.
+
+The plist it writes, for reference:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -88,7 +99,10 @@ and nothing in the code can stop it.
 
 ## One run at a time
 
-The suite takes a lockfile in the temp dir. A second run refuses to start and
+The suite takes a lockfile at `~/.guidelane/probe.lock` — NOT in the temp dir,
+because macOS gives launchd and each Terminal login session their own per-session
+`TMPDIR`, so a lock there is invisible between exactly the two processes it exists
+to serialise. A second run refuses to start and
 names the pid holding it. This is not tidiness: concurrent engine sessions race
 on the same five-hour rate-limit window, which makes a limit event
 indistinguishable from a real failure — and REVIEW-02 B7 flags that concurrent
@@ -97,7 +111,10 @@ recover from.
 
 A lock left behind by a crashed run is reclaimed automatically: the holder pid is
 liveness-checked, and a dead holder loses the lock. A lock that can strand its
-owner would be worse than no lock at all.
+owner would be worse than no lock at all. **Liveness beats the TTL** — a holder
+that is still alive keeps the lock at any age, because a slow run (rate-limit
+pauses) is not a dead one, and the earlier form stole the lock at exactly the
+moment contention hurts most.
 
 ## Things that will bite
 

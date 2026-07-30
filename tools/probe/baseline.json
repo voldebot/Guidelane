@@ -1,5 +1,9 @@
 {
   "_comment": "Expected probe statuses. Regenerate ONLY with `node tools/probe/run.mjs --live --update-baseline`, and commit this file on its own so the change is reviewable. Editing it by hand to silence a red build defeats the point.",
+  "generatedOn": {
+    "platform": "darwin",
+    "loggedIn": true
+  },
   "engineVersion": "2.1.220 (Claude Code)",
   "expected": {
     "p-flag-surface": "pass",

@@ -108,11 +108,18 @@ service; anything commercial.
   data/auth always `full`. Invariants are always pushed (≤~300 tokens), exempt
   from proportionality.
 - **Engine sessions run with auto-update disabled** in the child env; tested
-  CLI version range maintained. The conformance probe runs on a schedule in two
-  places, and the split is an ADR-001 consequence, not an oversight: the **free
-  tier in GitHub Actions** (a runner has no subscription login), the **`--live`
-  tier locally** on a machine where the owner is signed in
-  (`tools/probe/README-ci.md`).
+  CLI version range maintained. The conformance probe is *designed* to run on a
+  schedule in two places, and the split is an ADR-001 consequence rather than an
+  oversight: the **free tier in GitHub Actions** (a runner has no subscription
+  login) and the **`--live` tier locally** on a machine where the owner is
+  signed in (`tools/probe/README-ci.md`).
+  **Status, stated because this sentence used to overclaim**: the free tier
+  genuinely runs — every push plus daily. The live tier is **NOT scheduled on
+  any machine**; `tools/probe/install-nightly.sh install` sets it up in one
+  command, and `… status` will tell you the truth at any time. It is not
+  installed by default because a 04:00 job spending 17 real engine calls a night
+  is a standing cost on the owner's subscription, which is the owner's call.
+  Until it is installed, live conformance is whatever was last run by hand.
 
 ## 4. Folder convention
 

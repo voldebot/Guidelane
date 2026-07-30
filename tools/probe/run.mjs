@@ -196,6 +196,34 @@ function checkBaseline(report, opts) {
         'Expected probe statuses. Regenerate ONLY with `node tools/probe/run.mjs --live --update-baseline`, ' +
         'and commit this file on its own so the change is reviewable. Editing it by hand to silence a red ' +
         'build defeats the point.',
+      // ONE baseline, asserted in BOTH environments — deliberately, not by
+      // omission. This file is generated on macOS with the owner signed in and
+      // then asserted by CI on a logged-out Linux runner, and the free tier has
+      // agreed across both from the start. Splitting it (baseline.free.json /
+      // baseline.live.json) or adding a per-tier expectation would sanction a
+      // divergence that does not exist, and would leave each environment
+      // unchecked by the other — a free probe regressing on macOS would be
+      // caught nowhere.
+      //
+      // THE RULE: a probe whose STATUS depends on the environment is measuring
+      // the environment, not the engine. Fix the probe, never the baseline.
+      // `p-auth-mode-visibility` is the worked example — it branches on
+      // `loggedIn` and asserts something different but equally meaningful in
+      // each case, so its status is stable while its assertion is not.
+      //
+      // `generatedOn` exists so that IF the two ever disagree, the report can
+      // say which environment produced the expectation instead of leaving
+      // someone to guess.
+      // Derived from a probe that already measured it, rather than spending a
+      // second `auth status` call to learn something the run already knows.
+      generatedOn: {
+        platform: process.platform,
+        loggedIn: (() => {
+          const p = report.results.find((r) => r.id === 'p-auth-mode-visibility')
+          const v = p && p.evidence && p.evidence.loggedIn
+          return v === true || v === false ? v : null
+        })(),
+      },
       engineVersion: report.exercisedVersion || null,
       expected: Object.fromEntries(judged.map((r) => [r.id, r.status])),
     }
@@ -238,6 +266,18 @@ function checkBaseline(report, opts) {
   const actualV = semverOf(report.exercisedVersion)
   if (expectedV && actualV && expectedV !== actualV) {
     drift.push({ id: '(engine version)', expected: expectedV, actual: actualV })
+  }
+  // Informational, NOT drift. Asserting across environments is the design; the
+  // note exists so a future disagreement is attributable on sight rather than
+  // debugged from scratch.
+  const gen = baseline.generatedOn
+  if (gen && gen.platform && gen.platform !== process.platform) {
+    process.stderr.write(
+      `Note: this baseline was generated on ${gen.platform}` +
+      `${gen.loggedIn === false ? ' (logged out)' : gen.loggedIn === true ? ' (signed in)' : ''}` +
+      `; asserting it on ${process.platform}. That is intended — a probe whose status differs by ` +
+      `environment is measuring the environment, so any drift below is a probe bug, not a tiering problem.\n`
+    )
   }
   for (const r of judged) {
     const expected = baseline.expected[r.id]

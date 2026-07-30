@@ -70,6 +70,30 @@ const clip = (s, n = 1200) => {
 // assertion matches against the collapsed form.
 const flat = (s) => String(s || '').replace(/\s+/g, ' ')
 
+/**
+ * The set of flags the help text actually DECLARES, read from the option column.
+ *
+ * Deliberately NOT built on `flat()`: the line structure is the only thing that
+ * distinguishes a flag's definition from a mention of it inside someone else's
+ * description, and flattening destroys exactly that. Option lines are indented
+ * then start with `-`; the head of the line (before the 2+ space gutter) is the
+ * flag and its metavar.
+ */
+const declaredFlags = (helpRaw) => {
+  const found = new Set()
+  for (const line of String(helpRaw || '').split('\n')) {
+    if (!/^\s{1,8}-/.test(line)) continue
+    // trim() FIRST — the line begins with the indent, so splitting on the gutter
+    // without trimming yields an empty first element and finds nothing at all.
+    const head = line.trim().split(/\s{2,}/)[0]
+    for (const tok of head.split(/[,\s]+/)) {
+      const flag = tok.replace(/[=<[].*$/, '')
+      if (/^--?[A-Za-z]/.test(flag)) found.add(flag)
+    }
+  }
+  return found
+}
+
 // Every flag the plan's architecture depends on. A missing entry here is not a
 // cosmetic problem: each one is load-bearing for a named mechanism.
 const REQUIRED_FLAGS = [
@@ -120,15 +144,70 @@ const helpProbes = [
       'A missing flag invalidates whichever mechanism depends on it and may force the PTY contingency for that capability.',
     docRefs: ['RESEARCH-01 §4.1', 'RESEARCH-02 §5', 'ADR-001'],
     async run(ctx) {
-      const help = flat(await ctx.help())
+      const raw = await ctx.help()
+      const help = flat(raw)
+      // TWO SIGNALS, because either alone fails silently in a different direction.
+      //
+      // Substring-over-flattened-help (the original) cannot tell a flag's
+      // DEFINITION from a mention of it inside another flag's description. Remove
+      // `--forward-subagent-text` and add "replaces the removed
+      // --forward-subagent-text" under a neighbour, and this `critical` probe —
+      // whose entire job is catching removals — stays green forever.
+      //
+      // The option-column parse alone would be worse: it depends on the vendor's
+      // help formatter, so a layout change makes it report every flag missing,
+      // i.e. libel the engine. (This probe's fix was deferred once on the grounds
+      // that column parsing "trades one silent failure for another". That was
+      // wrong, and it was wrong because my throwaway parser had a bug — the line
+      // starts with two spaces, so `split(/\s{2,}/)[0]` was the empty string. The
+      // measured parser finds 69 declared flags and misses none of the required
+      // ones. Test the worry before honouring it.)
+      const declared = declaredFlags(raw)
+      // A healthy parse sees ~69 flags; a broken one sees ~0. The gap is enormous,
+      // so a floor separates "the formatter changed" from "flags disappeared"
+      // without either masking the other.
+      const PARSER_FLOOR = 40
+      const parserBroke = declared.size < PARSER_FLOOR
+
       const missing = REQUIRED_FLAGS.filter(([flag]) => !help.includes(flag))
+      // The case neither signal catches alone: present in the text, absent from
+      // the option column — a flag that now exists only as prose about its own
+      // removal.
+      const proseOnly = parserBroke
+        ? []
+        : REQUIRED_FLAGS.filter(([flag]) => help.includes(flag) && !declared.has(flag)).map(([f]) => f)
+
+      if (parserBroke) {
+        return {
+          status: P.PARTIAL,
+          detail:
+            `The option-column parser found only ${declared.size} flags (floor ${PARSER_FLOOR}) — the help ` +
+            `formatter changed, so the declared-vs-mentioned check cannot run. Substring check says ` +
+            `${missing.length ? `MISSING ${missing.map(([f]) => f).join(', ')}` : 'all present'}, but that check ` +
+            `cannot distinguish a definition from a mention. Fix the parser before believing either answer.`,
+          evidence: { declaredCount: declared.size, parserFloor: PARSER_FLOOR, substringMissing: missing.map(([f]) => f) },
+        }
+      }
+
       return {
-        status: missing.length === 0 ? P.PASS : P.FAIL,
+        status: missing.length === 0 && proseOnly.length === 0 ? P.PASS : P.FAIL,
         detail:
-          missing.length === 0
-            ? `All ${REQUIRED_FLAGS.length} required flags present.`
-            : `Missing: ${missing.map(([f, why]) => `${f} (needed for ${why})`).join('; ')}`,
-        evidence: { required: REQUIRED_FLAGS.length, missing: missing.map(([f]) => f) },
+          missing.length === 0 && proseOnly.length === 0
+            ? `All ${REQUIRED_FLAGS.length} required flags present AND declared in the option column (${declared.size} flags parsed).`
+            : [
+                missing.length ? `Missing entirely: ${missing.map(([f, why]) => `${f} (needed for ${why})`).join('; ')}` : null,
+                proseOnly.length
+                  ? `MENTIONED BUT NOT DECLARED — present in the help text yet absent from the option column, ` +
+                    `i.e. removed and only referred to in prose: ${proseOnly.join(', ')}. This is the exact case ` +
+                    `a substring check reports as healthy.`
+                  : null,
+              ].filter(Boolean).join(' | '),
+        evidence: {
+          required: REQUIRED_FLAGS.length,
+          missing: missing.map(([f]) => f),
+          mentionedButNotDeclared: proseOnly,
+          declaredCount: declared.size,
+        },
       }
     },
   },
@@ -1291,14 +1370,27 @@ const governanceProbes = [
       const counts = Object.fromEntries(sections.map((s) => [s, Array.isArray(a[s]) ? a[s].length : null]))
       const drifted = sections.filter((s) => JSON.stringify(a[s]) !== JSON.stringify(b[s]))
 
-      // Drift is not a failure of the engine — it is a fact the doctor must
-      // report, because it changes what `auto` does on this install.
+      // A machine with no user settings satisfies `config == defaults`
+      // VACUOUSLY — there is nothing that could have drifted. That is the state
+      // of a fresh CI runner, so a green here in CI means strictly less than a
+      // green on a machine that actually has configuration. Say so, rather than
+      // let one green stand in for the other: this probe's whole point is that
+      // the classifier is per-machine, and the environment least likely to have
+      // a per-machine classifier is the one asserting it nightly.
+      const totalRules = sections.reduce((n, s) => n + (Array.isArray(a[s]) ? a[s].length : 0), 0)
+      const vacuous = totalRules === 0
+
       return {
         status: drifted.length === 0 ? P.PASS : P.PARTIAL,
-        detail: drifted.length === 0
-          ? `Effective classifier is byte-identical to the shipped defaults (${sections.map((s) => `${s}:${counts[s]}`).join(', ')}).`
-          : `Classifier DRIFTS from defaults in: ${drifted.join(', ')}. G0 doctor must surface this — \`auto\` does not mean the same thing here.`,
-        evidence: { counts, driftedSections: drifted, identical: drifted.length === 0 },
+        detail: drifted.length !== 0
+          ? `Classifier DRIFTS from defaults in: ${drifted.join(', ')}. G0 doctor must surface this — \`auto\` does not mean the same thing here.`
+          : vacuous
+            ? `Effective classifier matches the shipped defaults, but VACUOUSLY — this machine has 0 classifier ` +
+              `rules at all, so there was nothing that could have drifted. A pass here is evidence the command ` +
+              `works, NOT evidence that the classifier is portable. The load-bearing run is one on a machine with ` +
+              `real user settings.`
+            : `Effective classifier is byte-identical to the shipped defaults (${sections.map((s) => `${s}:${counts[s]}`).join(', ')}).`,
+        evidence: { counts, driftedSections: drifted, identical: drifted.length === 0, vacuous, totalRules },
       }
     },
   },

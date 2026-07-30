@@ -1,6 +1,6 @@
 {
   "version": "2.1.220 (Claude Code)",
-  "generatedAt": "2026-07-30T22:31:53.540Z",
+  "generatedAt": "2026-07-30T22:59:11.150Z",
   "suiteRoot": "<TMP>/guidelane-probe-<run>",
   "workspacesKept": false,
   "stoleStaleLock": false,
@@ -62,13 +62,15 @@
       ],
       "failureImpact": "A missing flag invalidates whichever mechanism depends on it and may force the PTY contingency for that capability.",
       "status": "pass",
-      "detail": "All 33 required flags present.",
+      "detail": "All 33 required flags present AND declared in the option column (69 flags parsed).",
       "evidence": {
         "required": 33,
-        "missing": []
+        "missing": [],
+        "mentionedButNotDeclared": [],
+        "declaredCount": 69
       },
       "observationFailures": null,
-      "ms": 483
+      "ms": 280
     },
     {
       "id": "p-bare-forbidden",
@@ -132,7 +134,7 @@
         "present": true
       },
       "observationFailures": null,
-      "ms": 1
+      "ms": 0
     },
     {
       "id": "p-plugin-eval-exists",
@@ -152,7 +154,7 @@
         "hasEval": true
       },
       "observationFailures": null,
-      "ms": 516
+      "ms": 132
     },
     {
       "id": "p-plugin-validate-fixture",
@@ -173,7 +175,7 @@
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 840
+      "ms": 333
     },
     {
       "id": "p-kill-reaps-process-group",
@@ -192,10 +194,10 @@
         "timedOut": true,
         "parentSurvived": false,
         "grandchildSurvived": false,
-        "settleMs": 4011
+        "settleMs": 4004
       },
       "observationFailures": null,
-      "ms": 4019
+      "ms": 4005
     },
     {
       "id": "p-watchdog-settles-on-escaped-child",
@@ -210,15 +212,15 @@
       ],
       "failureImpact": "The single worst outcome the product can have: a run that stops with no output, no error, and no terminal event. In the nightly job it burns to the CI cap; in front of a non-coder it is \"the computer froze\".",
       "status": "pass",
-      "detail": "Escaped grandchild held the pipe open and 'close' never came, yet the call settled in 8021ms via the watchdog. A stuck session degrades into evidence instead of a silent hang. As designed, the escapee outlived the group kill — the probe reaped it itself.",
+      "detail": "Escaped grandchild held the pipe open and 'close' never came, yet the call settled in 8006ms via the watchdog. A stuck session degrades into evidence instead of a silent hang. As designed, the escapee outlived the group kill — the probe reaped it itself.",
       "evidence": {
-        "elapsedMs": 8021,
+        "elapsedMs": 8006,
         "timedOut": true,
         "escapeeOutlivedGroupKill": true,
-        "settleMs": 8020
+        "settleMs": 8006
       },
       "observationFailures": null,
-      "ms": 8028
+      "ms": 8008
     },
     {
       "id": "p-version-in-tested-range",
@@ -243,7 +245,7 @@
         "inRange": true
       },
       "observationFailures": null,
-      "ms": 210
+      "ms": 97
     },
     {
       "id": "p-init-receipt",
@@ -297,7 +299,7 @@
         "version": "2.1.220"
       },
       "observationFailures": null,
-      "ms": 3654
+      "ms": 3060
     },
     {
       "id": "p-ambient-isolation",
@@ -363,7 +365,7 @@
         "bothFlagsRequired": true
       },
       "observationFailures": null,
-      "ms": 9410
+      "ms": 7662
     },
     {
       "id": "p-messagedisplay-rewrite",
@@ -387,7 +389,7 @@
         "rewritten": true
       },
       "observationFailures": null,
-      "ms": 4190
+      "ms": 3481
     },
     {
       "id": "p-stream-json-roundtrip",
@@ -404,7 +406,7 @@
       "detail": "Full round-trip. Event types: system, user, stream_event, rate_limit_event, assistant, result.",
       "evidence": {
         "exit": 0,
-        "eventCount": 23,
+        "eventCount": 27,
         "types": [
           "system",
           "user",
@@ -448,7 +450,7 @@
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 4600
+      "ms": 4325
     },
     {
       "id": "p-usage-accounting",
@@ -489,40 +491,40 @@
         ],
         "usage": {
           "input_tokens": 10,
-          "cache_creation_input_tokens": 6419,
+          "cache_creation_input_tokens": 6417,
           "cache_read_input_tokens": 0,
-          "output_tokens": 43,
+          "output_tokens": 47,
           "server_tool_use": {
             "web_search_requests": 0,
             "web_fetch_requests": 0
           },
           "service_tier": "standard",
           "cache_creation": {
-            "ephemeral_1h_input_tokens": 6419,
+            "ephemeral_1h_input_tokens": 6417,
             "ephemeral_5m_input_tokens": 0
           },
           "inference_geo": "not_available",
           "iterations": [
             {
               "input_tokens": 10,
-              "output_tokens": 43,
+              "output_tokens": 47,
               "cache_read_input_tokens": 0,
-              "cache_creation_input_tokens": 6419,
+              "cache_creation_input_tokens": 6417,
               "cache_creation": {
                 "ephemeral_5m_input_tokens": 0,
-                "ephemeral_1h_input_tokens": 6419
+                "ephemeral_1h_input_tokens": 6417
               },
               "type": "message"
             }
           ],
           "speed": "standard"
         },
-        "cost": 0.013647,
-        "durationMs": 1225,
+        "cost": 0.013663,
+        "durationMs": 1462,
         "numTurns": 1
       },
       "observationFailures": null,
-      "ms": 2526
+      "ms": 2731
     },
     {
       "id": "p-json-schema",
@@ -563,11 +565,11 @@
           "duration_ms",
           "uuid"
         ],
-        "payloadPreview": "{\"productName\":\"ShopList\",\"audience\":\"Individual home shoppers managing their personal grocery and household purchases\",\"invariants\":[\"A shopping list is persistent across sessions\",\"Each item has a checked/unchecked state (purchased or not)\",\"The app serves exactly one user with no authentication needed\",\"Items can only be added or removed by the user, not shared\"],\"acceptance\":[{\"given\":\"a user opens the app\",\"then\":\"they see their previous shopping list (or an empty list on first use)\"},{\"given\":\"a user wants to add an item to their list\",\"then\":\"they can type a name, press enter, and see it appear as unchecked\"},{\"given\":\"a user has bought an item\",\"then\":\"they can tap/click it to mark i…[955 chars]",
+        "payloadPreview": "{\"productName\":\"ShopList\",\"audience\":\"A single person managing household groceries and errands\",\"invariants\":[\"Every list item has a name and completion state\",\"Completed items remain in the list until explicitly deleted\",\"All changes persist across browser sessions\",\"The list is never empty—adding an item that already exists increments its quantity instead\"],\"acceptance\":[{\"given\":\"the user opens the app\",\"then\":\"they see all saved items with their completion states and quantities\"},{\"given\":\"the user types an item name and presses Enter\",\"then\":\"a new item appears with quantity 1 and completion state unchecked\"},{\"given\":\"the user clicks an item's checkbox\",\"then\":\"it toggles between check…[1078 chars]",
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 9905
+      "ms": 9849
     },
     {
       "id": "p-append-system-prompt",
@@ -588,7 +590,7 @@
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 4196
+      "ms": 2981
     },
     {
       "id": "p-agents-inline",
@@ -621,7 +623,7 @@
         "exit": 0
       },
       "observationFailures": null,
-      "ms": 105653
+      "ms": 26231
     },
     {
       "id": "p-max-budget-subscription",
@@ -644,11 +646,11 @@
         "terminalSubtype": "error_max_budget_usd",
         "budgetSubtype": true,
         "stderrMentionsBudget": false,
-        "stdout": "{\"is_error\":true,\"duration_api_ms\":1377,\"num_turns\":1,\"stop_reason\":null,\"session_id\":\"2affbfd9-039a-4f4c-bf1a-054a29fe70d6\",\"total_cost_usd\":0.000582,\"usage\":{\"input_tokens\":0,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"output_tokens\":0,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"modelUsage\":{\"cla…[1059 chars]",
+        "stdout": "{\"is_error\":true,\"duration_api_ms\":1142,\"num_turns\":1,\"stop_reason\":null,\"session_id\":\"cac5880f-9c7d-4755-8fb3-ecff9349ebea\",\"total_cost_usd\":0.000582,\"usage\":{\"input_tokens\":0,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"output_tokens\":0,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"modelUsage\":{\"cla…[1059 chars]",
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 4261
+      "ms": 2693
     },
     {
       "id": "p-effort-model-fallback",
@@ -669,7 +671,7 @@
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 3109
+      "ms": 2787
     },
     {
       "id": "p-permission-allowlist",
@@ -699,7 +701,7 @@
         "permissionDeniedHookFired": false,
         "advisoryFrameSeen": false,
         "proseHintOnly": false,
-        "autoAloneStdout": "{\"type\":\"system\",\"subtype\":\"hook_started\",\"hook_id\":\"6571257f-7d06-403c-816f-f7dbde8f37bf\",\"hook_name\":\"SessionStart:startup\",\"hook_event\":\"SessionStart\",\"uuid\":\"e39e40b2-30b8-4749-a335-90c157327791\",\"session_id\":\"1e531f06-a4f7-44c1-b1b3-1b64e6bd1986\"}\n{\"type\":\"system\",\"subtype\":\"hook_response\",\"hoo…[17923 chars]",
+        "autoAloneStdout": "{\"type\":\"system\",\"subtype\":\"hook_started\",\"hook_id\":\"95a73293-42fe-4395-a248-37f780b0fd66\",\"hook_name\":\"SessionStart:startup\",\"hook_event\":\"SessionStart\",\"uuid\":\"15499d90-bb6c-4b4b-97da-7c60a7807a4d\",\"session_id\":\"a3fe7386-a120-4492-9fac-7495039a71c4\"}\n{\"type\":\"system\",\"subtype\":\"hook_response\",\"hoo…[16436 chars]",
         "allowListWrote": true,
         "allowListStdout": "WROTE_OK\n",
         "exits": {
@@ -708,7 +710,7 @@
         }
       },
       "observationFailures": null,
-      "ms": 17860
+      "ms": 17271
     },
     {
       "id": "p-session-identity",
@@ -724,9 +726,9 @@
       "status": "pass",
       "detail": "Session id honoured, resume kept context, fork produced a new id.",
       "evidence": {
-        "suppliedId": "d0f530c0-fadd-49cb-b04f-2423d860251c",
+        "suppliedId": "69b4909c-6f85-48cf-9f02-2aa51f73dd4f",
         "resumeRecalled": true,
-        "forkedId": "5d6674ad-1e3e-47db-8e6c-90554beb244f",
+        "forkedId": "7754375c-176d-427e-a953-cbbbe197d515",
         "exits": {
           "first": 0,
           "second": 0,
@@ -734,7 +736,7 @@
         }
       },
       "observationFailures": null,
-      "ms": 18324
+      "ms": 15887
     },
     {
       "id": "p-mcp-strict-load",
@@ -751,11 +753,11 @@
       "detail": "MCP server loaded from the command line and its tool was callable under a fail-closed allow-list (mcp__<server>__<tool>).",
       "evidence": {
         "exit": 0,
-        "stdout": "{\"is_error\":false,\"duration_api_ms\":8019,\"num_turns\":3,\"stop_reason\":\"end_turn\",\"session_id\":\"96470188-4cd8-4efd-882b-a5bee460cb42\",\"total_cost_usd\":0.02306,\"usage\":{\"input_tokens\":28,\"cache_creation_input_tokens\":7104,\"cache_read_input_tokens\":66270,\"output_tokens\":316,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":7104,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"not_available\",\"iterations\":[{\"input_tokens\":8,\"output_tokens\":55,\"cache_read_input_tokens\":24515,\"cache_creation_input_tokens\":125,\"cache_creation\":{\"ephemeral_5m_input_tokens\":0,\"ephemeral_1h_input_tokens\":125},\"type\":\"message\"}],\"spee…[1348 chars]",
+        "stdout": "{\"is_error\":false,\"duration_api_ms\":7477,\"num_turns\":3,\"stop_reason\":\"end_turn\",\"session_id\":\"4351297d-6d9e-4cb8-881b-da6f76fce737\",\"total_cost_usd\":0.0229571,\"usage\":{\"input_tokens\":28,\"cache_creation_input_tokens\":7088,\"cache_read_input_tokens\":66261,\"output_tokens\":302,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":7088,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"not_available\",\"iterations\":[{\"input_tokens\":8,\"output_tokens\":55,\"cache_read_input_tokens\":24508,\"cache_creation_input_tokens\":116,\"cache_creation\":{\"ephemeral_5m_input_tokens\":0,\"ephemeral_1h_input_tokens\":116},\"type\":\"message\"}],\"sp…[1352 chars]",
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 8594
+      "ms": 7159
     },
     {
       "id": "p-plugin-skill-headless",
@@ -776,7 +778,7 @@
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 4081
+      "ms": 3856
     },
     {
       "id": "p-hook-events-headless",
@@ -808,11 +810,11 @@
         "markerSurvived": true,
         "wroteFile": true,
         "hookEventsInStreamCount": 12,
-        "sampleHookEvent": "{\"type\":\"system\",\"subtype\":\"hook_started\",\"hook_id\":\"e91fca56-bc13-413b-98b1-2ddcf89abcf8\",\"hook_name\":\"SessionStart:startup\",\"hook_event\":\"SessionStart\",\"uuid\":\"9d1ea00c-606b-4650-a229-903cc31a195a\",\"session_id\":\"7d816a6b-ea36-49be-8649-7a0aaf102f3d\"}",
+        "sampleHookEvent": "{\"type\":\"system\",\"subtype\":\"hook_started\",\"hook_id\":\"39bf8de9-a0d6-4ddd-8a09-0edbcf9f6fea\",\"hook_name\":\"SessionStart:startup\",\"hook_event\":\"SessionStart\",\"uuid\":\"9d1e9a75-f24a-4d53-b083-ee39b18e7118\",\"session_id\":\"2e970cc8-ca97-4552-8b23-e4908a8a9d4d\"}",
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 7999
+      "ms": 8586
     },
     {
       "id": "p-plugin-bundled-mcp",
@@ -833,7 +835,7 @@
           "fixture": [
             "plugin:guidelane-probe:echo [connected]"
           ],
-          "ambientCount": 6
+          "ambientCount": 1
         },
         "strict": {
           "fixture": [],
@@ -852,7 +854,7 @@
         "initToolsCarriesMcpNames": false
       },
       "observationFailures": null,
-      "ms": 29219
+      "ms": 162608
     },
     {
       "id": "p-version-readable",
@@ -872,7 +874,7 @@
         "parsed": "2.1.220"
       },
       "observationFailures": null,
-      "ms": 67
+      "ms": 171
     },
     {
       "id": "p-auth-mode-visibility",
@@ -916,7 +918,7 @@
         "parseFailed": false
       },
       "observationFailures": null,
-      "ms": 337
+      "ms": 246
     },
     {
       "id": "p-automode-classifier-pinned",
@@ -940,10 +942,12 @@
           "environment": 20
         },
         "driftedSections": [],
-        "identical": true
+        "identical": true,
+        "vacuous": false,
+        "totalRules": 103
       },
       "observationFailures": null,
-      "ms": 1068
+      "ms": 777
     },
     {
       "id": "p-autoupdate-governable",
@@ -968,7 +972,7 @@
         }
       },
       "observationFailures": null,
-      "ms": 2912
+      "ms": 2052
     },
     {
       "id": "p-rate-limit-signal",
@@ -983,7 +987,7 @@
       ],
       "failureImpact": "Without it, unattended runs must guess: backoff-poll with capped attempts and a manual morning resume, and the morning report cannot say when capacity returns.",
       "status": "pass",
-      "detail": "rate_limit_event present — status=allowed, window=five_hour, resetsAt=1785451200 (epoch seconds — supervisor can sleep to the boundary).",
+      "detail": "rate_limit_event present — status=allowed, window=five_hour, resetsAt=1785469200 (epoch seconds — supervisor can sleep to the boundary).",
       "evidence": {
         "present": true,
         "fields": [
@@ -996,7 +1000,7 @@
         ],
         "sample": {
           "status": "allowed",
-          "resetsAt": 1785451200,
+          "resetsAt": 1785469200,
           "rateLimitType": "five_hour",
           "overageStatus": "rejected",
           "overageDisabledReason": "org_level_disabled",
@@ -1008,7 +1012,7 @@
         "note": "Only the healthy (\"allowed\") branch is observed here; the rejected branch is not provoked on purpose."
       },
       "observationFailures": null,
-      "ms": 2849
+      "ms": 2598
     }
   ],
   "exercisedVersion": "2.1.220 (Claude Code)"
