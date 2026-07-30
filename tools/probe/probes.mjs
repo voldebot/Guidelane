@@ -977,7 +977,17 @@ const governanceProbes = [
       const keys = parsed ? Object.keys(parsed) : []
       const haveAllowed = ALLOWED.filter((k) => keys.includes(k))
       const haveSensitive = SENSITIVE.filter((k) => keys.includes(k))
-      const ok = haveAllowed.length === ALLOWED.length
+      // A logged-out machine is not a degraded machine — it is the G0 doctor's
+      // primary case, and the first-run state on a friend's laptop. Measured on
+      // a GitHub runner: `{loggedIn: false, authMethod: ...}` with NO
+      // `subscriptionType`, returned promptly and parseably. The absence of the
+      // field IS the signal, so treat this shape as a pass rather than letting
+      // the probe sit permanently yellow in CI (a standing PARTIAL hides the
+      // next real regression).
+      const loggedOut = Boolean(parsed) && parsed.loggedIn === false
+      const ok = loggedOut
+        ? keys.includes('loggedIn')
+        : haveAllowed.length === ALLOWED.length
 
       // Even the two "safe" values are enumerated rather than echoed. An
       // unexpected shape (an apiKeyHelper path, say) would otherwise ship
@@ -989,7 +999,9 @@ const governanceProbes = [
 
       return {
         status: ok ? P.PASS : parsed ? P.PARTIAL : P.FAIL,
-        detail: ok
+        detail: ok && loggedOut
+          ? `LOGGED OUT — auth status --json returned promptly with \`loggedIn: false\` and no subscriptionType. That absence is the G0 doctor's signal; no credential is touched and nothing hangs. (Does not answer whether \`claude -p\` itself hangs when logged out — REVIEW-02 B5.)`
+          : ok
           ? `auth status --json exposes ${haveAllowed.join(', ')} — mode is readable without touching a credential. ${haveSensitive.length} personal field(s) in the same payload must be projected away (ADR-008).`
           : parsed
             ? `JSON parsed but missing ${ALLOWED.filter((k) => !keys.includes(k)).join(', ')}; doctor must infer mode from behaviour.`

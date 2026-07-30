@@ -127,7 +127,7 @@ The critic also named eight probes as overreach. Accepted, with reasons — cost
 | 4 | Droppable `permission_denied` frames | critical | **A3** — S1 blocker; rewrites CLAUDE.md §3 |
 | 5 | In-stage auto-compaction | critical | **B3** — S2 |
 | 6 | `--json-schema` retry ceiling | critical | **B4** — S2 (base probe already passes) |
-| 7 | Logged-out / expired auth | critical | **B5** — detection half **resolved today**; hang half open |
+| 7 | Logged-out / expired auth | critical | **B5** — detection half **resolved**; logged-out shape measured on a CI runner (§11); the `claude -p` hang half is still open |
 | 8 | kill -9, orphans, resume | critical | **B1** — S2 exit gate |
 | 9 | Graceful cancellation / `interrupt` | high | **B2** — S1 stop button depends on it |
 | 10 | Stall baseline + backpressure | critical | **A5** — S1 blocker |
@@ -145,6 +145,31 @@ The critic also named eight probes as overreach. Accepted, with reasons — cost
 | 22 | Persona/skill delivery | medium | Already covered by `p-append-system-prompt` + `p-plugin-skill-headless`; the mechanism-4 premise is **refuted by measurement** (§2) |
 | 23 | UTF-8 / Turkish integrity | medium | **B10** — invisible to English tests; pilot-critical |
 | 24 | Long-idle survival | medium | **B9** — gates S3b design |
+
+## 11. Addendum — the logged-out shape, measured for free (2026-07-30)
+
+The first CI run doubled as a B5 probe nobody had to pay for: a GitHub runner has
+no subscription login, so the free tier executed against a genuinely logged-out
+machine. Result:
+
+```
+{ loggedIn: false, authMethod: <string> }     // no subscriptionType
+```
+
+Three things follow.
+
+1. **The G0 doctor's detection path works logged-out.** `claude auth status --json`
+   returned promptly and parseably — no hang, no browser, no credential touched.
+2. **`subscriptionType` is absent rather than empty.** The doctor must key on its
+   absence, not on a falsy value; code that reads `parsed.subscriptionType` and
+   compares strings will silently classify a logged-out user as "unknown plan".
+3. **This does NOT answer the dangerous half of B5.** `claude -p` with no valid
+   login is the path that can hang or open an interactive flow, and nothing here
+   exercised it. B5 stays open for that.
+
+The probe now treats the logged-out shape as a pass with an explicit note, rather
+than a PARTIAL. A standing yellow in a nightly job is how the next real
+regression goes unnoticed.
 
 ## 10. Confidence
 
