@@ -187,7 +187,9 @@ In addition to global gates (`~/.claude/CLAUDE.md` §6):
   subscription use) — both are S0/S1 exit criteria; GLM/Codex engines stay unshipped
   until answered/accepted.
 - Calendar honesty: 2.5–4 months of steady work (REVIEW-01 #4), content track separate.
-- Open: friends' OS mix (K5) and GitHub account for the public repo (K4).
+- **macOS only for now** (K5, decided 2026-07-30). The harness's process-group
+  kill is POSIX-only; Windows needs a `taskkill /T /F` branch before S7. Do not
+  claim cross-platform support anywhere until that exists.
 
 ## 9. Reference docs
 

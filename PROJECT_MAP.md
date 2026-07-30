@@ -138,8 +138,8 @@ source (MIT), non-commercial, zero Guidelane-operated servers.
 
 | Question / debt | Noted | Status | Owner | Notes |
 |---|---|---|---|---|
-| K5: friends' OS mix (macOS-first assumed) | 2026-07-30 | **open — asked, unanswered** | owner | Windows work is unscheduled; answer changes S7 and packaging |
-| K4: GitHub account for the public repo | 2026-07-30 | **open — asked, unanswered** | owner | Repo doubles as plugin marketplace |
+| K5: friends' OS mix | 2026-07-30 | **DECIDED (2026-07-30)** | owner | **macOS only for now** — "önce bu mac'te çalışır hale getireceğiz". Windows is deferred, not dropped: the process-group kill in `tools/probe/lib/runner.mjs` is POSIX-only and needs a `taskkill /T /F` branch before S7 |
+| K4: GitHub account for the public repo | 2026-07-30 | **DECIDED (2026-07-30)** | owner | `voldebot`, public. Repo doubles as the plugin marketplace |
 | z.ai written confirmation (GLM allowlist covers Guidelane-driven Claude Code) | 2026-07-30 | **drafted, unsent** | owner | `docs/inquiries/zai-glm-coding-plan-allowlist.md`. Gates GLM engine (S6) |
 | Anthropic written inquiry (headless subscription use at Guidelane's pattern) | 2026-07-30 | **drafted, unsent** | owner | `docs/inquiries/anthropic-headless-subscription-use.md`. S0/S1 exit criterion (REVIEW-01 #1); also the revisit trigger for the CI tier split |
 | `--max-budget-usd` under subscription auth | 2026-07-30 | **RESOLVED (S0)** | — | Enforced on a session reporting `apiKeySource: none`. Usable ceiling; timeouts stay primary (ADR-008) |
