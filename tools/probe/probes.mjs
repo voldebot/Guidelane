@@ -2854,8 +2854,30 @@ const lifecycleProbes = [
       const alive = (pid) => {
         try { process.kill(pid, 0); return true } catch { return false }
       }
-      const parentAlive = alive(parentPid)
-      const childAlive = alive(childPid)
+
+      // Delivering SIGKILL and the process leaving the process table are not the
+      // same moment. Checking liveness the instant spawnCapture returns made
+      // this probe RACE: it passed on four consecutive Linux CI runs and then
+      // reported `grandchild alive=true` on the fifth, on a loaded runner, with
+      // nothing about the kill path changed. That is a probe measuring the
+      // machine rather than the engine — this repo's own rule says fix the
+      // probe, never the baseline.
+      //
+      // The budget does NOT weaken the claim: an ACTUALLY unreaped grandchild
+      // (the `escaped` fixture mode, which puts it in its own process group)
+      // survives indefinitely and still fails. Only teardown latency is
+      // forgiven, and the latency is recorded so a future race is visible as
+      // data rather than as a mystery red.
+      const REAP_BUDGET_MS = 3000
+      const reapStart = Date.now()
+      let parentAlive = alive(parentPid)
+      let childAlive = alive(childPid)
+      while ((parentAlive || childAlive) && Date.now() - reapStart < REAP_BUDGET_MS) {
+        await new Promise((r) => setTimeout(r, 25))
+        parentAlive = alive(parentPid)
+        childAlive = alive(childPid)
+      }
+      const reapLatencyMs = Date.now() - reapStart
 
       // Never leak a real process because a probe failed.
       for (const pid of [childPid, parentPid]) {
@@ -2866,10 +2888,19 @@ const lifecycleProbes = [
       return {
         status: ok ? P.PASS : P.FAIL,
         detail: ok
-          ? `Timeout killed the whole group: the direct child AND its grandchild were both gone afterwards. The process-group kill added at S0 close does what it claims.`
-          : `Reaping incomplete — timedOut=${res.timedOut}, parent alive=${parentAlive}, grandchild alive=${childAlive}. ` +
+          ? `Timeout killed the whole group: the direct child AND its grandchild were both gone within ${reapLatencyMs}ms. The process-group kill added at S0 close does what it claims.`
+          : `Reaping incomplete after ${reapLatencyMs}ms — timedOut=${res.timedOut}, parent alive=${parentAlive}, grandchild alive=${childAlive}. ` +
             `A surviving grandchild is an authenticated process spending quota with nobody reading it.`,
-        evidence: { timedOut: res.timedOut, parentSurvived: parentAlive, grandchildSurvived: childAlive, settleMs: res.ms },
+        evidence: {
+          timedOut: res.timedOut,
+          parentSurvived: parentAlive,
+          grandchildSurvived: childAlive,
+          settleMs: res.ms,
+          // Recorded so a race shows up as a rising number rather than as a
+          // mystery red on one CI run in five.
+          reapLatencyMs,
+          reapBudgetMs: REAP_BUDGET_MS,
+        },
       }
     },
   },
