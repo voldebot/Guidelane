@@ -1161,30 +1161,65 @@ const controlProbes = [
     kind: 'live-call',
     loadBearing: 'high',
     claim:
-      'Crew routing can set model and effort per session, with a fallback chain, in a single command.',
+      'Crew routing can set model and effort per session, with a fallback chain, in a single command — AND the routed model is the one that answers, asserted on the init receipt rather than assumed from a zero exit.',
     failureImpact: 'ADR-004 crew routing cannot be expressed per stage; token economy loses its largest lever.',
-    docRefs: ['ADR-004', 'RESEARCH-02 §13.2'],
+    docRefs: ['ADR-004', 'ADR-008', 'RESEARCH-02 §13.2'],
     async run(ctx) {
+      // WAS: `--output-format json` + `j.model || j.usage.model`, which is not
+      // carried on the result envelope — so this probe recorded
+      // "model reported as not surfaced in result" and PASSED on exit 0 alone
+      // for its whole life. The evidence for ADR-004 could not tell a session
+      // that honoured `--model` from one that ignored it. Instance 24 of the
+      // shape in CLAUDE.md §8: recorded where it should have asserted, and the
+      // inference failed open.
+      //
+      // The routed model IS on the init receipt (ADR-008), so the fix is to
+      // read the surface that carries it.
       const res = await ctx.claude(
         ['-p', 'Reply with exactly: ROUTING_OK', '--model', ctx.model, '--effort', 'low',
-         '--fallback-model', 'haiku', '--output-format', 'json', '--tools', '',
+         '--fallback-model', 'haiku', '--output-format', 'stream-json', '--verbose', '--tools', '',
          '--strict-mcp-config', '--no-session-persistence'],
         { workspaceFor: 'p-effort-model-fallback' }
       )
-      const ok = /ROUTING_OK/.test(res.stdout) && res.code === 0
-      let modelReported = null
-      try {
-        const j = JSON.parse(res.stdout.trim())
-        modelReported = j.model || (j.usage && j.usage.model) || null
-      } catch {
-        /* not fatal */
+      const events = ctx.jsonLines(res.stdout)
+      const init = events.find((e) => e.type === 'system' && e.subtype === 'init') || {}
+      const modelReported = typeof init.model === 'string' ? init.model : null
+      const answered = events.some((e) => e.type === 'result' && e.subtype === 'success')
+      const marker = /ROUTING_OK/.test(res.stdout)
+
+      // `init.model` carries the RESOLVED id (`claude-haiku-4-5-20251001`), never
+      // the alias that was routed with. Segment membership, not substring: a
+      // substring test would also accept `claude-haikuish-9`, and a guard that
+      // passes for the wrong reason is the defect this suite keeps rediscovering.
+      const routedTook = modelReported !== null && modelReported.split('-').includes(ctx.model)
+      const ok = marker && res.code === 0 && answered && routedTook
+
+      const why = []
+      if (!marker) why.push('no ROUTING_OK marker')
+      if (res.code !== 0) why.push(`exit ${res.code}`)
+      if (!answered) why.push('no result/success event')
+      if (!routedTook) {
+        why.push(modelReported === null
+          ? 'init carried no model field — the receipt surface changed'
+          : `routed --model ${ctx.model} but ${modelReported} answered`)
       }
       return {
         status: ok ? P.PASS : P.FAIL,
         detail: ok
-          ? `Accepted together; model reported as ${modelReported || 'not surfaced in result'}.`
-          : `Rejected or no marker. Exit ${res.code}. ${clip(res.stderr, 300)}`,
-        evidence: { exit: res.code, modelReported, stderr: clip(res.stderr, 400) },
+          ? `Accepted together, and the routed model is the one that answered: --model ${ctx.model} --effort low --fallback-model haiku resolved to ${modelReported}.`
+          : `${why.join('; ')}. ${clip(res.stderr, 300)}`,
+        evidence: {
+          exit: res.code,
+          routedAlias: ctx.model,
+          modelReported,
+          routedTook,
+          answered,
+          // `--effort` has no receipt field of its own; all that is assertable is
+          // that the flag composed without rejection. Said plainly rather than
+          // implied, so nobody reads this probe as evidence that effort applied.
+          effortAssertable: false,
+          stderr: clip(res.stderr, 400),
+        },
       }
     },
   },

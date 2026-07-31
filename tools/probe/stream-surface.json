@@ -79,10 +79,10 @@
     "rate_limit_event": {
       "when": {
         "path": "rate_limit_info.status",
-        "values": { "allowed": "ignore" },
+        "values": { "allowed": "ignore", "allowed_warning": "render" },
         "unknown": "escalate"
       },
-      "why": "Night Shift sleeps to resetsAt (ADR-007), and a paused run that looks identical to a working one is the worst outcome in front of a non-coder — so the PAUSE must reach the surface. The event itself does not mean a pause: it is emitted on every healthy session carrying `rate_limit_info.status = \"allowed\"` (measured 2026-07-31, alongside resetsAt, rateLimitType, overageStatus, overageDisabledReason, isUsingOverage). Only `allowed` is pinned because only `allowed` has been observed; `rejected` and anything else escalate by falling through, which is the correct default for the branch ADR-007 could only handle defensively."
+      "why": "Night Shift sleeps to resetsAt (ADR-007), and a paused run that looks identical to a working one is the worst outcome in front of a non-coder — so the PAUSE must reach the surface. The event itself does not mean a pause: it is emitted on every healthy session. `allowed` (measured 2026-07-31 morning, alongside resetsAt, rateLimitType: five_hour, overageStatus, overageDisabledReason, isUsingOverage) is routine and ignored. `allowed_warning` was found the same evening BY THE ADAPTER ESCALATING IT — the fail-closed default doing its job on a value nobody had modelled — carrying `rateLimitType: \"seven_day\"` and a new `utilization: 0.51` field. It is classified `render`, not `escalate`: the user should be told they are half way through a weekly allowance, and interrupting them for it would be the alarm fatigue this schema exists to prevent, while hiding it would make work stopping later a surprise. `rejected` and anything else still escalate by falling through."
     },
     "system/status": {
       "when": {

@@ -1,6 +1,6 @@
 {
   "version": "2.1.220 (Claude Code)",
-  "generatedAt": "2026-07-31T19:06:40.968Z",
+  "generatedAt": "2026-07-31T20:16:49.476Z",
   "suiteRoot": "<TMP>/guidelane-probe-<run>",
   "workspacesKept": false,
   "stoleStaleLock": false,
@@ -70,7 +70,7 @@
         "declaredCount": 69
       },
       "observationFailures": null,
-      "ms": 195
+      "ms": 262
     },
     {
       "id": "p-bare-forbidden",
@@ -115,7 +115,7 @@
         ]
       },
       "observationFailures": null,
-      "ms": 1
+      "ms": 0
     },
     {
       "id": "p-doctor-exists",
@@ -154,7 +154,7 @@
         "hasEval": true
       },
       "observationFailures": null,
-      "ms": 190
+      "ms": 143
     },
     {
       "id": "p-plugin-validate-fixture",
@@ -175,7 +175,7 @@
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 335
+      "ms": 394
     },
     {
       "id": "p-kill-reaps-process-group",
@@ -189,12 +189,14 @@
       ],
       "failureImpact": "Orphaned engine processes keep spending a friend's subscription after a crash, with nobody reading their output. This is the S2 exit gate's core question, and it is invisible to every happy-path probe.",
       "status": "pass",
-      "detail": "Timeout killed the whole group: the direct child AND its grandchild were both gone afterwards. The process-group kill added at S0 close does what it claims.",
+      "detail": "Timeout killed the whole group: the direct child AND its grandchild were both gone within 0ms. The process-group kill added at S0 close does what it claims.",
       "evidence": {
         "timedOut": true,
         "parentSurvived": false,
         "grandchildSurvived": false,
-        "settleMs": 4004
+        "settleMs": 4005,
+        "reapLatencyMs": 0,
+        "reapBudgetMs": 3000
       },
       "observationFailures": null,
       "ms": 4006
@@ -212,15 +214,15 @@
       ],
       "failureImpact": "The single worst outcome the product can have: a run that stops with no output, no error, and no terminal event. In the nightly job it burns to the CI cap; in front of a non-coder it is \"the computer froze\".",
       "status": "pass",
-      "detail": "Escaped grandchild held the pipe open and 'close' never came, yet the call settled in 8003ms via the watchdog. A stuck session degrades into evidence instead of a silent hang. As designed, the escapee outlived the group kill — the probe reaped it itself.",
+      "detail": "Escaped grandchild held the pipe open and 'close' never came, yet the call settled in 8005ms via the watchdog. A stuck session degrades into evidence instead of a silent hang. As designed, the escapee outlived the group kill — the probe reaped it itself.",
       "evidence": {
-        "elapsedMs": 8003,
+        "elapsedMs": 8005,
         "timedOut": true,
         "escapeeOutlivedGroupKill": true,
-        "settleMs": 8002
+        "settleMs": 8005
       },
       "observationFailures": null,
-      "ms": 8003
+      "ms": 8006
     },
     {
       "id": "p-version-in-tested-range",
@@ -245,7 +247,7 @@
         "inRange": true
       },
       "observationFailures": null,
-      "ms": 104
+      "ms": 767
     },
     {
       "id": "p-init-receipt",
@@ -299,7 +301,7 @@
         "version": "2.1.220"
       },
       "observationFailures": null,
-      "ms": 3085
+      "ms": 4773
     },
     {
       "id": "p-ambient-isolation",
@@ -365,7 +367,7 @@
         "bothFlagsRequired": true
       },
       "observationFailures": null,
-      "ms": 8110
+      "ms": 13903
     },
     {
       "id": "p-messagedisplay-rewrite",
@@ -389,7 +391,7 @@
         "rewritten": true
       },
       "observationFailures": null,
-      "ms": 3838
+      "ms": 3007
     },
     {
       "id": "p-stream-json-roundtrip",
@@ -403,15 +405,15 @@
       ],
       "failureImpact": "The cockpit cannot render a live activity feed; the entire event-translation layer (R3 mechanism 3) has no input.",
       "status": "pass",
-      "detail": "Full round-trip. Event types: system, user, stream_event, rate_limit_event, assistant, result.",
+      "detail": "Full round-trip. Event types: system, rate_limit_event, user, stream_event, assistant, result.",
       "evidence": {
         "exit": 0,
-        "eventCount": 34,
+        "eventCount": 23,
         "types": [
           "system",
+          "rate_limit_event",
           "user",
           "stream_event",
-          "rate_limit_event",
           "assistant",
           "result"
         ],
@@ -450,7 +452,7 @@
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 4330
+      "ms": 3018
     },
     {
       "id": "p-usage-accounting",
@@ -493,7 +495,7 @@
           "input_tokens": 10,
           "cache_creation_input_tokens": 6419,
           "cache_read_input_tokens": 0,
-          "output_tokens": 49,
+          "output_tokens": 52,
           "server_tool_use": {
             "web_search_requests": 0,
             "web_fetch_requests": 0
@@ -507,7 +509,7 @@
           "iterations": [
             {
               "input_tokens": 10,
-              "output_tokens": 49,
+              "output_tokens": 52,
               "cache_read_input_tokens": 0,
               "cache_creation_input_tokens": 6419,
               "cache_creation": {
@@ -519,12 +521,12 @@
           ],
           "speed": "standard"
         },
-        "cost": 0.013677,
-        "durationMs": 2844,
+        "cost": 0.013108,
+        "durationMs": 1842,
         "numTurns": 1
       },
       "observationFailures": null,
-      "ms": 4407
+      "ms": 3274
     },
     {
       "id": "p-stream-surface-union",
@@ -597,7 +599,7 @@
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 4783
+      "ms": 3048
     },
     {
       "id": "p-json-schema",
@@ -638,11 +640,11 @@
           "duration_ms",
           "uuid"
         ],
-        "payloadPreview": "{\"productName\":\"Shopping List\",\"audience\":\"One person managing household groceries and errands\",\"invariants\":[\"A list contains zero or more items\",\"Each item has a name and completion status\",\"Data persists across app sessions\",\"Only the owner can view or modify the list\"],\"acceptance\":[{\"given\":\"I open the app\",\"then\":\"I see my shopping list with all saved items\"},{\"given\":\"I want to add an item\",\"then\":\"I can type its name and tap Add\"},{\"given\":\"An item is on my list\",\"then\":\"I can tap it to mark it bought (visually distinct)\"},{\"given\":\"An item is on my list\",\"then\":\"I can swipe or long-press to delete it\"},{\"given\":\"I close the app\",\"then\":\"My list and item statuses are saved for next t…[707 chars]",
+        "payloadPreview": "{\"productName\":\"Shopping List\",\"audience\":\"Individual home shoppers managing grocery and household purchases\",\"invariants\":[\"Items persist between sessions\",\"Each item has a name and optional quantity\",\"Items can be marked purchased without deletion\",\"A list contains zero or more items\"],\"acceptance\":[{\"given\":\"I open the app\",\"then\":\"I see my shopping list from the last session\"},{\"given\":\"I want to add milk to my list\",\"then\":\"I type the item name and press add, and it appears at the bottom of my list\"},{\"given\":\"I have items on my list\",\"then\":\"I can tap an item to toggle it as purchased, visually marking it differently (strikethrough/dimmed)\"},{\"given\":\"I have purchased items on my list\"…[876 chars]",
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 9979
+      "ms": 10063
     },
     {
       "id": "p-append-system-prompt",
@@ -663,7 +665,7 @@
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 2795
+      "ms": 2936
     },
     {
       "id": "p-agents-inline",
@@ -696,7 +698,7 @@
         "exit": 0
       },
       "observationFailures": null,
-      "ms": 31164
+      "ms": 65195
     },
     {
       "id": "p-max-budget-subscription",
@@ -719,32 +721,37 @@
         "terminalSubtype": "error_max_budget_usd",
         "budgetSubtype": true,
         "stderrMentionsBudget": false,
-        "stdout": "{\"is_error\":true,\"duration_api_ms\":921,\"num_turns\":1,\"stop_reason\":null,\"session_id\":\"ff80a23f-e81a-43ec-94d8-fa1a5d3950f1\",\"total_cost_usd\":0.000582,\"usage\":{\"input_tokens\":0,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"output_tokens\":0,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"modelUsage\":{\"clau…[1057 chars]",
+        "stdout": "{\"is_error\":true,\"duration_api_ms\":873,\"num_turns\":1,\"stop_reason\":null,\"session_id\":\"529b1e0b-e085-4abc-bbba-6aa335416a6d\",\"total_cost_usd\":0.000597,\"usage\":{\"input_tokens\":0,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"output_tokens\":0,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"modelUsage\":{\"clau…[1057 chars]",
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 2515
+      "ms": 2406
     },
     {
       "id": "p-effort-model-fallback",
       "title": "Effort, model, and fallback-model compose in one invocation",
       "kind": "live-call",
       "loadBearing": "high",
-      "claim": "Crew routing can set model and effort per session, with a fallback chain, in a single command.",
+      "claim": "Crew routing can set model and effort per session, with a fallback chain, in a single command — AND the routed model is the one that answers, asserted on the init receipt rather than assumed from a zero exit.",
       "docRefs": [
         "ADR-004",
+        "ADR-008",
         "RESEARCH-02 §13.2"
       ],
       "failureImpact": "ADR-004 crew routing cannot be expressed per stage; token economy loses its largest lever.",
       "status": "pass",
-      "detail": "Accepted together; model reported as not surfaced in result.",
+      "detail": "Accepted together, and the routed model is the one that answered: --model haiku --effort low --fallback-model haiku resolved to claude-haiku-4-5-20251001.",
       "evidence": {
         "exit": 0,
-        "modelReported": null,
+        "routedAlias": "haiku",
+        "modelReported": "claude-haiku-4-5-20251001",
+        "routedTook": true,
+        "answered": true,
+        "effortAssertable": false,
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 2782
+      "ms": 2992
     },
     {
       "id": "p-permission-allowlist",
@@ -774,7 +781,7 @@
         "permissionDeniedHookFired": false,
         "advisoryFrameSeen": false,
         "proseHintOnly": false,
-        "autoAloneStdout": "{\"type\":\"system\",\"subtype\":\"hook_started\",\"hook_id\":\"a9e9f6ac-d73a-4577-aa9e-0ed0ec1a0221\",\"hook_name\":\"SessionStart:startup\",\"hook_event\":\"SessionStart\",\"uuid\":\"dabc0b14-23be-416a-ad47-87db47a4b826\",\"session_id\":\"6c753db9-2fff-4114-a848-e6bedf711b5d\"}\n{\"type\":\"system\",\"subtype\":\"hook_response\",\"hoo…[19142 chars]",
+        "autoAloneStdout": "{\"type\":\"system\",\"subtype\":\"hook_started\",\"hook_id\":\"4f388f5b-5688-4627-a15d-589518f808e2\",\"hook_name\":\"SessionStart:startup\",\"hook_event\":\"SessionStart\",\"uuid\":\"dcafb880-16ab-41e9-89c2-2d166a838ccf\",\"session_id\":\"79b27d26-b87c-405b-ba13-0c3b92a2e157\"}\n{\"type\":\"system\",\"subtype\":\"hook_response\",\"hoo…[20871 chars]",
         "allowListWrote": true,
         "allowListStdout": "WROTE_OK\n",
         "exits": {
@@ -783,7 +790,7 @@
         }
       },
       "observationFailures": null,
-      "ms": 21959
+      "ms": 16832
     },
     {
       "id": "p-session-identity",
@@ -799,9 +806,9 @@
       "status": "pass",
       "detail": "Session id honoured, resume kept context, fork produced a new id.",
       "evidence": {
-        "suppliedId": "06a5fd3d-98eb-4d39-bfef-fbc7d4048f0d",
+        "suppliedId": "ebf5e502-10ea-4e44-a3fb-3e60e70b9e3d",
         "resumeRecalled": true,
-        "forkedId": "70c33375-fc22-47ec-b3a0-3883cbb5b792",
+        "forkedId": "1044f8ff-120f-4cdc-91fb-21275c33a5af",
         "exits": {
           "first": 0,
           "second": 0,
@@ -809,7 +816,7 @@
         }
       },
       "observationFailures": null,
-      "ms": 17149
+      "ms": 14189
     },
     {
       "id": "p-mcp-strict-load",
@@ -826,11 +833,11 @@
       "detail": "MCP server loaded from the command line and its tool was callable under a fail-closed allow-list (mcp__<server>__<tool>).",
       "evidence": {
         "exit": 0,
-        "stdout": "{\"is_error\":false,\"duration_api_ms\":8307,\"num_turns\":3,\"stop_reason\":\"end_turn\",\"session_id\":\"91654f51-699c-40c4-a48d-d98d89b96ba0\",\"total_cost_usd\":0.023160199999999995,\"usage\":{\"input_tokens\":28,\"cache_creation_input_tokens\":7116,\"cache_read_input_tokens\":66282,\"output_tokens\":327,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":7116,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"not_available\",\"iterations\":[{\"input_tokens\":8,\"output_tokens\":54,\"cache_read_input_tokens\":24527,\"cache_creation_input_tokens\":125,\"cache_creation\":{\"ephemeral_5m_input_tokens\":0,\"ephemeral_1h_input_tokens\":125},\"type\":\"mes…[1374 chars]",
+        "stdout": "{\"is_error\":false,\"duration_api_ms\":7721,\"num_turns\":3,\"stop_reason\":\"end_turn\",\"session_id\":\"a22b0e33-2b7e-4640-b904-c0773e7c1111\",\"total_cost_usd\":0.023289300000000002,\"usage\":{\"input_tokens\":28,\"cache_creation_input_tokens\":7144,\"cache_read_input_tokens\":66313,\"output_tokens\":345,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":7144,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"not_available\",\"iterations\":[{\"input_tokens\":8,\"output_tokens\":44,\"cache_read_input_tokens\":24558,\"cache_creation_input_tokens\":122,\"cache_creation\":{\"ephemeral_5m_input_tokens\":0,\"ephemeral_1h_input_tokens\":122},\"type\":\"mes…[1374 chars]",
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 8511
+      "ms": 7523
     },
     {
       "id": "p-plugin-skill-headless",
@@ -851,7 +858,7 @@
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 4686
+      "ms": 3519
     },
     {
       "id": "p-hook-events-headless",
@@ -883,11 +890,11 @@
         "markerSurvived": true,
         "wroteFile": true,
         "hookEventsInStreamCount": 12,
-        "sampleHookEvent": "{\"type\":\"system\",\"subtype\":\"hook_started\",\"hook_id\":\"587daeb3-f1ec-4715-bf19-38e915ae0964\",\"hook_name\":\"SessionStart:startup\",\"hook_event\":\"SessionStart\",\"uuid\":\"82604ad3-2f48-4875-95a9-d5aba3fdb037\",\"session_id\":\"ca611f5e-b4d5-40e8-b605-e11df4df8e35\"}",
+        "sampleHookEvent": "{\"type\":\"system\",\"subtype\":\"hook_started\",\"hook_id\":\"4c37e4f7-41eb-4877-ada6-5dcf2abf4b83\",\"hook_name\":\"SessionStart:startup\",\"hook_event\":\"SessionStart\",\"uuid\":\"02d1eaa2-6ad5-4d31-b694-7acbc2844971\",\"session_id\":\"9d146168-6187-4859-b3f7-2ac077627bbc\"}",
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 9235
+      "ms": 6977
     },
     {
       "id": "p-plugin-bundled-mcp",
@@ -927,7 +934,7 @@
         "initToolsCarriesMcpNames": false
       },
       "observationFailures": null,
-      "ms": 36892
+      "ms": 31958
     },
     {
       "id": "p-hook-failure-detectable",
@@ -1015,7 +1022,7 @@
         ]
       },
       "observationFailures": null,
-      "ms": 22544
+      "ms": 20845
     },
     {
       "id": "p-no-headless-dialog",
@@ -1065,7 +1072,7 @@
         "workspaceTrustDialog": "documented by --help as SKIPPED in non-interactive mode"
       },
       "observationFailures": null,
-      "ms": 8845
+      "ms": 7917
     },
     {
       "id": "p-backpressure-lossless",
@@ -1080,25 +1087,25 @@
       ],
       "failureImpact": "REVIEW-02 A5 + A3b. If the stream were lossy under load, a slow renderer would silently lose events — including the evidence that a tool was DENIED, which is what a phase failure is detected from. A gate reading a lossy channel reports success for work that never happened.",
       "status": "pass",
-      "detail": "Backpressure proven and lossless. Undrained for 55s, then 123002 bytes arrived within 250ms — more than a 65536-byte pipe can hold, so the writer WAS blocked with data queued — and 150917 further bytes followed, so the engine was alive and blocked rather than finished. All 603 lines parsed, 0 damaged. The denied tool_result and the terminal result both survived. So the engine BLOCKS rather than dropping: a slow cockpit loses nothing — but it STALLS the engine, which is a different hazard, and an inter-event stall watchdog must therefore not fire when the consumer is itself the cause.",
+      "detail": "Backpressure proven and lossless. Undrained for 55s, then 102968 bytes arrived within 250ms — more than a 65536-byte pipe can hold, so the writer WAS blocked with data queued — and 54901 further bytes followed, so the engine was alive and blocked rather than finished. All 315 lines parsed, 0 damaged. The denied tool_result and the terminal result both survived. So the engine BLOCKS rather than dropping: a slow cockpit loses nothing — but it STALLS the engine, which is a different hazard, and an inter-event stall watchdog must therefore not fire when the consumer is itself the cause.",
       "evidence": {
         "exit": 0,
-        "totalBytes": 282051,
-        "bytesBeforePausing": 8132,
-        "burstBytesWithin250msOfResume": 123002,
+        "totalBytes": 164353,
+        "bytesBeforePausing": 6484,
+        "burstBytesWithin250msOfResume": 102968,
         "pipeBytes": 65536,
-        "bytesAfterBurst": 150917,
-        "lines": 603,
-        "parsed": 603,
+        "bytesAfterBurst": 54901,
+        "lines": 315,
+        "parsed": 315,
         "unparseable": 0,
-        "deniedToolResults": 2,
+        "deniedToolResults": 1,
         "terminal": "result/success",
-        "permissionDenials": 2,
+        "permissionDenials": 1,
         "backpressureProven": true,
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 117213
+      "ms": 59861
     },
     {
       "id": "p-phase-terminator",
@@ -1113,18 +1120,18 @@
       ],
       "failureImpact": "An adapter that waits for process exit after `result` hangs forever — the \"run goes silent with no terminal event\" class REVIEW-02 Tier A exists to prevent. One that treats `result` as session-end leaks a live engine process spending quota. One that closes stdin and stops reading truncates the phase output. All three are silent.",
       "status": "pass",
-      "detail": "The terminator is stdin.end(). With stdin open the session reached result at 4308ms and was STILL ALIVE 20000ms later — so `result` is per-turn, not session-terminal, and an adapter that waits for process exit after it hangs forever. Closing stdin ended it with exit 0 in 562ms. Adapter rule that follows: end a phase by closing stdin, then KEEP DRAINING stdout until the process 'close' event — output still arrives after the close — and treat \"no exit within a bounded window after closing stdin\" as the real stall signal.",
+      "detail": "The terminator is stdin.end(). With stdin open the session reached result at 4752ms and was STILL ALIVE 20000ms later — so `result` is per-turn, not session-terminal, and an adapter that waits for process exit after it hangs forever. Closing stdin ended it with exit 0 in 565ms. Adapter rule that follows: end a phase by closing stdin, then KEEP DRAINING stdout until the process 'close' event — output still arrives after the close — and treat \"no exit within a bounded window after closing stdin\" as the real stall signal.",
       "evidence": {
         "noCloseArm": {
-          "firstResultAt": 4308,
+          "firstResultAt": 4752,
           "exitedOnItsOwn": false,
           "codeIfExited": null,
           "stillAliveAfterMs": 20000,
           "killedByProbeAfterwards": true
         },
         "closeOnResultArm": {
-          "firstResultAt": 3254,
-          "exitLatencyMs": 562,
+          "firstResultAt": 3158,
+          "exitLatencyMs": 565,
           "exited": true,
           "code": 0,
           "bytesAfterClose": 0
@@ -1133,7 +1140,7 @@
         "resultIsPerTurn": true
       },
       "observationFailures": null,
-      "ms": 28254
+      "ms": 28559
     },
     {
       "id": "p-stream-surface-artifact",
@@ -1196,7 +1203,7 @@
         "checksShapeNotBehaviour": true
       },
       "observationFailures": null,
-      "ms": 9
+      "ms": 7
     },
     {
       "id": "p-version-readable",
@@ -1216,7 +1223,7 @@
         "parsed": "2.1.220"
       },
       "observationFailures": null,
-      "ms": 143
+      "ms": 73
     },
     {
       "id": "p-auth-mode-visibility",
@@ -1260,7 +1267,7 @@
         "parseFailed": false
       },
       "observationFailures": null,
-      "ms": 638
+      "ms": 295
     },
     {
       "id": "p-automode-classifier-pinned",
@@ -1288,7 +1295,7 @@
         "totalRules": 103
       },
       "observationFailures": null,
-      "ms": 3083
+      "ms": 1021
     },
     {
       "id": "p-autoupdate-governable",
@@ -1313,7 +1320,7 @@
         }
       },
       "observationFailures": null,
-      "ms": 4814
+      "ms": 2408
     },
     {
       "id": "p-rate-limit-signal",
@@ -1328,23 +1335,21 @@
       ],
       "failureImpact": "Without it, unattended runs must guess: backoff-poll with capped attempts and a manual morning resume, and the morning report cannot say when capacity returns.",
       "status": "pass",
-      "detail": "rate_limit_event present — status=allowed, window=five_hour, resetsAt=1785529200 (epoch seconds — supervisor can sleep to the boundary).",
+      "detail": "rate_limit_event present — status=allowed_warning, window=seven_day, resetsAt=1785985200 (epoch seconds — supervisor can sleep to the boundary).",
       "evidence": {
         "present": true,
         "fields": [
           "status",
           "resetsAt",
           "rateLimitType",
-          "overageStatus",
-          "overageDisabledReason",
+          "utilization",
           "isUsingOverage"
         ],
         "sample": {
-          "status": "allowed",
-          "resetsAt": 1785529200,
-          "rateLimitType": "five_hour",
-          "overageStatus": "rejected",
-          "overageDisabledReason": "org_level_disabled",
+          "status": "allowed_warning",
+          "resetsAt": 1785985200,
+          "rateLimitType": "seven_day",
+          "utilization": 0.52,
           "isUsingOverage": false
         },
         "hasReset": true,
@@ -1353,7 +1358,7 @@
         "note": "Only the healthy (\"allowed\") branch is observed here; the rejected branch is not provoked on purpose."
       },
       "observationFailures": null,
-      "ms": 4393
+      "ms": 3074
     }
   ],
   "exercisedVersion": "2.1.220 (Claude Code)"
