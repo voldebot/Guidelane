@@ -191,11 +191,11 @@ the constitution's calibration rule, and it is deliberately uneven.
 > hiding two items whose measurability is itself the unknown**. Both corrected
 > below rather than left as a sound-looking number.
 
-**Stage S1-A0 — the two items whose mechanism is already known (88%)**
-*Batched into ONE `--live --update-baseline`: each new probe costs ~25 min and
-~18 real calls, so adding them one at a time costs four re-baselines.*
-5. [ ] A7 hook fail-open detectability — verify: a deliberately failing hook is distinguishable from a hook that never ran, asserted on `system/hook_response` (`exit_code`, `outcome`, `stderr` measured to exist)
-6. [ ] A2 residual (a): a free `observational` probe for artifact validity so CI gates it — verify: corrupt the artifact and confirm the **free** tier goes red
+**Stage S1-A0 — the two items whose mechanism is already known (88%) — DONE**
+*Batched into ONE `--live --update-baseline`, as planned: each new probe costs
+~25 min and ~18 real calls, so adding them one at a time costs four re-baselines.*
+5. [x] A7 hook fail-open detectability → `p-hook-failure-detectable`, 4 arms pinned by equality. **Answered, and the answer is bad in one mode**: a hook emitting a malformed payload with exit 0 is reported `outcome: "success"` — REVIEW-02 §16. Falsified twice; the first falsification attempt was itself broken (`join()` normalised the `..` away) and had to be redone, which is why the guard is now known to fire rather than assumed to
+6. [x] A2 residual (a) → `p-stream-surface-artifact` (`observational`, free, CI-gated). Validator **extracted and shared** with the live probe rather than copied. Falsified eight ways; the ninth passed correctly and exposed that shape validation cannot see a bad *classification*, so `thinking`/`thinking_delta`/`signature_delta` are now pinned to `ignore` in code
 
 **Stage S1-A1 — a measurability spike, NOT a probe (50% both measurable · 90% the spike answers decisively)**
 *Written as a spike because I cannot name a headless trigger for either. Answer
@@ -238,6 +238,8 @@ Add to PROJECT_MAP §6 at sprint close if not resolved.
 - **A `-p` session with stdin held open never exits, and `result` is per-turn.** Measured (§3 D). The phase lifecycle needs an explicit terminator and nobody has measured which one is correct — close stdin, or a control message. This is a Tier-A-class hazard that REVIEW-02 did not list.
 - **`defaultForUnknown: escalate` has no consumer and therefore protects nothing today.** It is a pinned decision in a JSON file that no code reads. Named here because "a guard that cannot fire is decoration" is this repo's own rule and this one is mine.
 - **The `--live` re-baseline cost is a planning constraint, not a footnote**: ~25 minutes and ~18 real engine calls on the owner's subscription per new probe, unless probes are batched.
+- **The orchestrator must validate hook stdout itself.** Measured (REVIEW-02 §16): a hook that emits an unparseable payload and exits 0 is reported `outcome: "success"`. Since ADR-006's dial is a `MessageDisplay` hook, "the engine said success" is not evidence the dial ran. Nothing in the codebase does this validation yet.
+- **Shape validation cannot see a wrong decision.** `p-stream-surface-artifact` proves the artifact is well-formed, and a well-formed artifact can still classify raw chain-of-thought as `render`. Exactly one classification is pinned in code against that; every other class remains an unguarded judgement call, by design.
 
 ## 9. Sprint close summary (filled by /sprint-close)
 

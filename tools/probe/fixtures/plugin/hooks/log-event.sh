@@ -54,4 +54,32 @@ if [ -n "${GUIDELANE_PROBE_REWRITE:-}" ] && [ "$EVENT" = "MessageDisplay" ]; the
   printf '%s\n' '{"hookSpecificOutput":{"hookEventName":"MessageDisplay","displayContent":"REWRITTEN_BY_HOOK"}}'
 fi
 
+# Failure branch (probe-only, opt-in, DEFAULT OFF). Answers REVIEW-02 A7: when a
+# hook fails, does the engine say so on a structural channel, or does it fail
+# open and silently? This matters beyond hooks in general — ADR-006's language
+# dial IS a MessageDisplay hook, so a hook that fails unnoticed means a non-coder
+# silently receives untranslated engineer-facing output.
+#
+# Scoped to ONE event name so the rest of the lifecycle still runs normally: the
+# probe has to distinguish "this hook ran and failed" from "no hook ran at all",
+# and it cannot do that if every hook dies at once. The log line above is written
+# BEFORE this branch for the same reason — arrival in the log is the evidence
+# that the hook executed.
+if [ -n "${GUIDELANE_PROBE_HOOK_FAIL:-}" ] && [ "$EVENT" = "${GUIDELANE_PROBE_HOOK_FAIL_EVENT:-}" ]; then
+  case "$GUIDELANE_PROBE_HOOK_FAIL" in
+    exit)
+      printf 'log-event.sh: deliberate probe failure (%s)\n' "$EVENT" >&2
+      exit 9 ;;
+    garbage)
+      # Well-formed exit, malformed payload: the engine is told nothing usable.
+      printf '%s\n' '{"hookSpecificOutput": THIS IS NOT JSON'
+      exit 0 ;;
+    hang)
+      # Outlives the 5s timeout declared in hooks.json, by enough to be
+      # unambiguous and little enough that a probe run does not pay for it.
+      sleep 8
+      exit 0 ;;
+  esac
+fi
+
 exit 0

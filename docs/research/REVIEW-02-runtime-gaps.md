@@ -438,6 +438,67 @@ live probes, (d) `p-stream-json-roundtrip`'s unreconstructible pair lists; the
 still has no consumer because `apps/cockpit/` does not exist; and `redacted_thinking`
 plus variation by model and effort remain unmeasured for A6.
 
+## 16. Addendum — A7 ANSWERED: hook failure is detectable in two modes and reported as **success** in the third (2026-07-31, S1-A0)
+
+Four arms on the fixture plugin's `MessageDisplay` hook, measured before
+anything was pinned. The hook's own log file separates *"ran and failed"* from
+*"never ran"* — without that control, an engine that silently stopped running
+hooks would have satisfied every assertion by emitting nothing.
+
+| Arm | `exit_code` | `outcome` | `stderr` | Detectable? |
+|---|---|---|---|---|
+| control (healthy) | 0 | `success` | — | — |
+| hook exits 9 | **9** | **`error`** | carries the message | **yes, loud** |
+| hook emits malformed JSON, exits 0 | **0** | **`success`** | — (payload lands in `stdout`) | **NO** |
+| hook outlives its 5s timeout | **1** | **`cancelled`** | — | **yes, and distinct from `error`** |
+
+Three things follow.
+
+**1. Fail-open is confirmed, in every mode.** All four arms ended in
+`result/success` with `is_error: false`. A failing hook never fails the phase.
+That is a design input, not a defect — but it means the orchestrator, not the
+engine, owns the decision to stop.
+
+**2. `cancelled` ≠ `error` is a usable distinction.** A timeout is retryable; a
+non-zero exit is a bug in the hook. The engine separates them, so the
+orchestrator can too, and neither has to be inferred from a message string.
+
+**3. The third row is A7's actual answer, and it is worse than "fail-open".** A
+hook that exits 0 while emitting an unparseable payload is reported as
+**`outcome: "success"`**. Its intended effect silently did not happen and *no
+structural channel says so*. This is not hypothetical for this project:
+**ADR-006's language dial IS a `MessageDisplay` hook.** A truncated write, a
+serialization bug, or the UTF-8 corruption this repo has already hit once would
+each produce exactly this shape — and a non-coder would receive untranslated,
+engineer-facing output while every gate reported green.
+
+**Consequence, stated as a constraint rather than a note**: the orchestrator must
+treat *non-empty hook stdout it cannot parse* as a hook failure itself. The
+engine will not do it. `p-hook-failure-detectable` pins all four rows by
+equality, so a future CLI that starts reporting an error there turns the probe
+**red** — which would be good news, to be re-pinned deliberately.
+
+### Also closed here: §14 follow-up (b)
+
+`p-stream-surface-artifact` (`observational`, **free**) validates the artifact's
+shape with no engine call, so **CI gates it on every push** — the gap that left
+`stream-surface.json` checkable only by a manual `--live` run. The validator is
+**extracted and shared** with `p-stream-surface-union` rather than copied: two
+implementations of one pinned expectation is how a pin drifts, and the free copy
+is the one CI runs, so a divergence would mean CI gating something the live suite
+does not assert.
+
+Falsified eight ways (fail-open `unknown`, deleted `defaultForUnknown`, removed
+floor entries on both halves, a gutted reason, `class` and `when` both present, a
+corrupt file). The eighth attempt **passed**, correctly and instructively:
+reclassifying a thinking block to `render` is a valid *shape*. Shape validation
+cannot see a product disaster, so **one classification is now pinned in code** —
+`thinking`, `thinking_delta` and `signature_delta` must be `ignore`, on the
+measured ground that they carry raw chain-of-thought that the language dial
+provably does not touch (§15). Deliberately not generalised to every class: the
+rest are genuinely decisions, and pinning them would freeze the artifact against
+its own purpose.
+
 ## 11. Addendum — the logged-out shape, measured for free (2026-07-30)
 
 The first CI run doubled as a B5 probe nobody had to pay for: a GitHub runner has

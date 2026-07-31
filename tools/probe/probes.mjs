@@ -132,6 +132,157 @@ const STREAM_KEY_FLOOR = [
 const publishableKey = (key) =>
   STREAM_KEY_FLOOR.includes(String(key)) ? String(key) : unpublishable(key)
 
+const own = (map, k) => Object.prototype.hasOwnProperty.call(map, k)
+
+/** Read the committed stream-surface artifact. Never writes it. */
+const readStreamSurface = () => {
+  try {
+    return { surface: JSON.parse(readFileSync(new URL('./stream-surface.json', import.meta.url), 'utf8')), readError: null }
+  } catch (err) {
+    return { surface: null, readError: `${(err && (err.code || err.name)) || 'error'}: ${(err && err.message) || err}` }
+  }
+}
+
+const SURFACE_CLASSES = ['render', 'ignore', 'escalate']
+// Floors pinned in CODE and asserted as SUBSETS of the artifact's own required
+// lists. Not a second source of truth — a shape constraint on the expectation,
+// so the two cannot disagree; only the artifact can be caught shrinking.
+// Without them, deleting entries from the artifact makes a session that died
+// after two events satisfy the subset check and pass having measured nothing.
+const SURFACE_REQUIRED_FLOOR = ['system/init', 'assistant', 'result/success']
+const SURFACE_REQUIRED_INNER_FLOOR = ['event.type=content_block_delta', 'event.delta.type=text_delta']
+
+/**
+ * Validate `stream-surface.json` as an EXPECTATION, with no engine call.
+ *
+ * Extracted so the live probe (`p-stream-surface-union`) and the free probe
+ * (`p-stream-surface-artifact`) share one implementation. Two copies of a
+ * validator is how a pinned expectation drifts, and the free copy is the one CI
+ * runs — so a divergence would mean CI gating something the live suite does not
+ * assert, which is worse than no free gate at all.
+ */
+const validateStreamSurface = (surface) => {
+  const problems = []
+  const pairsMap = surface && surface.pairs && typeof surface.pairs === 'object' ? surface.pairs : null
+  const innerMap = surface && surface.innerPairs && typeof surface.innerPairs === 'object' ? surface.innerPairs : null
+  const requiredPairs = surface && Array.isArray(surface.requiredPairs) ? surface.requiredPairs : null
+  const requiredInner = surface && Array.isArray(surface.requiredInnerPairs) ? surface.requiredInnerPairs : null
+
+  const validateMap = (map, label) => {
+    if (!map) return problems.push(`${label} is missing or not an object`)
+    const keys = Object.keys(map).filter((k) => !k.startsWith('_'))
+    if (keys.length === 0) problems.push(`${label} is empty — an empty whitelist classifies nothing`)
+    for (const k of keys) {
+      const v = map[k]
+      if (!v || typeof v !== 'object') { problems.push(`${label}["${k}"] is not an object`); continue }
+      // schemaVersion 2: exactly one of `class` (unconditional) or `when`
+      // (value-conditional). Accepting both would be two sources of truth for
+      // one decision, which is how a pin drifts.
+      const hasClass = own(v, 'class')
+      const hasWhen = own(v, 'when')
+      if (hasClass === hasWhen) {
+        problems.push(`${label}["${k}"] must carry exactly one of class | when (has ${hasClass && hasWhen ? 'both' : 'neither'})`)
+      } else if (hasClass) {
+        if (!SURFACE_CLASSES.includes(v.class)) {
+          problems.push(`${label}["${k}"] has class=${JSON.stringify(v.class)}, expected one of ${SURFACE_CLASSES.join(' | ')}`)
+        }
+      } else {
+        const w = v.when
+        if (!w || typeof w !== 'object') problems.push(`${label}["${k}"].when is not an object`)
+        else {
+          if (typeof w.path !== 'string' || !w.path.trim()) {
+            problems.push(`${label}["${k}"].when.path is missing — nothing to read the value from`)
+          }
+          const vals = w.values && typeof w.values === 'object' ? Object.entries(w.values) : null
+          if (!vals || vals.length === 0) {
+            problems.push(`${label}["${k}"].when.values is empty — a conditional that matches nothing is the unconditional rule it replaced`)
+          } else {
+            for (const [val, cls] of vals) {
+              if (!SURFACE_CLASSES.includes(cls)) problems.push(`${label}["${k}"].when.values["${val}"] = ${JSON.stringify(cls)}, expected one of ${SURFACE_CLASSES.join(' | ')}`)
+            }
+          }
+          // Deliberately narrower than the class set. Discriminating by value is
+          // a statement that the values matter, so an unrecognised one has to
+          // reach a human; `unknown: ignore` would swallow exactly the case
+          // nobody anticipated.
+          if (w.unknown !== 'escalate') {
+            problems.push(`${label}["${k}"].when.unknown = ${JSON.stringify(w.unknown)}, must be "escalate" — a value-conditional rule may not fail open on an unmodelled value`)
+          }
+        }
+      }
+      // An unexplained classification is a convention, not a constraint — the
+      // next person cannot tell a decision from a placeholder.
+      if (typeof v.why !== 'string' || v.why.trim().length < 10) {
+        problems.push(`${label}["${k}"] carries no stated reason`)
+      }
+    }
+  }
+  validateMap(pairsMap, 'pairs')
+  validateMap(innerMap, 'innerPairs')
+
+  // The rule for a pair in NO list. The artifact enumerates a universe it also
+  // states is a sample, so "what happens to the ones I did not enumerate" is not
+  // an edge case, it is the guaranteed steady state. Pinned here rather than
+  // left to each renderer, because a renderer that drops the unrecognised goes
+  // silent, and silence is REVIEW-02's named worst outcome.
+  if (!surface || surface.defaultForUnknown !== 'escalate') {
+    problems.push(`defaultForUnknown = ${JSON.stringify(surface && surface.defaultForUnknown)}, must be "escalate" — an unenumerated pair may not be silently dropped`)
+  }
+  // Without a pinned minimum the live probe passes on an empty stream: it would
+  // observe nothing, find nothing unclassified, and report green having measured
+  // nothing at all. This is the guard that makes it able to fire.
+  if (!requiredPairs || requiredPairs.length === 0) {
+    problems.push('requiredPairs is missing or empty — the live probe would pass on a zero-event stream')
+  }
+  for (const k of SURFACE_REQUIRED_FLOOR) {
+    if (requiredPairs && !requiredPairs.includes(k)) {
+      problems.push(`requiredPairs omits "${k}", which is pinned in code — without it a session that died early satisfies the subset check and passes having measured nothing`)
+    }
+  }
+  if (!requiredInner || requiredInner.length === 0) {
+    problems.push('requiredInnerPairs is missing or empty — the live probe would pass on an envelope with no content')
+  }
+  for (const k of SURFACE_REQUIRED_INNER_FLOOR) {
+    if (requiredInner && !requiredInner.includes(k)) {
+      problems.push(`requiredInnerPairs omits "${k}", which is pinned in code — without it an envelope carrying no text satisfies the subset check`)
+    }
+  }
+  for (const k of requiredPairs || []) {
+    if (pairsMap && !own(pairsMap, k)) problems.push(`requiredPairs names "${k}", absent from pairs — that requirement can never be satisfied cleanly`)
+  }
+  for (const k of requiredInner || []) {
+    if (innerMap && !own(innerMap, k)) problems.push(`requiredInnerPairs names "${k}", absent from innerPairs`)
+  }
+
+  // One CLASSIFICATION pinned in code, not just a shape.
+  //
+  // Everything above checks that the artifact is well-formed. Well-formed is not
+  // safe: reclassifying a thinking block to `render` is a perfectly valid edit
+  // that ships raw chain-of-thought to a non-coder. Measured 2026-07-31 — content
+  // -bearing thinking reaches `-p` stream-json by default, and the MessageDisplay
+  // rewrite that implements ADR-006's language dial provably does NOT touch it
+  // (same-run differential: the text block came back rewritten, the thinking
+  // block kept its original characters). So this is the one place where a
+  // classification is a product invariant rather than a judgement call, and a
+  // shape-only validator would wave it through.
+  //
+  // Deliberately NOT generalised into "check every class": the rest genuinely are
+  // decisions, and pinning them would freeze the artifact against its own purpose.
+  const THINKING_MUST_IGNORE = [
+    'event.content_block.type=thinking',
+    'event.delta.type=thinking_delta',
+    'event.delta.type=signature_delta',
+  ]
+  for (const k of THINKING_MUST_IGNORE) {
+    if (!innerMap || !own(innerMap, k)) {
+      problems.push(`innerPairs omits "${k}", which is pinned in code — a renderer that ignores thinking BY OMISSION fails open the first time it is rewritten`)
+    } else if (innerMap[k].class !== 'ignore') {
+      problems.push(`innerPairs["${k}"].class = ${JSON.stringify(innerMap[k].class)}, must be "ignore" — this is raw chain-of-thought, it reaches the wire by default, and ADR-006's language dial does not touch it`)
+    }
+  }
+  return { problems, pairsMap, innerMap, requiredPairs, requiredInner }
+}
+
 /** Truncate captured output so the JSON report stays readable. */
 const clip = (s, n = 1200) => {
   const t = String(s || '')
@@ -534,14 +685,7 @@ const protocolProbes = [
       // this probe never writes it: a probe that generates its own expectation
       // and then checks it against itself is a tautology (PROJECT_MAP
       // Principle 9, Q3) and would have passed green on day one forever.
-      const CLASSES = ['render', 'ignore', 'escalate']
-      let surface = null
-      let readError = null
-      try {
-        surface = JSON.parse(readFileSync(new URL('./stream-surface.json', import.meta.url), 'utf8'))
-      } catch (err) {
-        readError = `${(err && (err.code || err.name)) || 'error'}: ${(err && err.message) || err}`
-      }
+      const { surface, readError } = readStreamSurface()
       // Fail CLOSED on a missing or corrupt artifact. An absent whitelist means
       // "nothing is classified", which is the maximally unsafe state — reporting
       // green for it is the same shape as the baseline gate that printed "no
@@ -556,114 +700,11 @@ const protocolProbes = [
         }
       }
 
-      const own = (map, k) => Object.prototype.hasOwnProperty.call(map, k)
-      const pairsMap = surface.pairs && typeof surface.pairs === 'object' ? surface.pairs : null
-      const innerMap = surface.innerPairs && typeof surface.innerPairs === 'object' ? surface.innerPairs : null
-      const requiredPairs = Array.isArray(surface.requiredPairs) ? surface.requiredPairs : null
-      const requiredInner = Array.isArray(surface.requiredInnerPairs) ? surface.requiredInnerPairs : null
-
       // Validate the artifact BEFORE spending a live call: a broken expectation
-      // file cannot be rescued by a good measurement, and quota is real.
-      const artifactProblems = []
-      const validateMap = (map, label) => {
-        if (!map) return artifactProblems.push(`${label} is missing or not an object`)
-        const keys = Object.keys(map).filter((k) => !k.startsWith('_'))
-        if (keys.length === 0) artifactProblems.push(`${label} is empty — an empty whitelist classifies nothing`)
-        for (const k of keys) {
-          const v = map[k]
-          if (!v || typeof v !== 'object') { artifactProblems.push(`${label}["${k}"] is not an object`); continue }
-          // schemaVersion 2: exactly one of `class` (unconditional) or `when`
-          // (value-conditional). Accepting both would be two sources of truth
-          // for one decision, which is how a pin drifts.
-          const hasClass = own(v, 'class')
-          const hasWhen = own(v, 'when')
-          if (hasClass === hasWhen) {
-            artifactProblems.push(`${label}["${k}"] must carry exactly one of class | when (has ${hasClass && hasWhen ? 'both' : 'neither'})`)
-          } else if (hasClass) {
-            if (!CLASSES.includes(v.class)) {
-              artifactProblems.push(`${label}["${k}"] has class=${JSON.stringify(v.class)}, expected one of ${CLASSES.join(' | ')}`)
-            }
-          } else {
-            const w = v.when
-            if (!w || typeof w !== 'object') artifactProblems.push(`${label}["${k}"].when is not an object`)
-            else {
-              if (typeof w.path !== 'string' || !w.path.trim()) {
-                artifactProblems.push(`${label}["${k}"].when.path is missing — nothing to read the value from`)
-              }
-              const vals = w.values && typeof w.values === 'object' ? Object.entries(w.values) : null
-              if (!vals || vals.length === 0) {
-                artifactProblems.push(`${label}["${k}"].when.values is empty — a conditional that matches nothing is the unconditional rule it replaced`)
-              } else {
-                for (const [val, cls] of vals) {
-                  if (!CLASSES.includes(cls)) artifactProblems.push(`${label}["${k}"].when.values["${val}"] = ${JSON.stringify(cls)}, expected one of ${CLASSES.join(' | ')}`)
-                }
-              }
-              // Deliberately narrower than CLASSES. Discriminating by value is a
-              // statement that the values matter, so an unrecognised one has to
-              // reach a human; `unknown: ignore` would be a rule that swallows
-              // exactly the case nobody anticipated.
-              if (w.unknown !== 'escalate') {
-                artifactProblems.push(`${label}["${k}"].when.unknown = ${JSON.stringify(w.unknown)}, must be "escalate" — a value-conditional rule may not fail open on an unmodelled value`)
-              }
-            }
-          }
-          // An unexplained classification is a convention, not a constraint —
-          // the next person cannot tell a decision from a placeholder.
-          if (typeof v.why !== 'string' || v.why.trim().length < 10) {
-            artifactProblems.push(`${label}["${k}"] carries no stated reason`)
-          }
-        }
-      }
-      validateMap(pairsMap, 'pairs')
-      validateMap(innerMap, 'innerPairs')
-      // The rule for a pair in NO list. Its absence was logged as a residual of
-      // cycle 1: the artifact enumerates a universe it also states is a sample,
-      // so "what happens to the ones I did not enumerate" is not an edge case,
-      // it is the guaranteed steady state. Pinned to `escalate` here rather than
-      // left to each renderer, because a renderer that drops the unrecognised
-      // goes silent, and silence is REVIEW-02's named worst outcome.
-      if (surface.defaultForUnknown !== 'escalate') {
-        artifactProblems.push(`defaultForUnknown = ${JSON.stringify(surface.defaultForUnknown)}, must be "escalate" — an unenumerated pair may not be silently dropped`)
-      }
-      // Without a pinned minimum this probe passes on an empty stream: it would
-      // observe nothing, find nothing unclassified, and report green having
-      // measured nothing at all. This is the guard that makes it able to fire.
-      if (!requiredPairs || requiredPairs.length === 0) {
-        artifactProblems.push('requiredPairs is missing or empty — the probe would pass on a zero-event stream')
-      }
-      // ...and a FLOOR pinned in code, asserted as a SUBSET of the artifact's
-      // list. Checking only "non-empty" leaves the hole one edit wide: delete
-      // `system/init` and `result/success` from the artifact, keep one cheap
-      // entry, and a session that died after two events passes again. This is
-      // not a second source of truth — it is a shape constraint on the
-      // expectation, so the two cannot disagree, only the artifact can be
-      // caught shrinking. Same pattern as p-flag-surface's declaredCount floor.
-      const REQUIRED_FLOOR = ['system/init', 'assistant', 'result/success']
-      for (const k of REQUIRED_FLOOR) {
-        if (requiredPairs && !requiredPairs.includes(k)) {
-          artifactProblems.push(`requiredPairs omits "${k}", which is pinned in code — without it a session that died early satisfies the subset check and passes having measured nothing`)
-        }
-      }
-      if (!requiredInner || requiredInner.length === 0) {
-        artifactProblems.push('requiredInnerPairs is missing or empty — the probe would pass on an envelope with no content')
-      }
-      // The same floor on the inner half. It was written for the outer half and
-      // applied to one of the two places, which left the exact attack the
-      // comment below describes open on the other: swap requiredInnerPairs for
-      // one cheap envelope-only entry and a stream carrying no text at all
-      // satisfies the subset check. Found by the cycle-1 second-opinion review.
-      const REQUIRED_INNER_FLOOR = ['event.type=content_block_delta', 'event.delta.type=text_delta']
-      for (const k of REQUIRED_INNER_FLOOR) {
-        if (requiredInner && !requiredInner.includes(k)) {
-          artifactProblems.push(`requiredInnerPairs omits "${k}", which is pinned in code — without it an envelope carrying no text satisfies the subset check`)
-        }
-      }
-      for (const k of requiredPairs || []) {
-        if (pairsMap && !own(pairsMap, k)) artifactProblems.push(`requiredPairs names "${k}", absent from pairs — that requirement can never be satisfied cleanly`)
-      }
-      for (const k of requiredInner || []) {
-        if (innerMap && !own(innerMap, k)) artifactProblems.push(`requiredInnerPairs names "${k}", absent from innerPairs`)
-      }
+      // file cannot be rescued by a good measurement, and quota is real. The
+      // validator is shared with the free probe — see validateStreamSurface.
+      const { problems: artifactProblems, pairsMap, innerMap, requiredPairs, requiredInner } =
+        validateStreamSurface(surface)
       if (artifactProblems.length) {
         return {
           status: P.FAIL,
@@ -1667,6 +1708,192 @@ const pluginProbes = [
       }
     },
   },
+
+  {
+    id: 'p-hook-failure-detectable',
+    title: 'A failing hook is distinguishable from a healthy one — and one failure mode is not',
+    kind: 'fixture-call',
+    loadBearing: 'critical',
+    claim:
+      'When a hook fails, the engine says so on a structural channel (`system/hook_response`), so the orchestrator can tell a hook that ran and failed from one that ran fine — and from one that never ran at all.',
+    failureImpact:
+      "ADR-006's language dial IS a MessageDisplay hook. A hook failure the orchestrator cannot see means a non-coder silently receives untranslated, engineer-facing output with no signal anywhere. REVIEW-02 A7.",
+    docRefs: ['REVIEW-02 §3 A7', 'ADR-006', 'ADR-008'],
+    async run(ctx) {
+      // Measured on 2.1.220, all four arms, before anything here was pinned.
+      // Equality against these exact pairs — never "an error appeared", which
+      // cannot falsify the claim that a SPECIFIC failure mode is invisible.
+      //
+      // The `garbage` row is the finding, not an oversight: a hook that exits 0
+      // while emitting an unparseable payload is reported as SUCCESS. Its
+      // intended effect silently does not happen and no structural channel says
+      // so. If a future CLI reports an error there instead, this probe goes RED
+      // — and that is good news to be re-pinned deliberately, not a regression.
+      const ARMS = [
+        { key: 'control', env: {}, exit_code: 0, outcome: 'success',
+          why: 'baseline — the same hook, not armed to fail' },
+        { key: 'exit', env: { GUIDELANE_PROBE_HOOK_FAIL: 'exit' }, exit_code: 9, outcome: 'error',
+          why: 'non-zero exit is LOUD: the exit code and stderr both survive' },
+        { key: 'garbage', env: { GUIDELANE_PROBE_HOOK_FAIL: 'garbage' }, exit_code: 0, outcome: 'success',
+          why: 'THE FINDING — malformed payload, exit 0, reported as success. Undetectable.' },
+        { key: 'hang', env: { GUIDELANE_PROBE_HOOK_FAIL: 'hang' }, exit_code: 1, outcome: 'cancelled',
+          why: 'a timeout is detectable AND distinguishable from an error (cancelled != error), which is what lets the orchestrator retry a timeout and refuse an error' },
+      ]
+      const TARGET = 'MessageDisplay'
+
+      const problems = []
+      const observed = {}
+      for (const arm of ARMS) {
+        const ws = ctx.makeWorkspace(`p-hook-failure-${arm.key}`)
+        const logPath = join(ws, 'hook-events.log')
+        const res = await ctx.claude(
+          [
+            '-p',
+            '--input-format', 'stream-json',
+            '--output-format', 'stream-json',
+            '--verbose',
+            '--include-hook-events',
+            '--plugin-dir', join(ctx.fixtures, 'plugin'),
+            '--model', ctx.model,
+            '--tools', '',
+            '--no-session-persistence',
+          ],
+          {
+            cwd: ws,
+            env: { GUIDELANE_PROBE_LOG: logPath, GUIDELANE_PROBE_HOOK_FAIL_EVENT: TARGET, ...arm.env },
+            stdin: ctx.userMessage('Reply with exactly: HOOKFAIL_OK'),
+            timeoutMs: 240_000,
+          }
+        )
+
+        const events = ctx.jsonLines(res.stdout)
+        const frames = events.filter((e) => e && e.type === 'system' && e.subtype === 'hook_response')
+        const target = frames.find((e) => e.hook_name === TARGET)
+        const terminal = events.find((e) => e && e.type === 'result')
+        // The hook's OWN log is what separates "ran and failed" from "never
+        // ran". Without it, an engine that silently stopped running hooks
+        // entirely would satisfy every assertion below by emitting nothing,
+        // and this probe would report the absence as a finding about failure.
+        const ranNames = existsSync(logPath)
+          ? readFileSync(logPath, 'utf8').split('\n').map((s) => s.trim()).filter(Boolean)
+          : []
+
+        observed[arm.key] = {
+          hookRan: ranNames.includes(TARGET),
+          hookResponseFrames: frames.length,
+          exit_code: target ? target.exit_code : null,
+          outcome: target ? target.outcome : null,
+          stderrPresent: Boolean(target && String(target.stderr || '').trim()),
+          stdoutPresent: Boolean(target && String(target.stdout || '').trim()),
+          sessionCompleted: terminal ? `${terminal.type}/${terminal.subtype}` : null,
+          exit: res.code,
+        }
+
+        if (!ranNames.includes(TARGET)) {
+          problems.push(`[${arm.key}] the ${TARGET} hook never ran (its own log has ${ranNames.length} entr(y/ies)) — nothing here says anything about FAILURE detection`)
+          continue
+        }
+        if (!target) {
+          problems.push(`[${arm.key}] the hook ran but the engine emitted no hook_response frame for it — failure is undetectable on this channel by construction`)
+          continue
+        }
+        if (target.exit_code !== arm.exit_code || target.outcome !== arm.outcome) {
+          problems.push(`[${arm.key}] expected exit_code=${arm.exit_code} outcome=${JSON.stringify(arm.outcome)}, got exit_code=${JSON.stringify(target.exit_code)} outcome=${JSON.stringify(target.outcome)}`)
+        }
+        // Fail-open is the measured behaviour, so it is asserted rather than
+        // assumed: every arm must still finish. An arm that started failing the
+        // PHASE would change the orchestrator's design and must not pass quietly.
+        if (!terminal || terminal.subtype !== 'success') {
+          problems.push(`[${arm.key}] session did not end in result/success (${observed[arm.key].sessionCompleted}) — hook failure now fails the phase, which is a contract change`)
+        }
+      }
+
+      // The two halves of the finding, asserted rather than left to prose.
+      if (observed.exit && observed.control && observed.exit.outcome === observed.control.outcome) {
+        problems.push('a hook that exits non-zero is indistinguishable from a healthy one — the orchestrator has no failure signal at all')
+      }
+      if (observed.garbage && observed.garbage.outcome !== 'success') {
+        problems.push(`the malformed-payload arm no longer reports success (outcome=${JSON.stringify(observed.garbage.outcome)}). This is an IMPROVEMENT in the engine: re-pin the expectation deliberately and update REVIEW-02 A7`)
+      }
+
+      return {
+        status: problems.length ? P.FAIL : P.PASS,
+        detail: problems.length
+          ? problems.join(' | ')
+          : `Hook failure is detectable in 2 of 3 modes and INVISIBLE in the third. exit-9 -> exit_code=9/outcome=error (loud); timeout -> exit_code=1/outcome=cancelled (loud, and distinct from error, so a timeout is retryable and an error is not); ` +
+            `malformed payload -> exit_code=0/outcome=success — the engine reports SUCCESS for a hook whose effect silently did not happen. ` +
+            `All four arms still ended in result/success, so a hook failure never fails the phase: fail-open, measured. ` +
+            `Consequence for ADR-006: the language dial rides on a MessageDisplay hook, so the orchestrator must treat non-empty hook stdout that it cannot parse as a failure itself — the engine will not.`,
+        evidence: {
+          target: TARGET,
+          arms: observed,
+          expected: Object.fromEntries(ARMS.map((a) => [a.key, { exit_code: a.exit_code, outcome: a.outcome, why: a.why }])),
+          failOpenConfirmed: Object.values(observed).every((o) => o.sessionCompleted === 'result/success'),
+          undetectableModes: ['malformed payload with exit 0'],
+        },
+      }
+    },
+  },
+]
+
+const surfaceArtifactProbes = [
+  {
+    id: 'p-stream-surface-artifact',
+    title: 'The committed stream-surface artifact is a usable expectation — checked for free, on every push',
+    kind: 'observational',
+    loadBearing: 'critical',
+    claim:
+      '`tools/probe/stream-surface.json` is structurally valid as an expectation: every pair carries exactly one of `class`/`when`, every conditional rule fails CLOSED on an unmodelled value, `defaultForUnknown` is `escalate`, and the required-pair floors are present — with no engine call, so CI gates it.',
+    failureImpact:
+      'The artifact is the cockpit whitelist. Its only other gate, `p-stream-surface-union`, is a `fixture-call`: `node tools/probe/run.mjs` SKIPS it and CI has therefore never run it. Without this probe a fail-open edit — `unknown: "ignore"`, a deleted floor entry, a dropped `defaultForUnknown` — reaches the public repo green and stays there until somebody runs `--live` by hand.',
+    docRefs: ['REVIEW-02 §14 follow-up (b)', 'REVIEW-02 §15', 'PROJECT_MAP Principle 9'],
+    async run() {
+      const { surface, readError } = readStreamSurface()
+      // Fail CLOSED on a missing or corrupt artifact. "No whitelist" means
+      // "nothing is classified", the maximally unsafe state — the same shape as
+      // the baseline gate that once printed "no baseline yet" and exited 0 over
+      // a merge conflict.
+      if (!surface || typeof surface !== 'object' || Array.isArray(surface)) {
+        return {
+          status: P.FAIL,
+          detail: `stream-surface.json could not be read as an object (${readError || 'not an object'}). The cockpit whitelist has no expectation to check against.`,
+          evidence: { readError, artifactUsable: false },
+        }
+      }
+
+      const { problems, pairsMap, innerMap } = validateStreamSurface(surface)
+      if (problems.length) {
+        return {
+          status: P.FAIL,
+          detail: `stream-surface.json is not a usable expectation: ${problems.join('; ')}`,
+          evidence: { problems, artifactUsable: false, schemaVersion: surface.schemaVersion ?? null },
+        }
+      }
+
+      const pairKeys = Object.keys(pairsMap).filter((k) => !k.startsWith('_'))
+      const innerKeys = Object.keys(innerMap).filter((k) => !k.startsWith('_'))
+      const conditional = pairKeys.filter((k) => pairsMap[k].when)
+      return {
+        status: P.PASS,
+        detail:
+          `Artifact valid at schemaVersion ${surface.schemaVersion}: ${pairKeys.length} pair(s), ${innerKeys.length} inner type(s), ` +
+          `${conditional.length} value-conditional rule(s), every one failing closed on an unmodelled value, and defaultForUnknown=escalate. ` +
+          `This checks the artifact's SHAPE only — that the classifications match a real stream is p-stream-surface-union's job, and it needs --live.`,
+        evidence: {
+          schemaVersion: surface.schemaVersion ?? null,
+          // Names from our own committed file, safe verbatim by construction.
+          pairs: pairKeys.sort(),
+          innerPairs: innerKeys.sort(),
+          conditionalRules: Object.fromEntries(conditional.map((k) => [k, pairsMap[k].when.path])),
+          defaultForUnknown: surface.defaultForUnknown,
+          requiredPairs: surface.requiredPairs,
+          requiredInnerPairs: surface.requiredInnerPairs,
+          // Stated so nobody reads a green here as "the whitelist is correct".
+          checksShapeNotBehaviour: true,
+        },
+      }
+    },
+  },
 ]
 
 const governanceProbes = [
@@ -2315,5 +2542,6 @@ export const probes = [
   ...sessionProbes,
   ...mcpProbes,
   ...pluginProbes,
+  ...surfaceArtifactProbes,
   ...governanceProbes,
 ]
