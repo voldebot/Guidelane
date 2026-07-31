@@ -90,5 +90,26 @@ test('an unknown inner type escalates', () => {
 
 test('loadSurface refuses an artifact that fails open', () => {
   const bad = fileURLToPath(new URL('./fixtures/surface-fail-open.json', import.meta.url))
-  assert.throws(() => loadSurface(bad), /defaultForUnknown must be "escalate"/)
+  assert.throws(() => loadSurface(bad), /defaultForUnknown = "ignore", must be "escalate"/)
+})
+
+test('loadSurface refuses the shapes it used to load cleanly', () => {
+  // This loader checked `defaultForUnknown` and NOTHING else, while the probe
+  // suite enforced four more invariants on the same file — so the strong copy
+  // ran in CI and the weak one ran on the user's machine. It now calls the same
+  // validator. Each fixture is a shape that loaded fine before.
+  for (const [name, pattern] of [
+    // `when` with no `unknown` yielded `class: undefined`, which every renderer
+    // drops silently.
+    ['surface-when-no-unknown.json', /when\.unknown/],
+    // A typo'd class is outside the three-value set, so it is neither rendered
+    // nor escalated — it vanishes.
+    ['surface-bad-class.json', /expected one of render \| ignore \| escalate/],
+    // A VALID shape that is a raw chain-of-thought leak. Shape validation alone
+    // would wave this through, which is why one classification is pinned.
+    ['surface-thinking-render.json', /must be "ignore"/],
+  ] as const) {
+    const p = fileURLToPath(new URL(`./fixtures/${name}`, import.meta.url))
+    assert.throws(() => loadSurface(p), pattern, `${name} must be refused`)
+  }
 })

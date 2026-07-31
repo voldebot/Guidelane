@@ -793,6 +793,109 @@ session before reporting for exactly this reason; the same discipline has to hol
 at every exit path the orchestrator has, not only the one that was designed for
 it.
 
+## 21. Addendum — the S1 sprint-close audit, and what two independent reviewers found in code I had already verified (2026-07-31)
+
+Two advisory passes over `packages/engine` — a design review and an adversarial
+security audit, each given the code and no explanation of it. They converged
+independently on seven findings and the security pass added five more. Every one
+was verified against the code before acting; every one held. The suite was green
+and the live tests passed before this ran.
+
+**The headline is uncomfortable and worth stating plainly: the gate that ADR-008
+puts in front of every phase did not gate anything.** `assertInitReceipt`
+returned a list of problems, the caller emitted a `failure` event, and then fell
+through and kept running. The user-facing string said *"so it was stopped before
+doing any work"* — and nothing was stopped, and work had already begun, because
+the documented call order put the prompt on the wire before init was parsed. My
+own live test asserted the failure fired and then sent a turn anyway: **it
+documented the bug and called it a pass.**
+
+Three more fail-open layers were stacked in the same gate: `expect` was optional,
+so omitting it produced a gate that could not fire; the check ran only from
+inside the init branch, so an engine that emits no receipt was never gated at
+all; and there was no way for a caller to *wait* for the gate, so "before tokens
+are spent" was structurally impossible with that API.
+
+### 21.1 What the fix required measuring
+
+Making `send()` wait for the receipt deadlocked immediately — both live tests hung
+for exactly the 30-second timeout. The cause is a fact nobody had measured:
+
+> **The engine emits no `system/init` until it receives a user message.** Idle
+> for 8 s with stdin open: nothing. The receipt arrived **86 ms** after the first
+> turn was written.
+
+So the gate cannot be "no send before init". It is **one priming turn, then
+nothing until the receipt passes** — no second turn, no accepted output, and a
+kill within milliseconds of a mismatch, which is before the model's answer
+exists. ADR-008's "before tokens are spent" is corrected in place: the prompt's
+input tokens are spent, and that is the true and small cost of the gate.
+
+### 21.2 The other findings, in severity order
+
+- **Raw chain-of-thought was renderable at the API boundary.** `stream_event` is
+  pinned `render`, and the envelope is what carries `thinking_delta`. The adapter
+  emitted only the OUTER class, so a cockpit doing the obvious
+  `if (cls.class === 'render')` would stream unrewritten English reasoning into a
+  Turkish user's feed with every gate green. The artifact pinned it, the probe
+  pinned it, CI gated it — and the pin stopped at the adapter. Fixed with
+  `effectiveClass(outer, inner)` in **one** place, because re-deriving the
+  combination rule per consumer is ignoring-by-convention one layer up.
+- **stderr was piped and never read.** REVIEW-02 **B8 already named "both pipes
+  always drained" as an exit criterion** and the rewrite dropped it — the
+  predecessor harness has the listener, under a comment naming the consequence.
+  The engine blocks under backpressure rather than dropping, so ~64 KiB of
+  unread stderr deadlocks the phase, stdout goes quiet, and the stall watchdog
+  reports *"the engine went quiet"* about a fault that is four lines of ours.
+- **An `EPIPE` on stdin would kill the supervisor and orphan the children.** The
+  children are `detached`, so an uncaught throw takes the parent and leaves
+  authenticated processes running with nobody reading them. Same class: any
+  consumer listener that throws propagated out of the `data` handler.
+- **The framing layer violated the classifier's own invariant.** Three silent
+  `continue`s discarded unparseable lines, while `#lastEventAt` was refreshed by
+  *bytes* — so a CLI framing change would keep the watchdog fed while every line
+  was dropped: no events, no terminal event, a silent feed. `#buf` also had no
+  cap and was rescanned in full on every chunk.
+- **`loadSurface` was materially weaker than its own probe-side twin**, which is
+  the drift the probe's docstring warns about, one directory away. It checked
+  `defaultForUnknown` and nothing else, so three shapes loaded cleanly: a `when`
+  rule missing `unknown` (yielding `class: undefined`, silently dropped by any
+  renderer), a `class: "renderr"` typo, and **a thinking entry reclassified to
+  `render`** — a valid *shape* and a raw-reasoning leak. The strong copy ran in
+  CI; the weak one ran on the user's machine. Fixed by extracting the validator
+  to `tools/probe/lib/stream-surface-schema.mjs` and importing it from **both**.
+- **The env deny-list was proven inadequate by measurement, not argument.** The
+  audit asked whether `CLAUDE_CODE_OAUTH_TOKEN` was covered. Extracting every
+  auth-or-routing-shaped variable *from the 2.1.220 binary* returned about a
+  hundred names, of which the nine-key list caught nine — missing
+  `CLAUDE_CODE_OAUTH_TOKEN`, `CLAUDE_CODE_OAUTH_REFRESH_TOKEN`,
+  `CLAUDE_CODE_SESSION_ACCESS_TOKEN`, `CLAUDE_CODE_CLIENT_KEY`,
+  `ANTHROPIC_IDENTITY_TOKEN`, `ANTHROPIC_FOUNDRY_AUTH_TOKEN`, the whole `AWS_*`
+  credential family and `GOOGLE_APPLICATION_CREDENTIALS`. Now a prefix rule over
+  five namespaces plus 25 named `CLAUDE_CODE_` auth keys, iterating the
+  environment rather than the list.
+- Plus: a stale `#pgid` could SIGKILL a **recycled** process group (and every
+  session is its own group leader, so the likeliest victim is another live
+  engine); `start()` twice leaked a child per retry; `#expectingOutput` as a
+  boolean left a second in-flight turn unwatched; `setDraining(false)` then
+  `finish()` disarmed the watchdog entirely; `cmpVersion` returned `NaN` on a
+  malformed range and silently disabled the version gate; and `#checkHook`
+  exempted *empty* stdout — the commonest form of the truncated write it exists
+  to catch — while calling `JSON.parse` "validation".
+
+### 21.3 What this says about the process
+
+The code was written against measured facts, type-checked, unit-tested, and
+verified end to end against the real engine — and an adversarial pass still found
+a critical fail-open in the single most load-bearing gate, plus a raw-reasoning
+leak at an API boundary that three separate mechanisms had been built to prevent.
+
+That is not an argument against the earlier verification; it is the exact
+evidence for ADR-002's rule that **no claim is accepted from the session that
+produced the work**. The author's own tests encoded the author's own assumption
+about what the gate did. It took a reader with no such assumption to notice that
+the message and the code disagreed.
+
 ## 11. Addendum — the logged-out shape, measured for free (2026-07-30)
 
 The first CI run doubled as a B5 probe nobody had to pay for: a GitHub runner has

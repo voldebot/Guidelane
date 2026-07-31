@@ -72,19 +72,28 @@ test('live: the measured lifecycle holds against the real engine', { skip: !LIVE
   session.on('escalate', (_e, cls) => escalations.push(cls))
   session.on('failure', (f) => failures.push(f))
 
-  const closed = new Promise<{ code: number | null }>((resolve) => session.on('closed', resolve))
   // ARM BEFORE SEND. Registering the listener after send() is a race the engine
   // wins whenever it answers faster than this test resumes — the `turn` fires
   // into no listener and the await never settles. It hung exactly once that way.
   const turn = (): Promise<StreamEvent> =>
     new Promise((resolve) => session.once('turn', (t) => { turns.push(t); resolve(t) }))
+  const ready = new Promise<StreamEvent>((resolve) => session.once('ready', resolve))
 
   session.start()
-  const argv = session.argv
-  assert.ok(argv.includes('--strict-mcp-config'), 'isolation pair must be on the real argv')
+  // The argv the PROCESS got, not a fresh recomputation of what it should have
+  // been. `session.argv` re-runs applyIsolation on every access, so asserting
+  // against it proves a computation is isolated and says nothing about the
+  // running session.
+  assert.ok(session.spawnedArgv?.includes('--strict-mcp-config'), 'isolation pair must be on the real argv')
 
+  // THE PRIMING TURN. MEASURED: the engine emits no `system/init` at all until
+  // it receives a user message — nothing during 8 s of idle, receipt 86 ms after
+  // the first turn. So the gate cannot be "no send before init"; that deadlocks,
+  // and it did. It is "one priming turn, then nothing until the receipt passes".
   const turn1 = turn()
   session.send('Reply with exactly: ENGINE_OK_1')
+  assert.throws(() => session.send('a second, before the gate'), /again before the init receipt/)
+  await ready
   await turn1
 
   // MULTI-TURN on one session: `result` is per-turn, so the session is still
@@ -102,13 +111,11 @@ test('live: the measured lifecycle holds against the real engine', { skip: !LIVE
   assert.deepEqual(failures.filter((f) => f.kind === 'init-receipt'), [])
 
   // TERMINATION: closing stdin ends it. Measured at ~530 ms; a generous budget
-  // here, because the assertion is "it ends", not "it ends fast".
+  // here, because the assertion is "it ends", not "it ends fast". `close()`
+  // carries the whole measured sequence — finish, keep draining, wait for the
+  // process `close` — so a caller cannot get the order wrong.
   const t0 = Date.now()
-  session.finish()
-  const { code } = await Promise.race([
-    closed,
-    new Promise<{ code: null }>((_r, reject) => setTimeout(() => reject(new Error('did not exit after stdin closed')), 20_000)),
-  ])
+  const { code } = await session.close(20_000)
   const exitLatency = Date.now() - t0
   assert.equal(code, 0, 'a normal phase end must not look like a failure')
   assert.ok(exitLatency < 20_000)
@@ -158,18 +165,23 @@ test('live: an init receipt mismatch fails the phase before work', { skip: !LIVE
   })
   t.after(() => { session.stop(); registry.killAll() })
   const failures: SessionFailure[] = []
+  const turns: StreamEvent[] = []
   session.on('failure', (f) => failures.push(f))
-  const closed = new Promise((resolve) => session.on('closed', resolve))
+  session.on('turn', (t2) => turns.push(t2))
+  const gateFailed = new Promise<SessionFailure>((resolve) => session.once('failure', resolve))
 
   session.start()
-  const firstTurn = new Promise<void>((resolve) => session.once('turn', () => resolve()))
+  // The priming turn is what makes the engine emit its receipt at all.
   session.send('Reply with exactly: ENGINE_OK')
-  await firstTurn
-  session.finish()
-  await closed
+  const problem = await gateFailed
 
-  const receipt = failures.filter((f) => f.kind === 'init-receipt')
-  assert.equal(receipt.length, 1, 'the init receipt gate did not fire on a real mismatch')
-  assert.match(String(receipt[0]?.detail), /model is/)
-  assert.equal(registry.size, 0)
+  assert.equal(problem.kind, 'init-receipt', 'the init receipt gate did not fire on a real mismatch')
+  assert.match(String(problem.detail), /model is/)
+  // The claim in the message is "stopped before doing any work", and BOTH halves
+  // have to be true against the real engine. The previous version of this test
+  // asserted the failure fired and then sent a turn anyway — it documented the
+  // gate failing to gate and called it a pass.
+  assert.throws(() => session.send('anything'), /init receipt failed/)
+  assert.deepEqual(turns, [], 'no turn may complete after the gate fails')
+  assert.equal(registry.size, 0, 'a failed gate must reap the session')
 })

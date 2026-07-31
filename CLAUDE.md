@@ -199,7 +199,12 @@ a committed artifact. **The 24th arrived the same day**, and it was
 the model off a surface that does not carry it, publishing *"model reported as
 not surfaced in result"*, and passing on a zero exit for its entire life. It
 could not distinguish a session that honoured `--model` from one that ignored it.
-Expect the 25th.
+**The 25th was found by the S1 sprint-close audit, in the gate that guards every
+other gate**: `assertInitReceipt` returned a list of problems, the caller emitted
+a `failure` event and then *fell through and kept running*, under a user-facing
+message reading "so it was stopped before doing any work". Nothing was stopped.
+My own live test asserted the failure fired and then sent a turn anyway — it
+documented the bug and called it a pass. Expect the 26th.
 **Last sprint close**: 2026-07-31 (S0, post-audit hardening). Shipped: `tools/probe/`
 (30 probes, all green), ADR-007 + ADR-008 with two dated corrections, REVIEW-02
 (+§13 free Tier A answers), CI wiring, LICENSE, THIRD-PARTY-NOTICES, the two

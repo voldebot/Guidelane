@@ -123,6 +123,28 @@ assertion someone would reasonably have written:
 - `init.agents` **does** reflect `--agents`, so inline-agent registration is
   assertable on the receipt even though *dispatch* is a model decision.
 
+*Correction (measured 2026-07-31, evening — S1 sprint-close audit).* **"A mismatch
+fails the phase before tokens are spent" is not literally achievable in `-p`
+stream-json, and this ADR overclaimed it.** The engine emits **no `system/init`
+at all until it receives a user message**: a session left idle for 8 s produced
+nothing, and the receipt arrived 86 ms after the first turn was written. So
+"await the receipt, then send" deadlocks — the adapter was built that way first
+and both live tests hung for exactly the 30-second timeout.
+
+The honest rule, now implemented and tested against the real engine:
+
+- **One priming turn is allowed** — it is what makes the engine initialise.
+- **No second turn, no tool result, and no accepted output** before the receipt
+  passes. `send()` throws.
+- On a mismatch the session is **killed within milliseconds of init**, which is
+  before the model's answer exists — so no *work* is done and no claim from that
+  session is ever accepted. But the prompt has been submitted, and input tokens
+  for it are spent. That is the true cost of the gate, and it is small.
+
+The distinction matters because the previous wording invited an implementation
+that cannot exist, and the first attempt at one produced a silent hang — the
+failure class this whole line of work is meant to eliminate.
+
 *Correction (measured 2026-07-31, evening — the adapter's first live run).*
 **`init.model` carries the RESOLVED model id, never the alias that was routed
 with.** `--model haiku` reports `claude-haiku-4-5-20251001`; `--model sonnet`

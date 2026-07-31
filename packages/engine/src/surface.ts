@@ -5,6 +5,8 @@
 //      silently.
 
 import { readFileSync } from 'node:fs'
+import { basename } from 'node:path'
+import { validateStreamSurface } from '../../../tools/probe/lib/stream-surface-schema.mjs'
 
 export type StreamClass = 'render' | 'ignore' | 'escalate'
 
@@ -18,7 +20,7 @@ interface SurfaceEntry {
   when?: WhenRule
   why: string
 }
-interface SurfaceArtifact {
+export interface SurfaceArtifact {
   schemaVersion: number
   defaultForUnknown: StreamClass
   pairs: Record<string, SurfaceEntry>
@@ -50,20 +52,24 @@ const own = (o: object, k: string): boolean => Object.prototype.hasOwnProperty.c
 export function loadSurface(path: string): SurfaceArtifact {
   const parsed: unknown = JSON.parse(readFileSync(path, 'utf8'))
   if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    throw new Error(`stream surface at ${path} is not an object — refusing to run with no whitelist`)
+    // basename, not the full path: this message crosses the boundary into logs
+    // and run records, and the full path is the operator's home directory —
+    // `~/work/<client>/…` on a pilot machine. Same reasoning as redact.mjs.
+    throw new Error(`stream surface ${basename(path)} is not an object — refusing to run with no whitelist`)
   }
-  const a = parsed as Partial<SurfaceArtifact>
-  // Fail CLOSED on a missing default. "Nothing is classified" is the maximally
-  // unsafe state, and the whole point of this rule is that the artifact is
-  // KNOWN to be incomplete: it enumerates one flag configuration on one model.
-  if (a.defaultForUnknown !== 'escalate') {
-    throw new Error(
-      `stream surface defaultForUnknown must be "escalate" (got ${JSON.stringify(a.defaultForUnknown)}) — ` +
-        'an unenumerated pair may not be silently dropped'
-    )
+  // ONE validator, shared with the probe suite. This function used to check
+  // `defaultForUnknown` and nothing else, while `tools/probe` enforced four more
+  // invariants on the same file — so the strong copy ran in CI and the weak one
+  // ran on the user's machine. Concretely, the shapes that loaded cleanly here:
+  // a `when` rule missing `unknown` (producing `class: undefined`, which every
+  // renderer drops silently), a `class: "renderr"` typo, and a thinking entry
+  // reclassified to `render`, which is a valid SHAPE and a raw chain-of-thought
+  // leak. Found by the S1 sprint-close audit.
+  const { problems } = validateStreamSurface(parsed)
+  if (problems.length > 0) {
+    throw new Error(`stream surface ${basename(path)} is unusable:\n- ${problems.join('\n- ')}`)
   }
-  if (!a.pairs || !a.innerPairs) throw new Error('stream surface is missing pairs or innerPairs')
-  return a as SurfaceArtifact
+  return parsed as SurfaceArtifact
 }
 
 /** Read a dot-separated path off an event without trusting any of it. */
@@ -131,6 +137,31 @@ export function classify(
  * thinking block kept its original characters). A renderer that ignored them by
  * omission would fail open the first time it was rewritten.
  */
+/**
+ * The class a RENDERER must obey for one event — outer and inner combined.
+ *
+ * This exists because the outer classification alone is a trap. `stream_event`
+ * is pinned `render` (the artifact's own `why` says the envelope "is not enough
+ * to render from"), and the envelope is exactly what carries `thinking_delta`.
+ * A consumer doing the obvious `if (cls.class === 'render') show(event)` would
+ * therefore stream raw English chain-of-thought into a Turkish user's activity
+ * feed, with every gate green — ADR-006's dial is a MessageDisplay hook and
+ * provably does not touch thinking blocks.
+ *
+ * So the combination rule lives HERE, once, rather than being re-derived by
+ * every consumer. Re-deriving it per consumer is ignoring-by-convention one
+ * layer up, and a convention is not a constraint.
+ *
+ * `escalate` dominates (a human must be told); then `ignore` (one unrenderable
+ * part makes the whole envelope unrenderable — you cannot render half of it);
+ * otherwise the outer class stands.
+ */
+export function effectiveClass(outer: Classification, inner: readonly Classification[]): StreamClass {
+  if (outer.class === 'escalate' || inner.some((i) => i.class === 'escalate')) return 'escalate'
+  if (inner.some((i) => i.class === 'ignore')) return 'ignore'
+  return outer.class
+}
+
 export function classifyInner(
   surface: SurfaceArtifact,
   envelope: Record<string, unknown>

@@ -1,0 +1,157 @@
+{
+  "_comment": "FIXTURE: a typo'd class. Outside the three-value set, so it is neither rendered nor escalated \u2014 it vanishes.",
+  "schemaVersion": 2,
+  "_schema": "A pair entry carries EXACTLY ONE of `class` or `when`. `class` is an unconditional decision. `when` is a value-conditional one: read `path` (dot-separated, from the event root), look the value up in `values`, and fall back to `unknown` if it is not there. `unknown` MUST be `escalate` \u2014 a rule that discriminates by value is a statement that the values matter, so an unrecognised one has to reach a human. schemaVersion 1 had `class` only, which is why two of its three `escalate` entries were wrong: `rate_limit_event` fires on EVERY healthy session (measured `rate_limit_info.status = \"allowed\"`), and a renderer obeying that file literally would escalate every phase forever. Alarm fatigue then kills the one escalation that matters, which is the rate-limit pause the class was written for.",
+  "defaultForUnknown": "escalate",
+  "defaultForUnknownWhy": "The runtime rule for a pair that is in NO list. This file is a sample of one flag configuration, never the closed set (see `scope`), so incompleteness is not a risk to be managed but a certainty to be survived. A renderer that drops what it does not recognise goes silent in front of a non-coder, which REVIEW-02 names as the worst available outcome; one that escalates is merely noisy, and the noise is a bug report.",
+  "_findings": "Two entries here were NOT in the REVIEW-02 \u00a713 seed and were found by this probe's first live run: the pair `system/status`, and content-bearing thinking blocks (`event.content_block.type=thinking`, `event.delta.type=thinking_delta`, `event.delta.type=signature_delta`). The second answers the open half of REVIEW-02 A6 as a side effect: raw reasoning text DOES reach `-p` stream-json, on haiku, unrewritten by the MessageDisplay hook.",
+  "scope": "A SAMPLE OF ONE FLAG CONFIGURATION **ON ONE MODEL**, NOT THE CLOSED SET. Every pair below was observed in a real stream, but the union of one configuration is not the union of all of them. Configurations NOT represented here: sessions that use tools, subagents (--forward-subagent-text), MCP servers, --json-schema, a non-zero-exit result, an interrupted session, or a rate-limited one. `result/success` is present and the other `result/*` subtypes are deliberately ABSENT because none has been observed by this suite \u2014 so a run that ends in an error result WILL fail this probe, which is the intended behaviour: it forces the new subtype to be classified by a human before the cockpit meets it.",
+  "_modelDependence": "THE MODEL CHANGES THE UNION, measured 2026-07-31. Identical flags on `--model sonnet --effort high` produced NO thinking surface at all \u2014 no `content_block.type=thinking`, no `thinking_delta`, no `signature_delta`, and no `system/thinking_tokens` \u2014 where `--model haiku` produces all four. The whole conformance suite runs on haiku, so this file is haiku's universe. A cockpit validated here and run on another model is validated against a different stream. Effort level, by contrast, does NOT change the surface: low/medium/high/xhigh/max and no-flag all produced the same three thinking types on haiku, varying only in volume (157-299 chars).",
+  "seededFrom": [
+    "docs/research/REVIEW-02-runtime-gaps.md \u00a713 \u2014 the eight pairs measured in one short session",
+    "p-stream-json-roundtrip (baseline: pass) \u2014 evidences that `user` and `stream_event` appear under --replay-user-messages + --include-partial-messages",
+    "S1 night cycle 1, this probe's own first live run under the configuration recorded in `observedUnder`"
+  ],
+  "observedUnder": {
+    "flags": [
+      "-p",
+      "--input-format stream-json",
+      "--output-format stream-json",
+      "--verbose",
+      "--include-partial-messages",
+      "--include-hook-events",
+      "--replay-user-messages",
+      "--plugin-dir <fixtures>/plugin",
+      "--tools ''",
+      "--no-session-persistence",
+      "+ the ADR-008 isolation pair added by the harness"
+    ],
+    "model": "haiku (the suite's live default \u2014 the wire format is under test, not reasoning)",
+    "engineVersion": "2.1.220 (Claude Code)",
+    "platform": "darwin"
+  },
+  "classes": {
+    "render": "The cockpit turns this into user-facing plain language.",
+    "ignore": "Deliberately not shown to the user. Consumed by the orchestrator, or dropped.",
+    "escalate": "Must interrupt the normal flow \u2014 the user has to be told, or a gate has to act."
+  },
+  "requiredPairs": [
+    "system/init",
+    "assistant",
+    "user",
+    "stream_event",
+    "result/success"
+  ],
+  "requiredPairsWhy": "Without a pinned minimum this probe passes on an empty or truncated stream: it would observe nothing, find no unclassified pair, and report green having learned nothing. Every entry here is structurally guaranteed by the flag set in `observedUnder` and is already evidenced green by p-stream-json-roundtrip.",
+  "pairs": {
+    "system/init": {
+      "class": "ignore",
+      "why": "Consumed by the ADR-008 init-receipt gate as a pre-flight assertion before any work. Never rendered; it is engineer-facing configuration."
+    },
+    "system/hook_started": {
+      "class": "ignore",
+      "why": "Hook lifecycle. Internal to the behaviour pack; a non-coder has no model of what a hook is."
+    },
+    "system/hook_response": {
+      "class": "ignore",
+      "why": "Hook lifecycle. See system/hook_started."
+    },
+    "system/hook_progress": {
+      "class": "ignore",
+      "why": "Hook lifecycle. See system/hook_started."
+    },
+    "system/thinking_tokens": {
+      "class": "ignore",
+      "why": "Counters only (estimated_tokens, estimated_tokens_delta) and no text, measured REVIEW-02 \u00a713. May drive a progress indicator later; it is not a render surface."
+    },
+    "assistant": {
+      "class": "renderr",
+      "why": "The completed assistant message. This is the text the MessageDisplay rewrite acts on (ADR-008) and the primary user-facing surface."
+    },
+    "user": {
+      "class": "ignore",
+      "why": "Replay of the message the orchestrator itself sent (--replay-user-messages). Rendering it would echo the user's own words back at them as if the engine had said them."
+    },
+    "stream_event": {
+      "class": "render",
+      "why": "Token-level deltas that drive the live activity feed. See `innerPairs` \u2014 the outer envelope is not enough to render from."
+    },
+    "rate_limit_event": {
+      "when": {
+        "path": "rate_limit_info.status",
+        "values": {
+          "allowed": "ignore",
+          "allowed_warning": "render"
+        },
+        "unknown": "escalate"
+      },
+      "why": "Night Shift sleeps to resetsAt (ADR-007), and a paused run that looks identical to a working one is the worst outcome in front of a non-coder \u2014 so the PAUSE must reach the surface. The event itself does not mean a pause: it is emitted on every healthy session. `allowed` (measured 2026-07-31 morning, alongside resetsAt, rateLimitType: five_hour, overageStatus, overageDisabledReason, isUsingOverage) is routine and ignored. `allowed_warning` was found the same evening BY THE ADAPTER ESCALATING IT \u2014 the fail-closed default doing its job on a value nobody had modelled \u2014 carrying `rateLimitType: \"seven_day\"` and a new `utilization: 0.51` field. It is classified `render`, not `escalate`: the user should be told they are half way through a weekly allowance, and interrupting them for it would be the alarm fatigue this schema exists to prevent, while hiding it would make work stopping later a surprise. `rejected` and anything else still escalate by falling through."
+    },
+    "system/status": {
+      "when": {
+        "path": "status",
+        "values": {
+          "requesting": "ignore"
+        },
+        "unknown": "escalate"
+      },
+      "why": "NOT IN THE REVIEW-02 \u00a713 SEED \u2014 first observed by this probe in S1 night cycle 1, and it rides with --include-partial-messages (absent from a run without it, measured 2026-07-31). Keys are {type, subtype, session_id, uuid, status}. `status = \"requesting\"` is measured and is a request-progress signal, not a session-level alarm, so it is `ignore` on the same reasoning as system/thinking_tokens: it may drive a spinner, it is not a render surface. It was classified `escalate` unconditionally as a fail-closed placeholder while its values were unmeasured; that placeholder was correct then and would be alarm noise now. The rest of the value set is STILL unenumerated, which is exactly what `unknown: escalate` is for."
+    },
+    "result/success": {
+      "class": "render",
+      "why": "Terminal event. Carries usage/cost and closes the phase; the cockpit shows completion from this, never from the model claiming it finished."
+    }
+  },
+  "innerPairs": {
+    "_comment": "Inside a `stream_event` envelope. Asserted with the same no-unclassified-pair rule as `pairs`, but only the two entries in `requiredInnerPairs` are required to appear \u2014 the rest are absence-tolerant because which content blocks a session produces depends on what it was asked to do. A NEW inner type is still a FAIL, which is the drift this section exists to catch. REVIEW-02 A6 (thinking content blocks) is the open half and is a separate probe.",
+    "event.type=message_start": {
+      "class": "ignore",
+      "why": "Envelope open. Carries no text."
+    },
+    "event.type=content_block_start": {
+      "class": "render",
+      "why": "Opens a renderable block; the block's own type decides how."
+    },
+    "event.type=content_block_delta": {
+      "class": "render",
+      "why": "The token stream itself \u2014 this is the live feed."
+    },
+    "event.type=content_block_stop": {
+      "class": "render",
+      "why": "Closes a renderable block."
+    },
+    "event.type=message_delta": {
+      "class": "ignore",
+      "why": "Carries stop_reason and usage deltas, not text. The orchestrator reads it; the user does not."
+    },
+    "event.type=message_stop": {
+      "class": "ignore",
+      "why": "Envelope close. Carries no text."
+    },
+    "event.delta.type=text_delta": {
+      "class": "render",
+      "why": "Assistant text, one chunk at a time."
+    },
+    "event.content_block.type=text": {
+      "class": "render",
+      "why": "A text block opening."
+    },
+    "event.content_block.type=thinking": {
+      "class": "ignore",
+      "why": "RAW CHAIN-OF-THOUGHT, ON THE WIRE. Keys {type, thinking, signature}. Measured S1 night cycle 1 on `--model haiku` with no reasoning flag beyond --include-partial-messages, so this is the DEFAULT shape, not an opt-in one. The MessageDisplay rewrite fires on assistant text and NOT on thinking (ADR-008), so this text arrives unrewritten \u2014 the most engineer-facing text the engine produces. It must be in the renderer's ignore set BY NAME. A whitelist that ignores it by omission fails open the moment the renderer is rewritten."
+    },
+    "event.delta.type=thinking_delta": {
+      "class": "ignore",
+      "why": "Streaming chunks of the above. Keys {type, thinking, estimated_tokens}. Same rule, same reason: ignored by name, never by omission."
+    },
+    "event.delta.type=signature_delta": {
+      "class": "ignore",
+      "why": "Cryptographic signature over a thinking block. Keys {type, signature}. No user-facing meaning at all; carried so a thinking block can be replayed to the API intact."
+    }
+  },
+  "requiredInnerPairs": [
+    "event.type=content_block_delta",
+    "event.delta.type=text_delta"
+  ],
+  "requiredInnerPairsWhy": "A session that emits a `stream_event` envelope but no text delta inside it has a feed with no content. These two are the minimum that makes --include-partial-messages worth passing at all."
+}

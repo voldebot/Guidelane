@@ -36,6 +36,21 @@ This ADR fixes the runtime half of the contract, as `packages/engine`.
 
 ## Decision
 
+**0. The init receipt gates the phase, and it gates it by STOPPING.** A gate that
+emits an advisory and lets the phase continue is not a gate. On a mismatch the
+adapter reaps the process group first and reports second, refuses every later
+`send()`, and delivers no further events — so no claim from that session can be
+accepted. An **absent** receipt fails the same way after a bounded wait, because
+a check that only runs when the event arrives is satisfied by the event never
+arriving, which is the fail-open shape this project has catalogued two dozen
+times. Both halves are asserted against the real engine.
+
+The one thing this cannot do is precede the prompt: the engine emits no
+`system/init` until it has been sent a user message (measured — nothing at 8 s
+idle, receipt 86 ms after the first turn), so **exactly one priming turn** is
+allowed and everything after it waits. ADR-008's "before tokens are spent" is
+corrected there in place.
+
 **1. A phase is one engine session, and the phase boundary is `stdin.end()`.**
 Measured (`p-phase-terminator`): closing stdin ends the session, exit 0 arriving
 ~530 ms later. Waiting 10 s before closing gives the same latency, so it is the
