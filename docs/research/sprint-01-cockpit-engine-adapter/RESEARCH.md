@@ -206,10 +206,20 @@ the constitution's calibration rule, and it is deliberately uneven.
 **Tier A scoreboard after S1-A**: A2 partly answered · **A4 CLOSED** · **A6 CLOSED** · **A7 ANSWERED**. Remaining: A1, A3b, A5 — all in S1-C, all now unblocked by the measured session handle.
 
 **Stage S1-B — the reactive session handle (95%) — GATE ALREADY PASSED**
-9. [ ] Promote the 30-line feasibility harness (§3 D) into `packages/engine`'s session handle. **NOT throwaway** — that framing was wrong the moment it worked. It gets a design review gate instead of an imagined deletion
+9. [ ] Keep the 30-line feasibility harness (§3 D) as the **measurement rig for S1-C**, not as product code yet.
+
+> **Correction to this plan's own first revision.** The `/loophole-loop` revision
+> said "promote it into `packages/engine`" here *and* listed the same work in
+> S1-D — the same code in two stages. Worse, building the adapter before A1/A5/A3b
+> are measured is precisely the mistake the dependency split exists to prevent:
+> the lifecycle terminator (step 13) is still unmeasured, and it is an adapter
+> design input. So the rig stays a rig through S1-C, and `packages/engine` is
+> built once, in S1-D, on measured facts. What was right in the revision stands:
+> it is **not throwaway**, and it gets a design review rather than an imagined
+> deletion.
 
 **Stage S1-C — rig-dependent Tier A (72%, unblocked earlier than planned)**
-10. [ ] A1 control channel — verify: an unanswered `control_request` is distinguishable from a stall; settles the REVIEW-02 §3 A1-vs-A2 subtype contradiction for free
+10. [ ] A1 control channel — **already mostly answered as a side effect**: across ~12 sessions in the S1-A spikes (four permission modes, hook-failure arms, thinking arms) **no `control_request` frame has ever been emitted**, and A4 closed on the same evidence. What remains is narrow: confirm the engine never *initiates* one under a deliberately adversarial setup, at which point the REVIEW-02 §3 A1-vs-A2 subtype contradiction becomes **moot for the orchestrator** — you cannot mis-route a frame that is never sent. Verify: an adversarial arm that reaches a decision point and still emits nothing
 11. [ ] A5 stall baseline + stdout backpressure — verify: a measured inter-event silence threshold, not a wall-clock guess
 12. [ ] A3b does `is_error` survive backpressure — verify: denial detected under load, not only when idle
 
