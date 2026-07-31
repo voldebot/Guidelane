@@ -524,3 +524,79 @@ pass-path behaviour is unchanged by inspection. Not the same thing as measured.
 - Working tree at scan time: only `docs/FILEMAP.md` modified (hook-generated).
 - 30 probe ids present in `tools/probe/probes.mjs`; `p-stream-surface-union` is not among them and
   `tools/probe/stream-surface.json` does not exist — the item is genuinely unstarted.
+
+## Cycle 1 quality gate — independent verification (decide phase)
+
+An advisory `general-purpose` agent re-read every file named in the cycle-1 result and made **one**
+fresh `node tools/probe/run.mjs --live --only p-stream-surface-union` run. It was given H3 verbatim so
+it would classify exit 1 rather than report it raw.
+
+**Verdict: VERIFIED.** No discrepancy between claim and reality anywhere.
+
+- Tests: PASS (new probe `p-stream-surface-union` = `pass`; suite exit 1 = unrecorded-probe drift per
+  H3; `baseline.json` untouched and carries no entry for the new probe; drift list names ONLY
+  `p-stream-surface-union: (unrecorded) -> pass`, a probe added this run)
+- Live run detail: 31 events, 10 pairs, 11 inner types, 0 unknown, 0 missing-required, child exit 0,
+  5 hooks fired.
+- **This run supersedes the cycle-1 "Honesty note on validation".** The last green live run no longer
+  predates the two follow-up edits of `bc0a369` — the probe passes *with* `REQUIRED_INNER_FLOOR` and
+  the `publishablePair` leak fix in place. That gap is closed, measured rather than inspected.
+- Independently reproduced, not merely re-read: `rate_limit_event` fired on the gate's own trivial,
+  healthy, exit-0 session (confirming the night's headline unfixed finding is real); `system/status`
+  and the three thinking pairs appeared again on `--model haiku` with no reasoning flag (confirming
+  the A6 side-finding); and STATUS.md weak-spot #2 was traced to `runner.mjs:625-630`.
+- All five self-disclosed NOT-fixed items were confirmed present and accurately described. Nothing
+  had been overstated as fixed.
+
+### The gate found one defect cycle 1 did NOT disclose — and H5 predicted it by number
+
+**Instance 23. `publishablePair` is a shape *inference* that fails open, while its docstring claims it
+is the allow-list `publishableNames`.** (`tools/probe/probes.mjs:74-78`, docstring `:62-73`.)
+
+`publishableNames` (`:44-48`) fingerprints anything outside a pinned floor. `publishablePair` instead
+splits on `[/=.]` — exactly the separators in paths and dotted names — and passes any fragment matching
+`^[A-Za-z][A-Za-z0-9_-]{0,40}$`. Measured by the gate:
+
+| Input | Result |
+|---|---|
+| `plugin_<operator-plugin>_<server>` | **published verbatim** — and the docstring names this exact shape as what it protects against |
+| `mcp__plugin_<client>_<server>__<tool>` | **published verbatim** |
+| an absolute home path | **published verbatim** by this function (caught downstream by `redact.mjs` only) |
+| `SessionStart:startup`, or any token >41 chars | correctly fingerprinted |
+
+Why it matters despite low probability: it fires *precisely* on an unknown pair name — i.e. at the
+moment the probe has stopped understanding the stream, which is the isolation failure it exists to
+detect. `CLAUDE.md` §8 states operator-owned names are the one class `redact.mjs` and the CI grep
+cannot see, so there is no backstop for the first two rows. **Proposed fix** (not applied this cycle):
+give `publishablePair` a pinned floor — the artifact's own `pairs`/`innerPairs` key sets are the
+natural allow-list — and fingerprint everything else, i.e. actually be `publishableNames`.
+
+**No active exposure**: the gate's live run observed 0 unknown pairs, so nothing committed tonight
+contains a leaked name. This is a latent fail-open, not a disclosure.
+
+Two smaller nits, both low severity and both recorded rather than fixed:
+- `REQUIRED_INNER_FLOOR` is byte-identical to the artifact's `requiredInnerPairs`, so on the inner half
+  the artifact is not independent corroboration — it can only catch a shrink. That is its stated
+  purpose; noted so no future reader over-credits it.
+- `REQUIRED_FLOOR` (`:545`) pins only 3 of the 5 `requiredPairs`. `stream_event` is transitively
+  covered by `REQUIRED_INNER_FLOOR`; **`user` is pinned nowhere in code.**
+
+## Cycle 1 decision: CONTINUE — next: A4 (`Next steps` item #2) — probe `request_user_dialog` degradation, new id `p-request-user-dialog` [verdict=VERIFIED]
+- Gate basis: tests PASS (probe `p-stream-surface-union` own status = `pass`; suite exit 1 =
+  unrecorded-probe drift per H3; `baseline.json` untouched; drift list names ONLY the probe added this
+  run) + independent agent verdict **VERIFIED** on a fresh live run made with the `bc0a369` edits in
+  place. All three CONTINUE preconditions met.
+- H7 write-down is landed and verifiable: `docs/research/REVIEW-02-runtime-gaps.md`
+  **"## 14. Addendum — A2 measured and pinned; A6's open half answered as a side effect (2026-07-31,
+  S1 night cycle 1)"** (line 226), plus the §3 A2 amendment (line 38), the §9 row-1 disposition
+  (line 125), and 5 + 1 `PROJECT_MAP.md` §6 ledger rows.
+- **Rider for the next code-touching cycle, ahead of its own item**: fix `publishablePair`
+  (`tools/probe/probes.mjs:74-78`) to use a pinned floor instead of a shape inference — ~5 lines,
+  logged as instance 23 in `PROJECT_MAP.md` §6. It did **not** jump the queue: A4 is a Tier A S1
+  blocker on the plan's own priority order, the leak has no active exposure (0 unknown pairs
+  observed), and a decide phase re-ordering the owner's plan unilaterally is a worse failure than a
+  latent fail-open carried one cycle. Stated plainly so the choice is the owner's to overrule.
+- Also unfixed and more important than the rider, per cycle 1's own review: `rate_limit_event` is
+  classified `escalate` and fires on **every healthy session** — the one-class-per-pair artifact
+  schema cannot express a value-conditional class. Reproduced independently by the gate. Fix before
+  any renderer reads `stream-surface.json`.
