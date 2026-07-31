@@ -1,6 +1,6 @@
 {
   "version": "2.1.220 (Claude Code)",
-  "generatedAt": "2026-07-31T15:41:49.411Z",
+  "generatedAt": "2026-07-31T17:56:47.295Z",
   "suiteRoot": "<TMP>/guidelane-probe-<run>",
   "workspacesKept": false,
   "stoleStaleLock": false,
@@ -11,8 +11,8 @@
     "live": true,
     "only": null,
     "kinds": null,
-    "probesDefined": 31,
-    "probesRun": 31
+    "probesDefined": 33,
+    "probesRun": 33
   },
   "options": {
     "live": true,
@@ -27,7 +27,7 @@
       "CLAUDE_CODE_SIMPLE",
       "CLAUDE_CODE_SAFE_MODE"
     ],
-    "spawns": 36,
+    "spawns": 40,
     "ambientSpawns": 4,
     "autoUpdateOptOuts": 1,
     "expectedTimeouts": 2,
@@ -41,7 +41,7 @@
     ]
   },
   "counts": {
-    "pass": 31,
+    "pass": 33,
     "fail": 0,
     "partial": 0,
     "skip": 0,
@@ -70,7 +70,7 @@
         "declaredCount": 69
       },
       "observationFailures": null,
-      "ms": 178
+      "ms": 228
     },
     {
       "id": "p-bare-forbidden",
@@ -115,7 +115,7 @@
         ]
       },
       "observationFailures": null,
-      "ms": 0
+      "ms": 1
     },
     {
       "id": "p-doctor-exists",
@@ -154,7 +154,7 @@
         "hasEval": true
       },
       "observationFailures": null,
-      "ms": 120
+      "ms": 125
     },
     {
       "id": "p-plugin-validate-fixture",
@@ -175,7 +175,7 @@
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 264
+      "ms": 291
     },
     {
       "id": "p-kill-reaps-process-group",
@@ -194,10 +194,10 @@
         "timedOut": true,
         "parentSurvived": false,
         "grandchildSurvived": false,
-        "settleMs": 4006
+        "settleMs": 4003
       },
       "observationFailures": null,
-      "ms": 4007
+      "ms": 4003
     },
     {
       "id": "p-watchdog-settles-on-escaped-child",
@@ -212,15 +212,15 @@
       ],
       "failureImpact": "The single worst outcome the product can have: a run that stops with no output, no error, and no terminal event. In the nightly job it burns to the CI cap; in front of a non-coder it is \"the computer froze\".",
       "status": "pass",
-      "detail": "Escaped grandchild held the pipe open and 'close' never came, yet the call settled in 8008ms via the watchdog. A stuck session degrades into evidence instead of a silent hang. As designed, the escapee outlived the group kill — the probe reaped it itself.",
+      "detail": "Escaped grandchild held the pipe open and 'close' never came, yet the call settled in 8003ms via the watchdog. A stuck session degrades into evidence instead of a silent hang. As designed, the escapee outlived the group kill — the probe reaped it itself.",
       "evidence": {
-        "elapsedMs": 8008,
+        "elapsedMs": 8003,
         "timedOut": true,
         "escapeeOutlivedGroupKill": true,
-        "settleMs": 8008
+        "settleMs": 8003
       },
       "observationFailures": null,
-      "ms": 8011
+      "ms": 8005
     },
     {
       "id": "p-version-in-tested-range",
@@ -245,7 +245,7 @@
         "inRange": true
       },
       "observationFailures": null,
-      "ms": 102
+      "ms": 75
     },
     {
       "id": "p-init-receipt",
@@ -299,7 +299,7 @@
         "version": "2.1.220"
       },
       "observationFailures": null,
-      "ms": 3384
+      "ms": 6158
     },
     {
       "id": "p-ambient-isolation",
@@ -365,7 +365,7 @@
         "bothFlagsRequired": true
       },
       "observationFailures": null,
-      "ms": 7062
+      "ms": 9077
     },
     {
       "id": "p-messagedisplay-rewrite",
@@ -389,7 +389,7 @@
         "rewritten": true
       },
       "observationFailures": null,
-      "ms": 3791
+      "ms": 3002
     },
     {
       "id": "p-stream-json-roundtrip",
@@ -403,16 +403,16 @@
       ],
       "failureImpact": "The cockpit cannot render a live activity feed; the entire event-translation layer (R3 mechanism 3) has no input.",
       "status": "pass",
-      "detail": "Full round-trip. Event types: system, user, stream_event, assistant, rate_limit_event, result.",
+      "detail": "Full round-trip. Event types: system, user, stream_event, rate_limit_event, assistant, result.",
       "evidence": {
         "exit": 0,
-        "eventCount": 24,
+        "eventCount": 23,
         "types": [
           "system",
           "user",
           "stream_event",
-          "assistant",
           "rate_limit_event",
+          "assistant",
           "result"
         ],
         "subtypes": [
@@ -450,7 +450,7 @@
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 2945
+      "ms": 2613
     },
     {
       "id": "p-usage-accounting",
@@ -491,40 +491,40 @@
         ],
         "usage": {
           "input_tokens": 10,
-          "cache_creation_input_tokens": 6417,
+          "cache_creation_input_tokens": 6419,
           "cache_read_input_tokens": 0,
-          "output_tokens": 51,
+          "output_tokens": 45,
           "server_tool_use": {
             "web_search_requests": 0,
             "web_fetch_requests": 0
           },
           "service_tier": "standard",
           "cache_creation": {
-            "ephemeral_1h_input_tokens": 6417,
+            "ephemeral_1h_input_tokens": 6419,
             "ephemeral_5m_input_tokens": 0
           },
           "inference_geo": "not_available",
           "iterations": [
             {
               "input_tokens": 10,
-              "output_tokens": 51,
+              "output_tokens": 45,
               "cache_read_input_tokens": 0,
-              "cache_creation_input_tokens": 6417,
+              "cache_creation_input_tokens": 6419,
               "cache_creation": {
                 "ephemeral_5m_input_tokens": 0,
-                "ephemeral_1h_input_tokens": 6417
+                "ephemeral_1h_input_tokens": 6419
               },
               "type": "message"
             }
           ],
           "speed": "standard"
         },
-        "cost": 0.013682999999999999,
-        "durationMs": 1966,
+        "cost": 0.013657,
+        "durationMs": 1318,
         "numTurns": 1
       },
       "observationFailures": null,
-      "ms": 3241
+      "ms": 2785
     },
     {
       "id": "p-stream-surface-union",
@@ -543,7 +543,7 @@
       "detail": "All 10 pair(s) and 11 stream_event inner type(s) observed in this session are classified, every pinned required pair arrived, and every value-conditional rule this run exercised resolved to a pinned value. SAMPLE OF ONE CONFIGURATION, not the closed set: no tool use, no subagent, no MCP server, no error result. Hooks that fired: 5.",
       "evidence": {
         "exit": 0,
-        "eventCount": 31,
+        "eventCount": 37,
         "observedPairs": [
           "assistant",
           "rate_limit_event",
@@ -597,7 +597,7 @@
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 3328
+      "ms": 3969
     },
     {
       "id": "p-json-schema",
@@ -638,11 +638,11 @@
           "duration_ms",
           "uuid"
         ],
-        "payloadPreview": "{\"productName\":\"ShopList\",\"audience\":\"Single person managing household shopping needs\",\"invariants\":[\"One active list at a time; no multi-list switching\",\"All items and state persist locally without sign-up required\",\"Completed items remain visible, marked distinctly (strikethrough)\",\"Each item can only exist once per list (no duplicates)\"],\"acceptance\":[{\"given\":\"I open the app\",\"then\":\"I see my shopping list with any previously added items\"},{\"given\":\"I type a new item and press enter\",\"then\":\"the item appears in the list\"},{\"given\":\"I tap an item in the list\",\"then\":\"it's marked complete with strikethrough styling\"},{\"given\":\"I swipe or tap delete on an item\",\"then\":\"it's removed from the…[950 chars]",
+        "payloadPreview": "{\"productName\":\"Shopping List\",\"audience\":\"Individual home users tracking groceries and household items\",\"invariants\":[\"A list contains zero or more items, each with a name and optional quantity\",\"Checked items are visually distinguished but remain in the list until deleted\",\"Data persists across app sessions\",\"Only one list exists per user\"],\"acceptance\":[{\"given\":\"user opens the app\",\"then\":\"their shopping list appears with all previously saved items\"},{\"given\":\"user enters an item name and taps add\",\"then\":\"the item appears at the bottom of the list as unchecked\"},{\"given\":\"user taps an item\",\"then\":\"it toggles between checked and unchecked state\"},{\"given\":\"user swipes or taps delete on …[968 chars]",
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 10513
+      "ms": 9713
     },
     {
       "id": "p-append-system-prompt",
@@ -663,7 +663,7 @@
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 3956
+      "ms": 3176
     },
     {
       "id": "p-agents-inline",
@@ -696,7 +696,7 @@
         "exit": 0
       },
       "observationFailures": null,
-      "ms": 52372
+      "ms": 121427
     },
     {
       "id": "p-max-budget-subscription",
@@ -719,11 +719,11 @@
         "terminalSubtype": "error_max_budget_usd",
         "budgetSubtype": true,
         "stderrMentionsBudget": false,
-        "stdout": "{\"is_error\":true,\"duration_api_ms\":1213,\"num_turns\":1,\"stop_reason\":null,\"session_id\":\"966edc0b-d601-4130-a3bf-064d5164b3dc\",\"total_cost_usd\":0.000582,\"usage\":{\"input_tokens\":0,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"output_tokens\":0,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"modelUsage\":{\"cla…[1059 chars]",
+        "stdout": "{\"is_error\":true,\"duration_api_ms\":1147,\"num_turns\":1,\"stop_reason\":null,\"session_id\":\"da641ccf-8768-42fb-a511-b6c158bfdc3c\",\"total_cost_usd\":0.000597,\"usage\":{\"input_tokens\":0,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"output_tokens\":0,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"modelUsage\":{\"cla…[1059 chars]",
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 3145
+      "ms": 2995
     },
     {
       "id": "p-effort-model-fallback",
@@ -744,7 +744,7 @@
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 2671
+      "ms": 2371
     },
     {
       "id": "p-permission-allowlist",
@@ -774,7 +774,7 @@
         "permissionDeniedHookFired": false,
         "advisoryFrameSeen": false,
         "proseHintOnly": false,
-        "autoAloneStdout": "{\"type\":\"system\",\"subtype\":\"hook_started\",\"hook_id\":\"123e4f3f-c95c-4679-a1fe-b81cae8925bf\",\"hook_name\":\"SessionStart:startup\",\"hook_event\":\"SessionStart\",\"uuid\":\"1739a959-6c89-49d0-8529-d21b12da46ad\",\"session_id\":\"3cf35582-7432-46f1-ad0f-b08cb38cad2b\"}\n{\"type\":\"system\",\"subtype\":\"hook_response\",\"hoo…[24028 chars]",
+        "autoAloneStdout": "{\"type\":\"system\",\"subtype\":\"hook_started\",\"hook_id\":\"d32e3393-4617-4fc1-9d04-a72860d04975\",\"hook_name\":\"SessionStart:startup\",\"hook_event\":\"SessionStart\",\"uuid\":\"6959b50f-7e81-4cdd-b636-fc4a43dba2d0\",\"session_id\":\"ea37f00f-1874-4461-96c6-04f3f1f73999\"}\n{\"type\":\"system\",\"subtype\":\"hook_response\",\"hoo…[18456 chars]",
         "allowListWrote": true,
         "allowListStdout": "WROTE_OK\n",
         "exits": {
@@ -783,7 +783,7 @@
         }
       },
       "observationFailures": null,
-      "ms": 20870
+      "ms": 16998
     },
     {
       "id": "p-session-identity",
@@ -799,9 +799,9 @@
       "status": "pass",
       "detail": "Session id honoured, resume kept context, fork produced a new id.",
       "evidence": {
-        "suppliedId": "a0137113-6671-4e2e-a9d2-04673bb57874",
+        "suppliedId": "2f5e12f2-544e-4dbb-ac48-f0974a5d10a4",
         "resumeRecalled": true,
-        "forkedId": "050f7bff-9db8-4a7a-98c2-118bd5650949",
+        "forkedId": "e09daf92-5ae9-4844-a05a-4d9cfd92f979",
         "exits": {
           "first": 0,
           "second": 0,
@@ -809,7 +809,7 @@
         }
       },
       "observationFailures": null,
-      "ms": 16090
+      "ms": 19842
     },
     {
       "id": "p-mcp-strict-load",
@@ -826,11 +826,11 @@
       "detail": "MCP server loaded from the command line and its tool was callable under a fail-closed allow-list (mcp__<server>__<tool>).",
       "evidence": {
         "exit": 0,
-        "stdout": "{\"is_error\":false,\"duration_api_ms\":6768,\"num_turns\":3,\"stop_reason\":\"end_turn\",\"session_id\":\"1615d6f2-b818-4f02-869c-2e64bc219cbd\",\"total_cost_usd\":0.0229597,\"usage\":{\"input_tokens\":28,\"cache_creation_input_tokens\":7094,\"cache_read_input_tokens\":66267,\"output_tokens\":300,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":7094,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"not_available\",\"iterations\":[{\"input_tokens\":8,\"output_tokens\":47,\"cache_read_input_tokens\":24514,\"cache_creation_input_tokens\":116,\"cache_creation\":{\"ephemeral_5m_input_tokens\":0,\"ephemeral_1h_input_tokens\":116},\"type\":\"message\"}],\"sp…[1351 chars]",
+        "stdout": "{\"is_error\":false,\"duration_api_ms\":7132,\"num_turns\":3,\"stop_reason\":\"end_turn\",\"session_id\":\"2c6cce09-e2d5-4341-8a6e-4a2576cf1119\",\"total_cost_usd\":0.023335299999999996,\"usage\":{\"input_tokens\":28,\"cache_creation_input_tokens\":7147,\"cache_read_input_tokens\":66313,\"output_tokens\":349,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":7147,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"not_available\",\"iterations\":[{\"input_tokens\":8,\"output_tokens\":45,\"cache_read_input_tokens\":24558,\"cache_creation_input_tokens\":125,\"cache_creation\":{\"ephemeral_5m_input_tokens\":0,\"ephemeral_1h_input_tokens\":125},\"type\":\"mes…[1374 chars]",
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 7322
+      "ms": 7329
     },
     {
       "id": "p-plugin-skill-headless",
@@ -851,7 +851,7 @@
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 3842
+      "ms": 5062
     },
     {
       "id": "p-hook-events-headless",
@@ -883,11 +883,11 @@
         "markerSurvived": true,
         "wroteFile": true,
         "hookEventsInStreamCount": 12,
-        "sampleHookEvent": "{\"type\":\"system\",\"subtype\":\"hook_started\",\"hook_id\":\"0ab5a878-4267-4721-a21d-02fceb675d71\",\"hook_name\":\"SessionStart:startup\",\"hook_event\":\"SessionStart\",\"uuid\":\"d5c831b3-c0a0-4dd8-ae15-7a37e7bc7334\",\"session_id\":\"e92990af-2c4c-4887-a5aa-eb4e3f8e771f\"}",
+        "sampleHookEvent": "{\"type\":\"system\",\"subtype\":\"hook_started\",\"hook_id\":\"d799bdf8-8c1f-4e91-ad43-eb56db23cb2c\",\"hook_name\":\"SessionStart:startup\",\"hook_event\":\"SessionStart\",\"uuid\":\"c7b87524-101d-40e5-827c-04ba338ff056\",\"session_id\":\"467376c3-cc39-403f-8536-7479358c3366\"}",
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 7456
+      "ms": 5990
     },
     {
       "id": "p-plugin-bundled-mcp",
@@ -908,7 +908,7 @@
           "fixture": [
             "plugin:guidelane-probe:echo [connected]"
           ],
-          "ambientCount": 6
+          "ambientCount": 1
         },
         "strict": {
           "fixture": [],
@@ -927,7 +927,158 @@
         "initToolsCarriesMcpNames": false
       },
       "observationFailures": null,
-      "ms": 29923
+      "ms": 28068
+    },
+    {
+      "id": "p-hook-failure-detectable",
+      "title": "A failing hook is distinguishable from a healthy one — and one failure mode is not",
+      "kind": "fixture-call",
+      "loadBearing": "critical",
+      "claim": "When a hook fails, the engine says so on a structural channel (`system/hook_response`), so the orchestrator can tell a hook that ran and failed from one that ran fine — and from one that never ran at all.",
+      "docRefs": [
+        "REVIEW-02 §3 A7",
+        "ADR-006",
+        "ADR-008"
+      ],
+      "failureImpact": "ADR-006's language dial IS a MessageDisplay hook. A hook failure the orchestrator cannot see means a non-coder silently receives untranslated, engineer-facing output with no signal anywhere. REVIEW-02 A7.",
+      "status": "pass",
+      "detail": "Hook failure is detectable in 2 of 3 modes and INVISIBLE in the third. exit-9 -> exit_code=9/outcome=error (loud); timeout -> exit_code=1/outcome=cancelled (loud, and distinct from error, so a timeout is retryable and an error is not); malformed payload -> exit_code=0/outcome=success — the engine reports SUCCESS for a hook whose effect silently did not happen. All four arms still ended in result/success, so a hook failure never fails the phase: fail-open, measured. Consequence for ADR-006: the language dial rides on a MessageDisplay hook, so the orchestrator must treat non-empty hook stdout that it cannot parse as a failure itself — the engine will not.",
+      "evidence": {
+        "target": "MessageDisplay",
+        "arms": {
+          "control": {
+            "hookRan": true,
+            "hookResponseFrames": 4,
+            "exit_code": 0,
+            "outcome": "success",
+            "stderrPresent": false,
+            "stdoutPresent": false,
+            "sessionCompleted": "result/success",
+            "exit": 0
+          },
+          "exit": {
+            "hookRan": true,
+            "hookResponseFrames": 4,
+            "exit_code": 9,
+            "outcome": "error",
+            "stderrPresent": true,
+            "stdoutPresent": false,
+            "sessionCompleted": "result/success",
+            "exit": 0
+          },
+          "garbage": {
+            "hookRan": true,
+            "hookResponseFrames": 4,
+            "exit_code": 0,
+            "outcome": "success",
+            "stderrPresent": false,
+            "stdoutPresent": true,
+            "sessionCompleted": "result/success",
+            "exit": 0
+          },
+          "hang": {
+            "hookRan": true,
+            "hookResponseFrames": 4,
+            "exit_code": 1,
+            "outcome": "cancelled",
+            "stderrPresent": false,
+            "stdoutPresent": false,
+            "sessionCompleted": "result/success",
+            "exit": 0
+          }
+        },
+        "expected": {
+          "control": {
+            "exit_code": 0,
+            "outcome": "success",
+            "why": "baseline — the same hook, not armed to fail"
+          },
+          "exit": {
+            "exit_code": 9,
+            "outcome": "error",
+            "why": "non-zero exit is LOUD: the exit code and stderr both survive"
+          },
+          "garbage": {
+            "exit_code": 0,
+            "outcome": "success",
+            "why": "THE FINDING — malformed payload, exit 0, reported as success. Undetectable."
+          },
+          "hang": {
+            "exit_code": 1,
+            "outcome": "cancelled",
+            "why": "a timeout is detectable AND distinguishable from an error (cancelled != error), which is what lets the orchestrator retry a timeout and refuse an error"
+          }
+        },
+        "failOpenConfirmed": true,
+        "undetectableModes": [
+          "malformed payload with exit 0"
+        ]
+      },
+      "observationFailures": null,
+      "ms": 18744
+    },
+    {
+      "id": "p-stream-surface-artifact",
+      "title": "The committed stream-surface artifact is a usable expectation — checked for free, on every push",
+      "kind": "observational",
+      "loadBearing": "critical",
+      "claim": "`tools/probe/stream-surface.json` is structurally valid as an expectation: every pair carries exactly one of `class`/`when`, every conditional rule fails CLOSED on an unmodelled value, `defaultForUnknown` is `escalate`, and the required-pair floors are present — with no engine call, so CI gates it.",
+      "docRefs": [
+        "REVIEW-02 §14 follow-up (b)",
+        "REVIEW-02 §15",
+        "PROJECT_MAP Principle 9"
+      ],
+      "failureImpact": "The artifact is the cockpit whitelist. Its only other gate, `p-stream-surface-union`, is a `fixture-call`: `node tools/probe/run.mjs` SKIPS it and CI has therefore never run it. Without this probe a fail-open edit — `unknown: \"ignore\"`, a deleted floor entry, a dropped `defaultForUnknown` — reaches the public repo green and stays there until somebody runs `--live` by hand.",
+      "status": "pass",
+      "detail": "Artifact valid at schemaVersion 2: 11 pair(s), 11 inner type(s), 2 value-conditional rule(s), every one failing closed on an unmodelled value, and defaultForUnknown=escalate. This checks the artifact's SHAPE only — that the classifications match a real stream is p-stream-surface-union's job, and it needs --live.",
+      "evidence": {
+        "schemaVersion": 2,
+        "pairs": [
+          "assistant",
+          "rate_limit_event",
+          "result/success",
+          "stream_event",
+          "system/hook_progress",
+          "system/hook_response",
+          "system/hook_started",
+          "system/init",
+          "system/status",
+          "system/thinking_tokens",
+          "user"
+        ],
+        "innerPairs": [
+          "event.content_block.type=text",
+          "event.content_block.type=thinking",
+          "event.delta.type=signature_delta",
+          "event.delta.type=text_delta",
+          "event.delta.type=thinking_delta",
+          "event.type=content_block_delta",
+          "event.type=content_block_start",
+          "event.type=content_block_stop",
+          "event.type=message_delta",
+          "event.type=message_start",
+          "event.type=message_stop"
+        ],
+        "conditionalRules": {
+          "rate_limit_event": "rate_limit_info.status",
+          "system/status": "status"
+        },
+        "defaultForUnknown": "escalate",
+        "requiredPairs": [
+          "system/init",
+          "assistant",
+          "user",
+          "stream_event",
+          "result/success"
+        ],
+        "requiredInnerPairs": [
+          "event.type=content_block_delta",
+          "event.delta.type=text_delta"
+        ],
+        "checksShapeNotBehaviour": true
+      },
+      "observationFailures": null,
+      "ms": 0
     },
     {
       "id": "p-version-readable",
@@ -947,7 +1098,7 @@
         "parsed": "2.1.220"
       },
       "observationFailures": null,
-      "ms": 166
+      "ms": 54
     },
     {
       "id": "p-auth-mode-visibility",
@@ -991,7 +1142,7 @@
         "parseFailed": false
       },
       "observationFailures": null,
-      "ms": 237
+      "ms": 212
     },
     {
       "id": "p-automode-classifier-pinned",
@@ -1019,7 +1170,7 @@
         "totalRules": 103
       },
       "observationFailures": null,
-      "ms": 834
+      "ms": 748
     },
     {
       "id": "p-autoupdate-governable",
@@ -1044,7 +1195,7 @@
         }
       },
       "observationFailures": null,
-      "ms": 2039
+      "ms": 1975
     },
     {
       "id": "p-rate-limit-signal",
@@ -1084,7 +1235,7 @@
         "note": "Only the healthy (\"allowed\") branch is observed here; the rejected branch is not provoked on purpose."
       },
       "observationFailures": null,
-      "ms": 2777
+      "ms": 2594
     }
   ],
   "exercisedVersion": "2.1.220 (Claude Code)"

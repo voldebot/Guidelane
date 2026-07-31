@@ -32,6 +32,8 @@
     "p-plugin-skill-headless": "pass",
     "p-hook-events-headless": "pass",
     "p-plugin-bundled-mcp": "pass",
+    "p-hook-failure-detectable": "pass",
+    "p-stream-surface-artifact": "pass",
     "p-version-readable": "pass",
     "p-auth-mode-visibility": "pass",
     "p-automode-classifier-pinned": "pass",
