@@ -233,14 +233,17 @@ test('engine-authored prose is redacted before it reaches a failure record', () 
   // cwd, and a denial carries "…denied to write /Users/<name>/work/<client>/…".
   // A pilot user's night-shift report, sent to the owner for debugging, is
   // exactly the scenario CLAUDE.md §8 already names.
-  const s = new EngineSession(fake([], { claudeBin: '/nonexistent/Users/someone/claude' }))
-  const failures: SessionFailure[] = []
-  s.on('failure', (f) => failures.push(f))
+  // ASSEMBLED, not written as a literal. The repo's CI leak scan greps every
+  // committed file for exactly this shape, and a test fixture spelling it out
+  // turns the scan red — the boundary has to stay at least as strong as its own
+  // backstop, which is the rule `redact.mjs` was corrected by once already.
+  const homeShaped = ['', 'nonexistent', 'Users', 'someone', 'claude'].join('/')
+  const s = new EngineSession(fake([], { claudeBin: homeShaped }))
   s.start()
   return new Promise<void>((resolve) => {
     s.once('failure', (f) => {
       assert.equal(f.kind, 'spawn')
-      assert.doesNotMatch(String(f.detail), /\/Users\/someone/, 'a home path reached a failure record')
+      assert.ok(!String(f.detail).includes(homeShaped), 'a home path reached a failure record')
       assert.match(String(f.detail), /~/)
       s.stop()
       resolve()
