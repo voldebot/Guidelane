@@ -20,6 +20,7 @@
     "p-messagedisplay-rewrite": "pass",
     "p-stream-json-roundtrip": "pass",
     "p-usage-accounting": "pass",
+    "p-stream-surface-union": "pass",
     "p-json-schema": "pass",
     "p-append-system-prompt": "pass",
     "p-agents-inline": "pass",

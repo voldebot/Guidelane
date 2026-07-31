@@ -1,6 +1,6 @@
 {
   "version": "2.1.220 (Claude Code)",
-  "generatedAt": "2026-07-30T22:59:11.150Z",
+  "generatedAt": "2026-07-31T15:41:49.411Z",
   "suiteRoot": "<TMP>/guidelane-probe-<run>",
   "workspacesKept": false,
   "stoleStaleLock": false,
@@ -11,8 +11,8 @@
     "live": true,
     "only": null,
     "kinds": null,
-    "probesDefined": 30,
-    "probesRun": 30
+    "probesDefined": 31,
+    "probesRun": 31
   },
   "options": {
     "live": true,
@@ -27,7 +27,7 @@
       "CLAUDE_CODE_SIMPLE",
       "CLAUDE_CODE_SAFE_MODE"
     ],
-    "spawns": 35,
+    "spawns": 36,
     "ambientSpawns": 4,
     "autoUpdateOptOuts": 1,
     "expectedTimeouts": 2,
@@ -41,7 +41,7 @@
     ]
   },
   "counts": {
-    "pass": 30,
+    "pass": 31,
     "fail": 0,
     "partial": 0,
     "skip": 0,
@@ -70,7 +70,7 @@
         "declaredCount": 69
       },
       "observationFailures": null,
-      "ms": 280
+      "ms": 178
     },
     {
       "id": "p-bare-forbidden",
@@ -154,7 +154,7 @@
         "hasEval": true
       },
       "observationFailures": null,
-      "ms": 132
+      "ms": 120
     },
     {
       "id": "p-plugin-validate-fixture",
@@ -175,7 +175,7 @@
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 333
+      "ms": 264
     },
     {
       "id": "p-kill-reaps-process-group",
@@ -194,10 +194,10 @@
         "timedOut": true,
         "parentSurvived": false,
         "grandchildSurvived": false,
-        "settleMs": 4004
+        "settleMs": 4006
       },
       "observationFailures": null,
-      "ms": 4005
+      "ms": 4007
     },
     {
       "id": "p-watchdog-settles-on-escaped-child",
@@ -212,15 +212,15 @@
       ],
       "failureImpact": "The single worst outcome the product can have: a run that stops with no output, no error, and no terminal event. In the nightly job it burns to the CI cap; in front of a non-coder it is \"the computer froze\".",
       "status": "pass",
-      "detail": "Escaped grandchild held the pipe open and 'close' never came, yet the call settled in 8006ms via the watchdog. A stuck session degrades into evidence instead of a silent hang. As designed, the escapee outlived the group kill — the probe reaped it itself.",
+      "detail": "Escaped grandchild held the pipe open and 'close' never came, yet the call settled in 8008ms via the watchdog. A stuck session degrades into evidence instead of a silent hang. As designed, the escapee outlived the group kill — the probe reaped it itself.",
       "evidence": {
-        "elapsedMs": 8006,
+        "elapsedMs": 8008,
         "timedOut": true,
         "escapeeOutlivedGroupKill": true,
-        "settleMs": 8006
+        "settleMs": 8008
       },
       "observationFailures": null,
-      "ms": 8008
+      "ms": 8011
     },
     {
       "id": "p-version-in-tested-range",
@@ -245,7 +245,7 @@
         "inRange": true
       },
       "observationFailures": null,
-      "ms": 97
+      "ms": 102
     },
     {
       "id": "p-init-receipt",
@@ -299,7 +299,7 @@
         "version": "2.1.220"
       },
       "observationFailures": null,
-      "ms": 3060
+      "ms": 3384
     },
     {
       "id": "p-ambient-isolation",
@@ -365,7 +365,7 @@
         "bothFlagsRequired": true
       },
       "observationFailures": null,
-      "ms": 7662
+      "ms": 7062
     },
     {
       "id": "p-messagedisplay-rewrite",
@@ -389,7 +389,7 @@
         "rewritten": true
       },
       "observationFailures": null,
-      "ms": 3481
+      "ms": 3791
     },
     {
       "id": "p-stream-json-roundtrip",
@@ -403,16 +403,16 @@
       ],
       "failureImpact": "The cockpit cannot render a live activity feed; the entire event-translation layer (R3 mechanism 3) has no input.",
       "status": "pass",
-      "detail": "Full round-trip. Event types: system, user, stream_event, rate_limit_event, assistant, result.",
+      "detail": "Full round-trip. Event types: system, user, stream_event, assistant, rate_limit_event, result.",
       "evidence": {
         "exit": 0,
-        "eventCount": 27,
+        "eventCount": 24,
         "types": [
           "system",
           "user",
           "stream_event",
-          "rate_limit_event",
           "assistant",
+          "rate_limit_event",
           "result"
         ],
         "subtypes": [
@@ -450,7 +450,7 @@
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 4325
+      "ms": 2945
     },
     {
       "id": "p-usage-accounting",
@@ -493,7 +493,7 @@
           "input_tokens": 10,
           "cache_creation_input_tokens": 6417,
           "cache_read_input_tokens": 0,
-          "output_tokens": 47,
+          "output_tokens": 51,
           "server_tool_use": {
             "web_search_requests": 0,
             "web_fetch_requests": 0
@@ -507,7 +507,7 @@
           "iterations": [
             {
               "input_tokens": 10,
-              "output_tokens": 47,
+              "output_tokens": 51,
               "cache_read_input_tokens": 0,
               "cache_creation_input_tokens": 6417,
               "cache_creation": {
@@ -519,12 +519,85 @@
           ],
           "speed": "standard"
         },
-        "cost": 0.013663,
-        "durationMs": 1462,
+        "cost": 0.013682999999999999,
+        "durationMs": 1966,
         "numTurns": 1
       },
       "observationFailures": null,
-      "ms": 2731
+      "ms": 3241
+    },
+    {
+      "id": "p-stream-surface-union",
+      "title": "Every stream type/subtype pair a session emits is classified in the committed surface artifact",
+      "kind": "fixture-call",
+      "loadBearing": "critical",
+      "claim": "The cockpit's only deterministic plain-language guarantee is whitelist-rendering, and a whitelist needs an enumerated universe: every `type`/`subtype` pair a session emits — and every content-block and delta type inside a `stream_event` envelope — appears in `tools/probe/stream-surface.json` carrying a deliberate `render | ignore | escalate` classification.",
+      "docRefs": [
+        "REVIEW-02 §3 A2",
+        "REVIEW-02 §13",
+        "RESEARCH-02 §4.3 mech. 3",
+        "ADR-008"
+      ],
+      "failureImpact": "An unclassified subtype reaches a non-coder as a blank card or a crash, and the failure is invisible during development: the pair simply never appeared on the machine where the whitelist was written.",
+      "status": "pass",
+      "detail": "All 10 pair(s) and 11 stream_event inner type(s) observed in this session are classified, every pinned required pair arrived, and every value-conditional rule this run exercised resolved to a pinned value. SAMPLE OF ONE CONFIGURATION, not the closed set: no tool use, no subagent, no MCP server, no error result. Hooks that fired: 5.",
+      "evidence": {
+        "exit": 0,
+        "eventCount": 31,
+        "observedPairs": [
+          "assistant",
+          "rate_limit_event",
+          "result/success",
+          "stream_event",
+          "system/hook_response",
+          "system/hook_started",
+          "system/init",
+          "system/status",
+          "system/thinking_tokens",
+          "user"
+        ],
+        "unknownPairs": [],
+        "unknownPairShapes": {},
+        "missingRequired": [],
+        "observedInner": [
+          "event.content_block.type=text",
+          "event.content_block.type=thinking",
+          "event.delta.type=signature_delta",
+          "event.delta.type=text_delta",
+          "event.delta.type=thinking_delta",
+          "event.type=content_block_delta",
+          "event.type=content_block_start",
+          "event.type=content_block_stop",
+          "event.type=message_delta",
+          "event.type=message_start",
+          "event.type=message_stop"
+        ],
+        "unknownInner": [],
+        "unknownInnerShapes": {},
+        "missingRequiredInner": [],
+        "nonJsonLineCount": 0,
+        "malformedCount": 0,
+        "conditionalRulesExercised": [
+          "rate_limit_event",
+          "system/status"
+        ],
+        "conditionalPathUnresolved": [],
+        "conditionalUnpinnedValues": [],
+        "classifiedButUnobserved": [
+          "system/hook_progress"
+        ],
+        "hookEventNamesFired": [
+          "SessionStart",
+          "UserPromptSubmit",
+          "MessageDisplay",
+          "Stop",
+          "SessionEnd"
+        ],
+        "artifactSchemaVersion": 2,
+        "stderr": ""
+      },
+      "observationFailures": null,
+      "ms": 3328
     },
     {
       "id": "p-json-schema",
@@ -565,11 +638,11 @@
           "duration_ms",
           "uuid"
         ],
-        "payloadPreview": "{\"productName\":\"ShopList\",\"audience\":\"A single person managing household groceries and errands\",\"invariants\":[\"Every list item has a name and completion state\",\"Completed items remain in the list until explicitly deleted\",\"All changes persist across browser sessions\",\"The list is never empty—adding an item that already exists increments its quantity instead\"],\"acceptance\":[{\"given\":\"the user opens the app\",\"then\":\"they see all saved items with their completion states and quantities\"},{\"given\":\"the user types an item name and presses Enter\",\"then\":\"a new item appears with quantity 1 and completion state unchecked\"},{\"given\":\"the user clicks an item's checkbox\",\"then\":\"it toggles between check…[1078 chars]",
+        "payloadPreview": "{\"productName\":\"ShopList\",\"audience\":\"Single person managing household shopping needs\",\"invariants\":[\"One active list at a time; no multi-list switching\",\"All items and state persist locally without sign-up required\",\"Completed items remain visible, marked distinctly (strikethrough)\",\"Each item can only exist once per list (no duplicates)\"],\"acceptance\":[{\"given\":\"I open the app\",\"then\":\"I see my shopping list with any previously added items\"},{\"given\":\"I type a new item and press enter\",\"then\":\"the item appears in the list\"},{\"given\":\"I tap an item in the list\",\"then\":\"it's marked complete with strikethrough styling\"},{\"given\":\"I swipe or tap delete on an item\",\"then\":\"it's removed from the…[950 chars]",
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 9849
+      "ms": 10513
     },
     {
       "id": "p-append-system-prompt",
@@ -590,7 +663,7 @@
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 2981
+      "ms": 3956
     },
     {
       "id": "p-agents-inline",
@@ -623,7 +696,7 @@
         "exit": 0
       },
       "observationFailures": null,
-      "ms": 26231
+      "ms": 52372
     },
     {
       "id": "p-max-budget-subscription",
@@ -646,11 +719,11 @@
         "terminalSubtype": "error_max_budget_usd",
         "budgetSubtype": true,
         "stderrMentionsBudget": false,
-        "stdout": "{\"is_error\":true,\"duration_api_ms\":1142,\"num_turns\":1,\"stop_reason\":null,\"session_id\":\"cac5880f-9c7d-4755-8fb3-ecff9349ebea\",\"total_cost_usd\":0.000582,\"usage\":{\"input_tokens\":0,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"output_tokens\":0,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"modelUsage\":{\"cla…[1059 chars]",
+        "stdout": "{\"is_error\":true,\"duration_api_ms\":1213,\"num_turns\":1,\"stop_reason\":null,\"session_id\":\"966edc0b-d601-4130-a3bf-064d5164b3dc\",\"total_cost_usd\":0.000582,\"usage\":{\"input_tokens\":0,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"output_tokens\":0,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"modelUsage\":{\"cla…[1059 chars]",
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 2693
+      "ms": 3145
     },
     {
       "id": "p-effort-model-fallback",
@@ -671,7 +744,7 @@
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 2787
+      "ms": 2671
     },
     {
       "id": "p-permission-allowlist",
@@ -701,7 +774,7 @@
         "permissionDeniedHookFired": false,
         "advisoryFrameSeen": false,
         "proseHintOnly": false,
-        "autoAloneStdout": "{\"type\":\"system\",\"subtype\":\"hook_started\",\"hook_id\":\"95a73293-42fe-4395-a248-37f780b0fd66\",\"hook_name\":\"SessionStart:startup\",\"hook_event\":\"SessionStart\",\"uuid\":\"15499d90-bb6c-4b4b-97da-7c60a7807a4d\",\"session_id\":\"a3fe7386-a120-4492-9fac-7495039a71c4\"}\n{\"type\":\"system\",\"subtype\":\"hook_response\",\"hoo…[16436 chars]",
+        "autoAloneStdout": "{\"type\":\"system\",\"subtype\":\"hook_started\",\"hook_id\":\"123e4f3f-c95c-4679-a1fe-b81cae8925bf\",\"hook_name\":\"SessionStart:startup\",\"hook_event\":\"SessionStart\",\"uuid\":\"1739a959-6c89-49d0-8529-d21b12da46ad\",\"session_id\":\"3cf35582-7432-46f1-ad0f-b08cb38cad2b\"}\n{\"type\":\"system\",\"subtype\":\"hook_response\",\"hoo…[24028 chars]",
         "allowListWrote": true,
         "allowListStdout": "WROTE_OK\n",
         "exits": {
@@ -710,7 +783,7 @@
         }
       },
       "observationFailures": null,
-      "ms": 17271
+      "ms": 20870
     },
     {
       "id": "p-session-identity",
@@ -726,9 +799,9 @@
       "status": "pass",
       "detail": "Session id honoured, resume kept context, fork produced a new id.",
       "evidence": {
-        "suppliedId": "69b4909c-6f85-48cf-9f02-2aa51f73dd4f",
+        "suppliedId": "a0137113-6671-4e2e-a9d2-04673bb57874",
         "resumeRecalled": true,
-        "forkedId": "7754375c-176d-427e-a953-cbbbe197d515",
+        "forkedId": "050f7bff-9db8-4a7a-98c2-118bd5650949",
         "exits": {
           "first": 0,
           "second": 0,
@@ -736,7 +809,7 @@
         }
       },
       "observationFailures": null,
-      "ms": 15887
+      "ms": 16090
     },
     {
       "id": "p-mcp-strict-load",
@@ -753,11 +826,11 @@
       "detail": "MCP server loaded from the command line and its tool was callable under a fail-closed allow-list (mcp__<server>__<tool>).",
       "evidence": {
         "exit": 0,
-        "stdout": "{\"is_error\":false,\"duration_api_ms\":7477,\"num_turns\":3,\"stop_reason\":\"end_turn\",\"session_id\":\"4351297d-6d9e-4cb8-881b-da6f76fce737\",\"total_cost_usd\":0.0229571,\"usage\":{\"input_tokens\":28,\"cache_creation_input_tokens\":7088,\"cache_read_input_tokens\":66261,\"output_tokens\":302,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":7088,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"not_available\",\"iterations\":[{\"input_tokens\":8,\"output_tokens\":55,\"cache_read_input_tokens\":24508,\"cache_creation_input_tokens\":116,\"cache_creation\":{\"ephemeral_5m_input_tokens\":0,\"ephemeral_1h_input_tokens\":116},\"type\":\"message\"}],\"sp…[1352 chars]",
+        "stdout": "{\"is_error\":false,\"duration_api_ms\":6768,\"num_turns\":3,\"stop_reason\":\"end_turn\",\"session_id\":\"1615d6f2-b818-4f02-869c-2e64bc219cbd\",\"total_cost_usd\":0.0229597,\"usage\":{\"input_tokens\":28,\"cache_creation_input_tokens\":7094,\"cache_read_input_tokens\":66267,\"output_tokens\":300,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":7094,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"not_available\",\"iterations\":[{\"input_tokens\":8,\"output_tokens\":47,\"cache_read_input_tokens\":24514,\"cache_creation_input_tokens\":116,\"cache_creation\":{\"ephemeral_5m_input_tokens\":0,\"ephemeral_1h_input_tokens\":116},\"type\":\"message\"}],\"sp…[1351 chars]",
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 7159
+      "ms": 7322
     },
     {
       "id": "p-plugin-skill-headless",
@@ -778,7 +851,7 @@
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 3856
+      "ms": 3842
     },
     {
       "id": "p-hook-events-headless",
@@ -810,11 +883,11 @@
         "markerSurvived": true,
         "wroteFile": true,
         "hookEventsInStreamCount": 12,
-        "sampleHookEvent": "{\"type\":\"system\",\"subtype\":\"hook_started\",\"hook_id\":\"39bf8de9-a0d6-4ddd-8a09-0edbcf9f6fea\",\"hook_name\":\"SessionStart:startup\",\"hook_event\":\"SessionStart\",\"uuid\":\"9d1e9a75-f24a-4d53-b083-ee39b18e7118\",\"session_id\":\"2e970cc8-ca97-4552-8b23-e4908a8a9d4d\"}",
+        "sampleHookEvent": "{\"type\":\"system\",\"subtype\":\"hook_started\",\"hook_id\":\"0ab5a878-4267-4721-a21d-02fceb675d71\",\"hook_name\":\"SessionStart:startup\",\"hook_event\":\"SessionStart\",\"uuid\":\"d5c831b3-c0a0-4dd8-ae15-7a37e7bc7334\",\"session_id\":\"e92990af-2c4c-4887-a5aa-eb4e3f8e771f\"}",
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 8586
+      "ms": 7456
     },
     {
       "id": "p-plugin-bundled-mcp",
@@ -835,7 +908,7 @@
           "fixture": [
             "plugin:guidelane-probe:echo [connected]"
           ],
-          "ambientCount": 1
+          "ambientCount": 6
         },
         "strict": {
           "fixture": [],
@@ -854,7 +927,7 @@
         "initToolsCarriesMcpNames": false
       },
       "observationFailures": null,
-      "ms": 162608
+      "ms": 29923
     },
     {
       "id": "p-version-readable",
@@ -874,7 +947,7 @@
         "parsed": "2.1.220"
       },
       "observationFailures": null,
-      "ms": 171
+      "ms": 166
     },
     {
       "id": "p-auth-mode-visibility",
@@ -918,7 +991,7 @@
         "parseFailed": false
       },
       "observationFailures": null,
-      "ms": 246
+      "ms": 237
     },
     {
       "id": "p-automode-classifier-pinned",
@@ -933,7 +1006,7 @@
       ],
       "failureImpact": "The classifier is per-machine user settings (`auto-mode reset` works by removing the autoMode section from user settings) and is admin-overridable. If it drifts, `auto` silently means something different per install and the permission contract is unportable.",
       "status": "pass",
-      "detail": "Effective classifier is byte-identical to the shipped defaults (allow:17, soft_deny:65, hard_deny:1, environment:20).",
+      "detail": "Effective classifier is byte-identical to the shipped defaults (allow:17, soft_deny:65, hard_deny:1, environment:20). Measures THIS machine only — the same assertion on a friend's laptop is a different run, which is the whole reason the probe exists.",
       "evidence": {
         "counts": {
           "allow": 17,
@@ -943,11 +1016,10 @@
         },
         "driftedSections": [],
         "identical": true,
-        "vacuous": false,
         "totalRules": 103
       },
       "observationFailures": null,
-      "ms": 777
+      "ms": 834
     },
     {
       "id": "p-autoupdate-governable",
@@ -972,7 +1044,7 @@
         }
       },
       "observationFailures": null,
-      "ms": 2052
+      "ms": 2039
     },
     {
       "id": "p-rate-limit-signal",
@@ -987,7 +1059,7 @@
       ],
       "failureImpact": "Without it, unattended runs must guess: backoff-poll with capped attempts and a manual morning resume, and the morning report cannot say when capacity returns.",
       "status": "pass",
-      "detail": "rate_limit_event present — status=allowed, window=five_hour, resetsAt=1785469200 (epoch seconds — supervisor can sleep to the boundary).",
+      "detail": "rate_limit_event present — status=allowed, window=five_hour, resetsAt=1785529200 (epoch seconds — supervisor can sleep to the boundary).",
       "evidence": {
         "present": true,
         "fields": [
@@ -1000,7 +1072,7 @@
         ],
         "sample": {
           "status": "allowed",
-          "resetsAt": 1785469200,
+          "resetsAt": 1785529200,
           "rateLimitType": "five_hour",
           "overageStatus": "rejected",
           "overageDisabledReason": "org_level_disabled",
@@ -1012,7 +1084,7 @@
         "note": "Only the healthy (\"allowed\") branch is observed here; the rejected branch is not provoked on purpose."
       },
       "observationFailures": null,
-      "ms": 2598
+      "ms": 2777
     }
   ],
   "exercisedVersion": "2.1.220 (Claude Code)"
