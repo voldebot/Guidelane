@@ -35,7 +35,7 @@ Nothing in S1 (cockpit + engine adapter + live feed) ships before these are answ
 
 **A1 — The bidirectional control channel.** `control_request` / `control_response` are real in 2.1.220 with subtypes `can_use_tool`, `initialize`, `interrupt`, `set_permission_mode`, `set_model`, `hook_callback`, `mcp_message`, `control_cancel_request`. With `--input-format stream-json` the engine can ask the client a question and block on the answer. An adapter that only ever writes user messages and never answers produces a session with no further events, no `result`, and no exit — indistinguishable from a hang. *Probe*: run under the ADR-007 profile and (a) deliberately never answer, measuring whether the run terminates within a bound; (b) answer correctly and confirm progress. *Exit*: either the engine provably never emits `control_request` under our session profile — asserted every nightly run — or the adapter ships a responder **and** a hard stall timeout. "Silence with no terminal event" must be provably impossible before a feed goes in front of anyone.
 
-**A2 — The closed set of stream `type`/`subtype` values.** The plan's only deterministic plain-language guarantee is whitelist-rendering of structured events, and the whitelist has no enumerated universe. The binary carries at least 28 system subtypes the plan never names — `compact_boundary`, `model_fallback`, `model_refusal_fallback`, `model_refusal_no_fallback`, `model_consent_fallback`, `permission_denied`, `notification`, `api_retry`, `error_during_execution`, `error_max_turns`, `error_max_budget_usd`, `error_max_structured_output_retries`, `interrupt`, `status`, `informational`, `thinking_tokens`, `session_state_changed`, `background_tasks_changed`, `request_user_dialog`, `side_question`, `hook_response`, `get_context_usage`, `set_model`, `set_permission_mode`, `can_use_tool`, `mcp_message`, `reload_plugins`, `apply_flag_settings`. An unhandled subtype in front of a non-coder is a blank card or a crash. *Probe*: extract the discriminated union from the shipped binary's strings **and** from every live probe's captured stream; emit it as a versioned artifact the adapter compiles its whitelist from; nightly CI diffs the union and **fails** on any new value. *Exit*: every observed value is classified `render | ignore | escalate`; unclassified = FAIL, not warning.
+**A2 — The closed set of stream `type`/`subtype` values.** The plan's only deterministic plain-language guarantee is whitelist-rendering of structured events, and the whitelist has no enumerated universe. The binary carries at least 28 system subtypes the plan never names — `compact_boundary`, `model_fallback`, `model_refusal_fallback`, `model_refusal_no_fallback`, `model_consent_fallback`, `permission_denied`, `notification`, `api_retry`, `error_during_execution`, `error_max_turns`, `error_max_budget_usd`, `error_max_structured_output_retries`, `interrupt`, `status`, `informational`, `thinking_tokens`, `session_state_changed`, `background_tasks_changed`, `request_user_dialog`, `side_question`, `hook_response`, `get_context_usage`, `set_model`, `set_permission_mode`, `can_use_tool`, `mcp_message`, `reload_plugins`, `apply_flag_settings`. An unhandled subtype in front of a non-coder is a blank card or a crash. *Probe*: extract the discriminated union from the shipped binary's strings **and** from every live probe's captured stream; emit it as a versioned artifact the adapter compiles its whitelist from; nightly CI diffs the union and **fails** on any new value. *Exit*: every observed value is classified `render | ignore | escalate`; unclassified = FAIL, not warning. — **PARTLY ANSWERED 2026-07-31, see §14.** `p-stream-surface-union` pins the universe of one maximally verbose configuration in `tools/probe/stream-surface.json` and FAILs on an unclassified pair. Two corrections to the paragraph above: of the ~28 binary-extracted subtype names, only `status` and `thinking_tokens` have been observed as real pairs, and the rest were deliberately **not** seeded (a guessed pair can never be falsified — Principle 8); and at least six of those names are listed as `control_request` subtypes in A1 above, so the two paragraphs contradict each other and nobody has measured which is right.
 
 **A3 — Denial signal loss.** The binary logs `[engine] pendingDenialFrames buffer is full; dropping oldest permission_denied advisory frames`. CLAUDE.md §3 makes "a tool-denied stream event is a loud phase failure, never silence" a non-negotiable, and it currently listens on a lossy channel. Under load the detector misses and the phase reads as "the agent did nothing" — the exact failure ADR-007 named as its accepted negative. *Probe*: `auto` with an allow-list omitting Write, prompt that attempts ~20 rapid writes; count attempted `tool_use` blocks against denial signals on **both** channels (advisory system frame vs `tool_result.is_error` on the user message); find the depth at which advisory frames drop. *Exit*: a lossless, non-droppable denial signal is identified — most likely `tool_result.is_error` — and named as the detector's input; the advisory frame is demoted to telemetry. **This changes CLAUDE.md §3's wording**: the non-negotiable is a *denied-tool detector on a lossless channel*, not "the stream event is loud".
 
@@ -122,7 +122,7 @@ The critic also named eight probes as overreach. Accepted, with reasons — cost
 
 | # | Gap | Severity | Disposition |
 |---|---|---|---|
-| 1 | Closed set of stream type/subtype | critical | **A2** — S1 blocker, CI drift alarm |
+| 1 | Closed set of stream type/subtype | critical | **A2** — **partly answered (§14, 2026-07-31)**: universe pinned + drift-gated for one configuration by `p-stream-surface-union`. Still open: the CI-visible (free) half, and every configuration this profile cannot produce |
 | 2 | Bidirectional control channel | critical | **A1** — S1 blocker |
 | 3 | `request_user_dialog` | critical | **A4** — S1 blocker |
 | 4 | Droppable `permission_denied` frames | critical | **A3** — S1 blocker; rewrites CLAUDE.md §3 |
@@ -222,6 +222,149 @@ listed `pending` at init and were simply never mentioned again, including the on
 that answered a tool call moments later. Whatever the control channel turns out
 to be, *server connection state is not published on it* — so the S1 adapter
 cannot wait for a "ready" signal that does not exist.
+
+## 14. Addendum — A2 measured and pinned; A6's open half answered as a side effect (2026-07-31, S1 night cycle 1)
+
+`p-stream-surface-union` (`fixture-call`, baseline `pass`) now runs one maximally
+verbose session and asserts every `type`/`subtype` pair it emits — and every
+content-block and delta type inside a `stream_event` envelope — against
+`tools/probe/stream-surface.json`, a hand-seeded, hand-classified artifact the
+probe reads and never writes.
+
+**Session profile measured**: `-p` with `--input-format stream-json`,
+`--output-format stream-json`, `--verbose`, `--include-partial-messages`,
+`--include-hook-events`, `--replay-user-messages`, `--plugin-dir` at the existing
+probe fixture, `--tools ''`, `--no-session-persistence`, plus the ADR-008
+isolation pair the harness adds. Model `haiku`, engine 2.1.220, 35 events.
+
+### What was observed
+
+| Outer pair | In the §13 seed? |
+|---|---|
+| `system/init` | yes |
+| `system/hook_started` | yes |
+| `system/hook_response` | yes |
+| `system/thinking_tokens` | yes |
+| `assistant` (no subtype) | yes |
+| `rate_limit_event` (no subtype) | yes |
+| `result/success` | yes |
+| `user` (no subtype) | no — evidenced by `p-stream-json-roundtrip`, never written down as a pair |
+| `stream_event` (no subtype) | no — same |
+| **`system/status`** | **NO — new, and in neither §13 nor any prior write-up** |
+
+`system/hook_progress` is classified but did **not** appear in this
+configuration; that is tolerated and reported, not failed.
+
+**Finding 1 — `system/status` exists and nothing in the plan named it.** Observed
+on both of the first two runs. Payload key names `{type, subtype, session_id,
+uuid, status}`; the values `status` can take are **not** measured, because the
+probe deliberately retains no payload values (a stream body carries `cwd`,
+session ids and the operator's plugin names, and the report is public). It is
+classified **`escalate` as a fail-closed placeholder** — an unmodelled
+session-level signal must reach a human rather than be swallowed — with a written
+instruction to downgrade it only after its value set is enumerated. Enumerating
+those values is open work, listed below.
+
+**Finding 2 — A6's open half is answered, and the answer is the unwelcome one.**
+§13 recorded that `system/thinking_tokens` carries counters and no text, and left
+open "whether a session configured for visible reasoning also emits content
+blocks". It does not need to be configured for anything. On **`--model haiku`
+with no reasoning flag beyond `--include-partial-messages`**, the stream carried:
+
+- `stream_event.event.content_block.type = thinking`, keys `{type, thinking, signature}`
+- `stream_event.event.delta.type = thinking_delta`, keys `{type, thinking, estimated_tokens}`
+- `stream_event.event.delta.type = signature_delta`, keys `{type, signature}`
+
+So raw chain-of-thought reaches `-p` stream-json **by default**, and the
+`MessageDisplay` rewrite fires on assistant text, not on thinking (ADR-008) — it
+arrives unrewritten. All three are pinned `ignore` **by name**. A renderer that
+ignores them by omission fails open the first time it is rewritten. A6 is not
+closed (`redacted_thinking` was not observed, and effort/model variation is
+untested), but its stated open question now has an answer.
+
+**Finding 3 — two negative results worth recording.** Zero non-JSON lines on
+stdout and zero events with an unusable `type`/`subtype` shape. The engine's
+stdout was pure JSONL for this configuration. Both are asserted, so a regression
+in either is a FAIL rather than a silence.
+
+### How the probe is kept from failing open
+
+Written down because every one of these exists to answer PROJECT_MAP Principle 9,
+and because the subset check on its own is the classic vacuous assertion — an
+empty observation is trivially a subset of anything:
+
+1. **A pinned required minimum** (`system/init`, `assistant`, `user`,
+   `stream_event`, `result/success`) — a session that dies after two events fails
+   instead of passing.
+2. **A floor pinned in code**, asserted as a subset of the artifact's required
+   list, so an artifact edit cannot shrink the minimum to nothing. Not a second
+   source of truth: it is a shape constraint, so the two cannot disagree.
+3. **Fail-closed on the artifact**: missing, unparseable, empty, a class outside
+   `render|ignore|escalate`, or an entry with no stated reason → FAIL before any
+   engine call is made.
+4. **`hasOwnProperty`, not `in`** — an event type of `constructor` or `toString`
+   would otherwise read as already classified.
+5. **Unknown pair names are shape-gated and fingerprinted** before publication.
+   An unclassified pair is the one novel string this probe emits, produced
+   exactly when it has stopped understanding the stream, and `redact.mjs` has no
+   rule that could match a bare token. Hook subtypes derive from hook names and
+   plugin-scoped names carry `plugin_<plugin>_<server>`, both operator-owned.
+
+### H6 falsification, performed
+
+| Corruption | Probe's own status |
+|---|---|
+| none (baseline) | `pass` |
+| renamed `pairs["system/thinking_tokens"]` so an observed pair is unclassified | **`fail`**, naming that pair |
+| restored | `pass` |
+| removed `system/init` from `requiredPairs` (exercises the code-side floor; costs no quota — it returns before the engine call) | **`fail`**, naming the omission |
+| restored | `pass` |
+
+Statuses read from the probe's entry in the partial report, never from the
+process exit code, which is `1` on every one of these runs because an unrecorded
+probe is baseline drift.
+
+### Honest scope, and what is still open
+
+- This is **a sample from one configuration, not the closed set**, and the
+  artifact says so in a field rather than only in prose. Not exercised: tool use,
+  subagents, MCP servers, `--json-schema`, compaction, an interrupted session, a
+  non-zero-exit result. Of the ~28 subtype names §3 A2 extracted from the binary,
+  **only `status` and `thinking_tokens` have now been observed as real pairs.**
+  The rest remain binary strings, and per Principle 8 they were deliberately
+  **not** seeded into the artifact: a guessed pair in a pinned expectation can
+  never be falsified, because it will never be observed. Two independent advisory
+  reviews flagged that §3 A2 and §3 A1 disagree about whether `can_use_tool`,
+  `set_model`, `set_permission_mode`, `mcp_message`, `interrupt` and
+  `hook_callback` are `system` subtypes or `control_request` subtypes. Nobody has
+  measured which. That contradiction is now on the record.
+- **The classification column has no enforced consumer.** `apps/cockpit/` does
+  not exist, so `render | ignore | escalate` is today a pinned decision, not a
+  constraint on any renderer. The universe is asserted; obedience to the
+  classification is not. This is the honest limit of what a probe can do before a
+  renderer exists, and it should not be discovered in S2.
+- **No `defaultForUnknown` rule is implemented anywhere.** Both advisory reviews
+  independently proposed that the cockpit treat an unclassified pair as
+  `escalate` at runtime, which would make the set's inevitable incompleteness
+  survivable rather than a correctness risk. That is an orchestrator decision,
+  not a probe change, and it is the single highest-value follow-up here.
+- **Follow-ups not done tonight, named so they are not lost**: (a) enumerate the
+  values of `system/status` and re-classify it deliberately; (b) split artifact
+  validation into a separate free `observational` probe so CI gates it on every
+  push — a `fixture-call` probe is `skip`ped without `--live` and CI therefore
+  never runs this one; (c) have all 17 live probes assert `observed ⊆ artifact`
+  through one shared helper, which is what would give A2 real breadth; (d)
+  `p-stream-json-roundtrip` records `types` and `subtypes` as two independent
+  lists, from which the pairs are not reconstructible — that is where the
+  unattributed `status` subtype in the committed S0 evidence came from.
+- **`subtype: null` is treated as an absent subtype** by the key function. One
+  advisory review argued they should be distinct shapes. Not changed; recorded.
+
+**Disposition**: A2 moves from *open blocker* to **partly answered — the
+whitelist has an enumerated, asserted, drift-gated universe for one
+configuration, and a CI-visible version of the check is follow-up (b)**. A6 moves
+from *open* to **open with its central question answered**: content-bearing
+thinking blocks do reach the wire, by default, unrewritten.
 
 ## 11. Addendum — the logged-out shape, measured for free (2026-07-30)
 

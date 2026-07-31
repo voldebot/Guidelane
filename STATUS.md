@@ -389,3 +389,91 @@ The night deliberately leaves these undone:
 
 ## Cycle history
 (populated by orchestrator, newest first)
+
+## Cycle 1 picked: A2 — enumerate the stream `type`/`subtype` union and pin it as a committed artifact
+- Source: '## Next steps' item #1 (A2, REVIEW-02 §3). TaskList empty; no cycle has picked anything yet
+  (cycle history was empty at scan time), so #1 is the lowest unpicked item.
+- Files: `tools/probe/probes.mjs` (new probe `p-stream-surface-union`),
+  `tools/probe/stream-surface.json` (new hand-seeded artifact),
+  `docs/research/REVIEW-02-runtime-gaps.md` (H7 addendum + §3/§9 disposition),
+  `PROJECT_MAP.md` (§6 ledger row). No UI files exist; none touched.
+- Why: the cockpit's only deterministic plain-language guarantee is whitelist-rendering, and the
+  whitelist currently has no enumerated universe — an unclassified subtype in front of a non-coder is
+  a blank card or a crash.
+- Success criterion: `node tools/probe/run.mjs --live --only p-stream-surface-union` reports the
+  probe's own status as `pass` (read from the partial report, not the exit code — H3/H6); the artifact
+  is hand-seeded with every pair classified `render | ignore | escalate`; an observed pair missing from
+  the artifact and an artifact pair with no classification both FAIL; H6 falsification demonstrated by
+  corrupting a pinned expectation and recording the resulting `fail` status, then restoring; H7
+  write-down landed before the cycle's decision line.
+
+## Cycle 1 result
+- Files changed: `tools/probe/probes.mjs` (new probe `p-stream-surface-union` + module-scope
+  `publishablePair`/`SAFE_STREAM_TOKEN`), `tools/probe/stream-surface.json` (NEW hand-seeded artifact),
+  `docs/research/REVIEW-02-runtime-gaps.md` (new §14 addendum; §3 A2 + §9 row 1 dispositions),
+  `PROJECT_MAP.md` (5 new §6 ledger rows), `STATUS.md`. No UI files exist; none touched.
+- Tests: PASS (new probe p-stream-surface-union = pass; suite exit 1 = unrecorded-probe drift per H3;
+  baseline.json untouched; drift list names ONLY probes added this run)
+- Advisors consulted: backend-architect (probe/artifact design + fail-open analysis),
+  security-pentester (7-question adversarial audit, leak analysis), general-purpose
+  (second-opinion review of my code — dispatched, had not returned before this write-up; see
+  "not done" below)
+- Confidence: **80%** that this probe is a real assertion rather than decoration. The 20%:
+  named below, not hidden.
+- Summary: `p-stream-surface-union` runs one maximally verbose session and asserts every
+  `type`/`subtype` pair — and every content-block/delta type inside `stream_event` — against a
+  hand-seeded, hand-classified `tools/probe/stream-surface.json`. It found two things the plan did
+  not know: the pair **`system/status`**, named nowhere in REVIEW-02; and **content-bearing thinking
+  blocks reaching `-p` stream-json on `--model haiku` with no reasoning flag**, unrewritten by the
+  MessageDisplay hook — which answers the open half of A6 as a side effect. H7 write-down landed in
+  REVIEW-02 **§14** before this line.
+
+### Cycle 1 — H6 falsification, as performed (the probe's real exit criterion)
+Statuses read from the probe's entry in `S0-conformance-results.partial.json`, never the exit code.
+
+| Corruption | Probe's own status |
+|---|---|
+| none | `pass` |
+| renamed `pairs["system/thinking_tokens"]` → an observed pair becomes unclassified | **`fail`**, naming it |
+| restored | `pass` |
+| removed `system/init` from `requiredPairs` → trips the code-side floor (returns before the engine call, costs no quota) | **`fail`**, naming it |
+| restored | `pass` |
+
+Two independent guards falsified, not one: the observed-⊆-artifact check **and** the pinned-minimum
+check. The second matters more — the subset check alone passes on an empty stream.
+
+### Cycle 1 — weak spots, stated before anyone has to ask
+1. **CI never runs this probe.** It is a `fixture-call`, so it is `skip`ped without `--live`, and the
+   free tier is the only tier CI has (H2). Artifact validity — which needs no engine at all — should
+   be split into a free `observational` probe. Not done tonight; logged in PROJECT_MAP §6.
+2. **The classification column has no consumer.** `apps/cockpit/` does not exist, so
+   `render | ignore | escalate` is a pinned decision, not a constraint on any renderer. The universe
+   is asserted; obedience to it is not. H5 Q2 answered honestly: this half is currently a convention.
+3. **`system/status` is classified without knowing what it means.** `escalate` is a deliberate
+   fail-closed placeholder, not a measurement. The probe retains no payload values by design (H10),
+   so enumerating them is separate work.
+4. **One configuration, ~28 unmeasured binary names.** Only `status` and `thinking_tokens` of REVIEW-02
+   §3 A2's extracted list have been seen as real pairs. The rest were deliberately NOT seeded — a
+   guessed pair in a pinned expectation can never be falsified (Principle 8). So the artifact is
+   honestly small, and "union" in the probe id overclaims relative to what one session proves; the
+   detail line carries the caveat on every run.
+5. **The second-opinion `general-purpose` review had not returned when I wrote this**, and the two
+   advisory reviews that did return arrived *after* I had already run the first live tests — so the
+   phase spec's ordering (advisors → code → review → tests) was not honoured strictly. Their findings
+   were folded in afterwards (the leak gate on unknown pair names and the code-side required floor
+   both came from them, and both are in the shipped code), but a finding that lands in the morning
+   review has not been acted on. Read them before trusting the probe.
+6. **I corrupted the artifact for H6 and `git checkout --` did not restore it** — the file was
+   untracked. Caught and repaired by re-reading the file; the final run confirms `requiredPairs`
+   contains all five entries. Worth noting because the same reflex on a *tracked* file would have
+   silently reverted real work.
+
+### Cycle 1 scan notes (pre-flight evidence, not the item)
+- Free-tier pre-flight: `node tools/probe/run.mjs` → `13 pass · 0 fail · 0 partial · 0 inconclusive ·
+  0 error · 17 skipped`. Baseline is healthy going in. **Per H2 this says nothing about any probe
+  built tonight** — it is recorded only as a "the existing 30 were green before I started" datum, so
+  a later real regression is attributable.
+- `grep -rn "TODO\|FIXME" tools/ docs/decisions/` → no matches.
+- Working tree at scan time: only `docs/FILEMAP.md` modified (hook-generated).
+- 30 probe ids present in `tools/probe/probes.mjs`; `p-stream-surface-union` is not among them and
+  `tools/probe/stream-surface.json` does not exist — the item is genuinely unstarted.

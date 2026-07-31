@@ -59,6 +59,24 @@ const BUILTIN_SKILL_FLOOR = [
 ]
 const BUILTIN_AGENT_FLOOR = ['Explore', 'Plan', 'claude', 'general-purpose', 'statusline-setup']
 
+/**
+ * Publish a stream `type`/`subtype` pair name, or fingerprint it if its shape
+ * says it may not be the engine's to publish.
+ *
+ * Engine pair names are short snake_case. A name that is not may be OPERATOR-
+ * owned: hook subtypes derive from hook names (`SessionStart:startup`) and
+ * plugin-scoped names carry `plugin_<plugin>_<server>` (ADR-008). An
+ * unclassified pair is published *exactly* when the probe has stopped
+ * understanding what it saw — the same shape as the identity leak that would
+ * have happened precisely at the moment of confusion — and `redact.mjs` has no
+ * rule that could match a bare token. Same reasoning as `publishableNames`.
+ */
+const SAFE_STREAM_TOKEN = /^[A-Za-z][A-Za-z0-9_-]{0,40}$/
+const publishablePair = (key) =>
+  String(key).split(/[/=.]/).every((tok) => tok === '' || SAFE_STREAM_TOKEN.test(tok))
+    ? String(key)
+    : `<unpublishable:${fingerprint(key)} len=${String(key).length}>`
+
 /** Truncate captured output so the JSON report stays readable. */
 const clip = (s, n = 1200) => {
   const t = String(s || '')
@@ -431,6 +449,268 @@ const protocolProbes = [
           cost: costKey ? parsed[costKey] : null,
           durationMs: parsed.duration_ms ?? null,
           numTurns: parsed.num_turns ?? null,
+        },
+      }
+    },
+  },
+
+  {
+    id: 'p-stream-surface-union',
+    title: 'Every stream type/subtype pair a session emits is classified in the committed surface artifact',
+    kind: 'fixture-call',
+    loadBearing: 'critical',
+    claim:
+      "The cockpit's only deterministic plain-language guarantee is whitelist-rendering, and a whitelist needs an enumerated universe: every `type`/`subtype` pair a session emits — and every content-block and delta type inside a `stream_event` envelope — appears in `tools/probe/stream-surface.json` carrying a deliberate `render | ignore | escalate` classification.",
+    failureImpact:
+      'An unclassified subtype reaches a non-coder as a blank card or a crash, and the failure is invisible during development: the pair simply never appeared on the machine where the whitelist was written.',
+    docRefs: ['REVIEW-02 §3 A2', 'REVIEW-02 §13', 'RESEARCH-02 §4.3 mech. 3', 'ADR-008'],
+    async run(ctx) {
+      // SCOPE — stated here because the probe's name overclaims and the detail
+      // line is where a reader will look for the caveat: this observes ONE
+      // session under ONE flag configuration. It is a SAMPLE OF THE SURFACE,
+      // NOT THE CLOSED SET. Configurations it does not exercise: tool use,
+      // subagents, MCP servers, --json-schema, a non-zero-exit result, an
+      // interrupted session, a rate-limited one. What it CAN prove is a
+      // one-directional and still useful thing — that nothing this
+      // configuration emits is unclassified, and that the pairs the renderer
+      // depends on actually arrive.
+      //
+      // The artifact is an INPUT. It is hand-seeded and hand-classified, and
+      // this probe never writes it: a probe that generates its own expectation
+      // and then checks it against itself is a tautology (PROJECT_MAP
+      // Principle 9, Q3) and would have passed green on day one forever.
+      const CLASSES = ['render', 'ignore', 'escalate']
+      let surface = null
+      let readError = null
+      try {
+        surface = JSON.parse(readFileSync(new URL('./stream-surface.json', import.meta.url), 'utf8'))
+      } catch (err) {
+        readError = `${(err && (err.code || err.name)) || 'error'}: ${(err && err.message) || err}`
+      }
+      // Fail CLOSED on a missing or corrupt artifact. An absent whitelist means
+      // "nothing is classified", which is the maximally unsafe state — reporting
+      // green for it is the same shape as the baseline gate that printed "no
+      // baseline yet" and exited 0 over a merge conflict.
+      if (!surface || typeof surface !== 'object' || Array.isArray(surface)) {
+        return {
+          status: P.FAIL,
+          detail:
+            `tools/probe/stream-surface.json could not be read as an object (${readError || 'not an object'}). ` +
+            `The classification gate cannot run, so this probe refuses to report a verdict about the stream.`,
+          evidence: { readError, artifactUsable: false },
+        }
+      }
+
+      const own = (map, k) => Object.prototype.hasOwnProperty.call(map, k)
+      const pairsMap = surface.pairs && typeof surface.pairs === 'object' ? surface.pairs : null
+      const innerMap = surface.innerPairs && typeof surface.innerPairs === 'object' ? surface.innerPairs : null
+      const requiredPairs = Array.isArray(surface.requiredPairs) ? surface.requiredPairs : null
+      const requiredInner = Array.isArray(surface.requiredInnerPairs) ? surface.requiredInnerPairs : null
+
+      // Validate the artifact BEFORE spending a live call: a broken expectation
+      // file cannot be rescued by a good measurement, and quota is real.
+      const artifactProblems = []
+      const validateMap = (map, label) => {
+        if (!map) return artifactProblems.push(`${label} is missing or not an object`)
+        const keys = Object.keys(map).filter((k) => !k.startsWith('_'))
+        if (keys.length === 0) artifactProblems.push(`${label} is empty — an empty whitelist classifies nothing`)
+        for (const k of keys) {
+          const v = map[k]
+          if (!v || typeof v !== 'object') { artifactProblems.push(`${label}["${k}"] is not an object`); continue }
+          if (!CLASSES.includes(v.class)) {
+            artifactProblems.push(`${label}["${k}"] has class=${JSON.stringify(v.class)}, expected one of ${CLASSES.join(' | ')}`)
+          }
+          // An unexplained classification is a convention, not a constraint —
+          // the next person cannot tell a decision from a placeholder.
+          if (typeof v.why !== 'string' || v.why.trim().length < 10) {
+            artifactProblems.push(`${label}["${k}"] carries no stated reason`)
+          }
+        }
+      }
+      validateMap(pairsMap, 'pairs')
+      validateMap(innerMap, 'innerPairs')
+      // Without a pinned minimum this probe passes on an empty stream: it would
+      // observe nothing, find nothing unclassified, and report green having
+      // measured nothing at all. This is the guard that makes it able to fire.
+      if (!requiredPairs || requiredPairs.length === 0) {
+        artifactProblems.push('requiredPairs is missing or empty — the probe would pass on a zero-event stream')
+      }
+      // ...and a FLOOR pinned in code, asserted as a SUBSET of the artifact's
+      // list. Checking only "non-empty" leaves the hole one edit wide: delete
+      // `system/init` and `result/success` from the artifact, keep one cheap
+      // entry, and a session that died after two events passes again. This is
+      // not a second source of truth — it is a shape constraint on the
+      // expectation, so the two cannot disagree, only the artifact can be
+      // caught shrinking. Same pattern as p-flag-surface's declaredCount floor.
+      const REQUIRED_FLOOR = ['system/init', 'assistant', 'result/success']
+      for (const k of REQUIRED_FLOOR) {
+        if (requiredPairs && !requiredPairs.includes(k)) {
+          artifactProblems.push(`requiredPairs omits "${k}", which is pinned in code — without it a session that died early satisfies the subset check and passes having measured nothing`)
+        }
+      }
+      if (!requiredInner || requiredInner.length === 0) {
+        artifactProblems.push('requiredInnerPairs is missing or empty — the probe would pass on an envelope with no content')
+      }
+      for (const k of requiredPairs || []) {
+        if (pairsMap && !own(pairsMap, k)) artifactProblems.push(`requiredPairs names "${k}", absent from pairs — that requirement can never be satisfied cleanly`)
+      }
+      for (const k of requiredInner || []) {
+        if (innerMap && !own(innerMap, k)) artifactProblems.push(`requiredInnerPairs names "${k}", absent from innerPairs`)
+      }
+      if (artifactProblems.length) {
+        return {
+          status: P.FAIL,
+          detail: `stream-surface.json is not a usable expectation: ${artifactProblems.join('; ')}. No engine call was made.`,
+          evidence: { artifactProblems, artifactUsable: false, schemaVersion: surface.schemaVersion ?? null },
+        }
+      }
+
+      const ws = ctx.makeWorkspace('p-stream-surface-union')
+      const logPath = join(ws, 'hook-events.log')
+      const res = await ctx.claude(
+        [
+          '-p',
+          '--input-format', 'stream-json',
+          '--output-format', 'stream-json',
+          '--verbose',
+          '--include-partial-messages',
+          '--include-hook-events',
+          '--replay-user-messages',
+          // Read-only reuse of the existing fixture — hook lifecycle pairs are a
+          // third of the known union and cannot be observed without a plugin
+          // that registers hooks. NOT mutated: several green probes consume it.
+          '--plugin-dir', join(ctx.fixtures, 'plugin'),
+          '--model', ctx.model,
+          '--tools', '',
+          '--no-session-persistence',
+        ],
+        {
+          cwd: ws,
+          env: { GUIDELANE_PROBE_LOG: logPath },
+          stdin: ctx.userMessage('Reply with exactly: SURFACE_OK'),
+          timeoutMs: 240_000,
+        }
+      )
+
+      // Counted separately from jsonLines(), which silently drops a line that
+      // does not start like JSON. For every other probe that is noise; for this
+      // one it is the whole subject — a non-JSON line on stdout is a surface the
+      // cockpit's line parser has no classification for, and dropping it here
+      // would be the probe hiding its own finding.
+      const rawLines = String(res.stdout || '').split('\n').map((s) => s.trim()).filter(Boolean)
+      const nonJsonLines = rawLines.filter((l) => l[0] !== '{' && l[0] !== '[')
+      const events = ctx.jsonLines(res.stdout)
+
+      const malformed = []
+      const observed = new Set()
+      const innerObserved = new Set()
+      // Top-level KEY NAMES per pair, so a FAIL is actionable. Naming an
+      // unclassified pair and nothing else leaves the next person to guess at
+      // `render | ignore | escalate`, and a guessed classification is precisely
+      // the decoration this repo keeps producing. Key names are engine
+      // vocabulary and safe to publish; VALUES are not — `system/init` alone
+      // carries cwd, session_id and the operator's plugin names (H10) — so no
+      // value is ever retained here.
+      const shapes = {}
+      const innerShapes = {}
+      const noteShape = (into, key, obj) => {
+        if (!into[key]) into[key] = new Set()
+        for (const k of Object.keys(obj)) into[key].add(k)
+      }
+      for (const e of events) {
+        if (!e || typeof e !== 'object' || Array.isArray(e)) { malformed.push('non-object event'); continue }
+        // The typeof, never the value: a non-string `type` could be an object
+        // carrying anything, and this string is destined for a public report.
+        if (typeof e.type !== 'string' || !e.type) { malformed.push(`event with a ${typeof e.type} type`); continue }
+        const sub = e.subtype
+        if (sub !== undefined && sub !== null && typeof sub !== 'string') {
+          malformed.push(`${e.type} with non-string subtype`)
+          continue
+        }
+        const pairKey = sub === undefined || sub === null ? e.type : `${e.type}/${sub}`
+        observed.add(pairKey)
+        noteShape(shapes, pairKey, e)
+        if (e.type !== 'stream_event') continue
+        const inner = e.event
+        if (!inner || typeof inner !== 'object') { malformed.push('stream_event carrying no event object'); continue }
+        if (typeof inner.type === 'string') {
+          innerObserved.add(`event.type=${inner.type}`)
+          noteShape(innerShapes, `event.type=${inner.type}`, inner)
+        } else malformed.push('stream_event.event with non-string type')
+        if (inner.delta && typeof inner.delta.type === 'string') {
+          innerObserved.add(`event.delta.type=${inner.delta.type}`)
+          noteShape(innerShapes, `event.delta.type=${inner.delta.type}`, inner.delta)
+        }
+        if (inner.content_block && typeof inner.content_block.type === 'string') {
+          innerObserved.add(`event.content_block.type=${inner.content_block.type}`)
+          noteShape(innerShapes, `event.content_block.type=${inner.content_block.type}`, inner.content_block)
+        }
+      }
+
+      // hasOwnProperty, not `in`: `in` walks the prototype chain, so an event
+      // type of `constructor` or `toString` would read as already classified.
+      const unknownPairs = [...observed].filter((k) => !own(pairsMap, k)).sort()
+      const unknownInner = [...innerObserved].filter((k) => !own(innerMap, k)).sort()
+      // Everything below this line that leaves the probe goes through
+      // publishablePair. A pair that MATCHED the artifact came from our own
+      // committed file and is safe verbatim; an unmatched one is a novel string
+      // produced at the exact moment the probe stopped understanding the stream.
+      const pubUnknownPairs = unknownPairs.map(publishablePair)
+      const pubUnknownInner = unknownInner.map(publishablePair)
+      const missingRequired = requiredPairs.filter((k) => !observed.has(k))
+      const missingRequiredInner = requiredInner.filter((k) => !innerObserved.has(k))
+
+      // Interpretation aid, deliberately NOT an assertion: if no hook pair shows
+      // up in the stream, this says whether the hooks fired at all. An absence
+      // read off the wrong surface is a confident wrong answer
+      // (p-autoupdate-governable spent its whole life doing exactly that).
+      // p-hook-events-headless owns the assertion.
+      const hooksFired = existsSync(logPath)
+        ? [...new Set(readFileSync(logPath, 'utf8').split('\n').map((s) => s.trim()).filter(Boolean))]
+        : []
+
+      const problems = []
+      if (nonJsonLines.length) problems.push(`${nonJsonLines.length} non-JSON line(s) on stdout — an unclassifiable surface`)
+      if (malformed.length) problems.push(`${malformed.length} event(s) with an unusable type/subtype shape (${[...new Set(malformed)].slice(0, 3).join('; ')})`)
+      if (unknownPairs.length) problems.push(`UNCLASSIFIED pair(s): ${pubUnknownPairs.join(', ')}`)
+      if (unknownInner.length) problems.push(`UNCLASSIFIED stream_event inner type(s): ${pubUnknownInner.join(', ')}`)
+      if (missingRequired.length) problems.push(`required pair(s) never arrived: ${missingRequired.join(', ')}`)
+      if (missingRequiredInner.length) problems.push(`required inner type(s) never arrived: ${missingRequiredInner.join(', ')}`)
+
+      return {
+        status: problems.length ? P.FAIL : P.PASS,
+        detail: problems.length
+          ? `${problems.join(' | ')}. Classify the new pair(s) in tools/probe/stream-surface.json by hand — never widen the artifact to silence this.`
+          : `All ${observed.size} pair(s) and ${innerObserved.size} stream_event inner type(s) observed in this session are classified, and every pinned required pair arrived. ` +
+            `SAMPLE OF ONE CONFIGURATION, not the closed set: no tool use, no subagent, no MCP server, no error result. ` +
+            `Hooks that fired: ${hooksFired.length}.`,
+        evidence: {
+          exit: res.code,
+          eventCount: events.length,
+          // Engine vocabulary only. No event BODIES reach the report: system/init
+          // alone carries cwd, session_id, and the operator's plugin/skill/agent
+          // names, and this artifact is public (H10).
+          observedPairs: [...observed].sort().map(publishablePair),
+          unknownPairs: pubUnknownPairs,
+          // Key names only — enough to classify the pair by hand, no payload.
+          unknownPairShapes: Object.fromEntries(
+            unknownPairs.map((k) => [publishablePair(k), [...(shapes[k] || [])].sort().map(publishablePair)])
+          ),
+          missingRequired,
+          observedInner: [...innerObserved].sort().map(publishablePair),
+          unknownInner: pubUnknownInner,
+          unknownInnerShapes: Object.fromEntries(
+            unknownInner.map((k) => [publishablePair(k), [...(innerShapes[k] || [])].sort().map(publishablePair)])
+          ),
+          missingRequiredInner,
+          nonJsonLineCount: nonJsonLines.length,
+          malformedCount: malformed.length,
+          // Not a failure: the artifact is deliberately a superset seeded from
+          // other configurations. Reported so staleness is visible on sight.
+          classifiedButUnobserved: Object.keys(pairsMap).filter((k) => !observed.has(k)).sort(),
+          hookEventNamesFired: hooksFired,
+          artifactSchemaVersion: surface.schemaVersion ?? null,
+          stderr: clip(res.stderr, 300),
         },
       }
     },
