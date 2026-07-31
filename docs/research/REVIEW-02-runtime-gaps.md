@@ -366,6 +366,78 @@ configuration, and a CI-visible version of the check is follow-up (b)**. A6 move
 from *open* to **open with its central question answered**: content-bearing
 thinking blocks do reach the wire, by default, unrewritten.
 
+## 15. Addendum — the night's three findings verified, and two of them were wrong in a way that mattered (2026-07-31, owner review pass)
+
+§14 was written by the session that did the work, so none of it counted as
+verified (ADR-002: no claim is accepted from the session that produced it). Every
+claim below was re-measured in a separate session against a fresh engine call.
+
+**Finding 1 — `system/status` is real. Its classification was wrong.**
+Reproduced. The pair rides with `--include-partial-messages` (absent from an
+otherwise identical run without it). Its value was measurable all along and
+nobody measured it: **`status = "requesting"`** — a request-progress signal, not
+a session-level alarm. §14 classified it `escalate` as a fail-closed placeholder,
+which was the right call while the value set was unknown and became alarm noise
+the moment it was knowable. Now value-conditional: `requesting` → `ignore`,
+anything else → `escalate`. This closes follow-up (a) of §14.
+
+**Finding 2 — confirmed, and the confirmation is stronger than the claim.**
+§14 inferred "unrewritten" from the ADR-008 note that `MessageDisplay` fires on
+assistant text. That is an inference about a hook from a different measurement.
+Measured directly instead, as a **same-run controlled differential**: with the
+fixture plugin's rewrite hook armed, one assistant message came back with its
+text block replaced by the hook's marker (`textWasRewritten: true`, 17 chars)
+while its thinking block carried **129 characters of the model's original
+reasoning, untouched** (`thinkingWasRewritten: false`). Same message, same run,
+same hook. Thinking deltas carried the same 129 characters, and a `signature_delta`
+carried 508. So: **the rewrite reaches assistant text and does not reach
+thinking.** ADR-006's language dial is implemented by that rewrite, which makes
+this a product defect and not a curiosity — a Turkish-dial user is one renderer
+bug away from receiving English engineer-facing reasoning.
+
+**Finding 3 — instance 23 confirmed exactly as reported, and fixed.**
+`publishablePair` published `mcp__plugin_<client>_<server>__<tool>` and
+`plugin_<operator>_<server>` **verbatim** — the two ADR-008 shapes its own
+docstring named as its reason to exist — because underscores are inside
+`[A-Za-z0-9_-]`. The hook-subtype case it also cited was caught only by the
+coincidence of a colon. Replaced with an allow-list keyed on the committed
+artifact's own pairs, falling back to engine-owned structure plus a fingerprint;
+falsified against all five shapes, and against the classified pairs to confirm no
+actionability was lost.
+
+**The schema flaw that made the artifact unimplementable.**
+Two of §14's three `escalate` entries were conditional on a **field value**, and
+schemaVersion 1 could only classify a pair. Measured: a healthy session emits
+`rate_limit_event` carrying `rate_limit_info = {status: "allowed", resetsAt,
+rateLimitType: "five_hour", overageStatus: "rejected", overageDisabledReason,
+isUsingOverage: false}` — so a renderer obeying that file literally escalates
+**every phase forever**, and the alarm fatigue would bury the one escalation the
+class was written for. Note `overageStatus`, `overageDisabledReason` and
+`isUsingOverage` are three fields ADR-007's recorded contract does not mention.
+
+schemaVersion **2** adds a `when` form (`path` · `values` · `unknown`), pins
+`unknown: "escalate"` as a validated requirement rather than a convention, and
+adds the top-level **`defaultForUnknown: "escalate"`** rule — which closes the
+item §14 called "the single highest-value follow-up here". Only `allowed` is
+pinned for the rate-limit branch, because only `allowed` has been observed;
+`rejected` escalates by falling through, which is the correct treatment of a
+branch ADR-007 could only handle defensively.
+
+**All five new guards were falsified before being trusted** — each corrupted,
+confirmed `fail`, restored, confirmed `pass`, with statuses read from the report
+and never from the exit code: `when.unknown` failing open, `defaultForUnknown`
+failing open, `class` and `when` both present, a `when.path` that resolves to
+nothing (a rule that silently never matches — the decoration shape), and an
+observed value absent from `values`. The first three return **before** the engine
+call.
+
+**Still open, unchanged by this pass**: §14 follow-ups (b) CI never runs this
+`fixture-call` probe, (c) no shared `observed ⊆ artifact` helper across the other
+live probes, (d) `p-stream-json-roundtrip`'s unreconstructible pair lists; the
+`system` vs `control_request` subtype contradiction; the classification column
+still has no consumer because `apps/cockpit/` does not exist; and `redacted_thinking`
+plus variation by model and effort remain unmeasured for A6.
+
 ## 11. Addendum — the logged-out shape, measured for free (2026-07-30)
 
 The first CI run doubled as a B5 probe nobody had to pay for: a GitHub runner has

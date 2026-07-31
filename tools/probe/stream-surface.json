@@ -1,6 +1,9 @@
 {
   "_comment": "HAND-MAINTAINED INPUT to p-stream-surface-union. The probe ASSERTS against this file and never writes it: a probe that generates its own expectation and then checks it asserts nothing (PROJECT_MAP Principle 9, Q3). Add a pair only after seeing it in a real stream, and classify it deliberately — `render | ignore | escalate` is a product decision about what a non-coder is shown, not a fact the engine can tell you.",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
+  "_schema": "A pair entry carries EXACTLY ONE of `class` or `when`. `class` is an unconditional decision. `when` is a value-conditional one: read `path` (dot-separated, from the event root), look the value up in `values`, and fall back to `unknown` if it is not there. `unknown` MUST be `escalate` — a rule that discriminates by value is a statement that the values matter, so an unrecognised one has to reach a human. schemaVersion 1 had `class` only, which is why two of its three `escalate` entries were wrong: `rate_limit_event` fires on EVERY healthy session (measured `rate_limit_info.status = \"allowed\"`), and a renderer obeying that file literally would escalate every phase forever. Alarm fatigue then kills the one escalation that matters, which is the rate-limit pause the class was written for.",
+  "defaultForUnknown": "escalate",
+  "defaultForUnknownWhy": "The runtime rule for a pair that is in NO list. This file is a sample of one flag configuration, never the closed set (see `scope`), so incompleteness is not a risk to be managed but a certainty to be survived. A renderer that drops what it does not recognise goes silent in front of a non-coder, which REVIEW-02 names as the worst available outcome; one that escalates is merely noisy, and the noise is a bug report.",
   "_findings": "Two entries here were NOT in the REVIEW-02 §13 seed and were found by this probe's first live run: the pair `system/status`, and content-bearing thinking blocks (`event.content_block.type=thinking`, `event.delta.type=thinking_delta`, `event.delta.type=signature_delta`). The second answers the open half of REVIEW-02 A6 as a side effect: raw reasoning text DOES reach `-p` stream-json, on haiku, unrewritten by the MessageDisplay hook.",
   "scope": "A SAMPLE, NOT THE CLOSED SET. Every pair below was observed in a real stream, but the union of one flag configuration is not the union of all of them. Configurations NOT represented here: sessions that use tools, subagents (--forward-subagent-text), MCP servers, --json-schema, a non-zero-exit result, an interrupted session, or a rate-limited one. `result/success` is present and the other `result/*` subtypes are deliberately ABSENT because none has been observed by this suite — so a run that ends in an error result WILL fail this probe, which is the intended behaviour: it forces the new subtype to be classified by a human before the cockpit meets it.",
   "seededFrom": [
@@ -73,12 +76,20 @@
       "why": "Token-level deltas that drive the live activity feed. See `innerPairs` — the outer envelope is not enough to render from."
     },
     "rate_limit_event": {
-      "class": "escalate",
-      "why": "Night Shift sleeps to resetsAt (ADR-007). A paused run that looks identical to a working one is the single worst outcome in front of a non-coder, so this must reach the surface."
+      "when": {
+        "path": "rate_limit_info.status",
+        "values": { "allowed": "ignore" },
+        "unknown": "escalate"
+      },
+      "why": "Night Shift sleeps to resetsAt (ADR-007), and a paused run that looks identical to a working one is the worst outcome in front of a non-coder — so the PAUSE must reach the surface. The event itself does not mean a pause: it is emitted on every healthy session carrying `rate_limit_info.status = \"allowed\"` (measured 2026-07-31, alongside resetsAt, rateLimitType, overageStatus, overageDisabledReason, isUsingOverage). Only `allowed` is pinned because only `allowed` has been observed; `rejected` and anything else escalate by falling through, which is the correct default for the branch ADR-007 could only handle defensively."
     },
     "system/status": {
-      "class": "escalate",
-      "why": "NOT IN THE REVIEW-02 §13 SEED — first observed by this probe, twice, in S1 night cycle 1. Payload key names are {type, subtype, session_id, uuid, status}; the VALUES `status` can take are NOT yet enumerated (this probe deliberately retains no payload values, H10). Classified `escalate` as the FAIL-CLOSED placeholder: an unmodelled session-level signal must reach a human rather than be swallowed. Downgrade to `ignore` deliberately once its value set is measured — do not downgrade it because it looked routine."
+      "when": {
+        "path": "status",
+        "values": { "requesting": "ignore" },
+        "unknown": "escalate"
+      },
+      "why": "NOT IN THE REVIEW-02 §13 SEED — first observed by this probe in S1 night cycle 1, and it rides with --include-partial-messages (absent from a run without it, measured 2026-07-31). Keys are {type, subtype, session_id, uuid, status}. `status = \"requesting\"` is measured and is a request-progress signal, not a session-level alarm, so it is `ignore` on the same reasoning as system/thinking_tokens: it may drive a spinner, it is not a render surface. It was classified `escalate` unconditionally as a fail-closed placeholder while its values were unmeasured; that placeholder was correct then and would be alarm noise now. The rest of the value set is STILL unenumerated, which is exactly what `unknown: escalate` is for."
     },
     "result/success": {
       "class": "render",

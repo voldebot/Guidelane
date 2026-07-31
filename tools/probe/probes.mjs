@@ -1,8 +1,9 @@
 // @MAP
-// REQUIRED_FLAGS (30) | helpText probes (78) | pluginValidate (170)
-// stream/protocol probes (206) | structured-output (286) | injection (330)
-// control+cost (395) | session identity (470) | mcp (523) | plugin+hooks (585)
-// governance/observational (676) | probes export (735)
+// REQUIRED_FLAGS (171) | help-text probes (207) | stream/protocol probes (400)
+// structured-output (865) | injection (932) | control+cost (1046)
+// session identity (1305) | mcp (1371) | plugin+hooks (1415)
+// governance/observational (1671) | isolation (1928) | lifecycle (2152)
+// probes export (2306)
 // @END-MAP
 //
 // MAP: The S0 probe matrix — one entry per falsifiable engine assumption the
@@ -60,22 +61,76 @@ const BUILTIN_SKILL_FLOOR = [
 const BUILTIN_AGENT_FLOOR = ['Explore', 'Plan', 'claude', 'general-purpose', 'statusline-setup']
 
 /**
- * Publish a stream `type`/`subtype` pair name, or fingerprint it if its shape
- * says it may not be the engine's to publish.
+ * Publish a stream `type`/`subtype` pair name, or fingerprint the component of
+ * it that may not be the engine's to publish.
  *
- * Engine pair names are short snake_case. A name that is not may be OPERATOR-
- * owned: hook subtypes derive from hook names (`SessionStart:startup`) and
- * plugin-scoped names carry `plugin_<plugin>_<server>` (ADR-008). An
- * unclassified pair is published *exactly* when the probe has stopped
- * understanding what it saw — the same shape as the identity leak that would
- * have happened precisely at the moment of confusion — and `redact.mjs` has no
- * rule that could match a bare token. Same reasoning as `publishableNames`.
+ * The first form of this helper shape-gated the WHOLE string: any name whose
+ * `[/=.]`-separated fragments matched `^[A-Za-z][A-Za-z0-9_-]{0,40}$` published
+ * verbatim. Underscores are inside that character class, so
+ * `mcp__plugin_<client>_<server>__<tool>` and `plugin_<operator>_<server>` —
+ * the exact ADR-008 shapes the docstring named as its own reason to exist —
+ * went through in full, and the hook-subtype case it also cited was caught only
+ * by the coincidence of a colon. Measured against both shapes, not argued.
+ * That was instance 23 of this repo's recurring defect, sitting inside the
+ * leak-prevention helper itself.
+ *
+ * The replacement is an allow-list with a pinned expectation, so it fails
+ * CLOSED on the only input that matters: a name nobody has classified, which is
+ * produced at exactly the moment the probe stops understanding the stream.
+ *   - A pair the committed artifact classifies is ours, and publishes verbatim.
+ *   - Anything else keeps ENGINE-OWNED structure only — the top-level `type`,
+ *     or the `event.…` accessor path — and fingerprints the name-bearing part.
+ *
+ * The FAIL stays actionable: `system/<unpublishable:…>` still says which
+ * top-level type grew a subtype, and the payload is readable on the local run.
  */
-const SAFE_STREAM_TOKEN = /^[A-Za-z][A-Za-z0-9_-]{0,40}$/
-const publishablePair = (key) =>
-  String(key).split(/[/=.]/).every((tok) => tok === '' || SAFE_STREAM_TOKEN.test(tok))
-    ? String(key)
-    : `<unpublishable:${fingerprint(key)} len=${String(key).length}>`
+const STREAM_TYPE_FLOOR = [
+  'system', 'assistant', 'user', 'stream_event', 'result',
+  'rate_limit_event', 'control_request', 'control_response',
+]
+const INNER_ACCESSOR_FLOOR = ['event.type', 'event.delta.type', 'event.content_block.type']
+const unpublishable = (s) => `<unpublishable:${fingerprint(s)} len=${String(s).length}>`
+
+const publishablePairIn = (classified) => (key) => {
+  const k = String(key)
+  if (classified.has(k)) return k
+  const eq = k.indexOf('=')
+  if (eq > 0) {
+    const accessor = k.slice(0, eq)
+    return INNER_ACCESSOR_FLOOR.includes(accessor)
+      ? `${accessor}=${unpublishable(k.slice(eq + 1))}`
+      : unpublishable(k)
+  }
+  const slash = k.indexOf('/')
+  const type = slash === -1 ? k : k.slice(0, slash)
+  if (!STREAM_TYPE_FLOOR.includes(type)) return unpublishable(k)
+  return slash === -1 ? type : `${type}/${unpublishable(k.slice(slash + 1))}`
+}
+
+/**
+ * The same rule for a top-level event KEY name, against a floor MEASURED on
+ * 2.1.220 across every pair this suite has observed (10 pairs, one maximally
+ * verbose session). Keys are protocol vocabulary and no operator-owned name has
+ * ever been seen in one — but "never been seen" is precisely the argument that
+ * produced instance 23, so an unlisted key fingerprints instead of publishing.
+ * Re-pin DELIBERATELY when the engine adds a field; never widen it to make a
+ * report read better.
+ */
+const STREAM_KEY_FLOOR = [
+  'agents', 'analytics_disabled', 'apiKeySource', 'api_error_status', 'capabilities',
+  'claude_code_version', 'cwd', 'duration_api_ms', 'duration_ms', 'estimated_tokens',
+  'estimated_tokens_delta', 'event', 'exit_code', 'fast_mode_disabled_reason',
+  'fast_mode_state', 'hook_event', 'hook_id', 'hook_name', 'isReplay', 'is_error',
+  'mcp_servers', 'memory_paths', 'message', 'model', 'modelUsage', 'num_turns',
+  'outcome', 'output', 'output_style', 'parent_tool_use_id', 'permissionMode',
+  'permission_denials', 'plugin_errors', 'plugins', 'product_feedback_disabled',
+  'rate_limit_info', 'request_id', 'result', 'session_id', 'skills', 'slash_commands',
+  'status', 'stderr', 'stdout', 'stop_reason', 'subtype', 'terminal_reason',
+  'time_to_request_ms', 'timestamp', 'tools', 'total_cost_usd', 'ttft_ms',
+  'ttft_stream_ms', 'type', 'usage', 'uuid',
+]
+const publishableKey = (key) =>
+  STREAM_KEY_FLOOR.includes(String(key)) ? String(key) : unpublishable(key)
 
 /** Truncate captured output so the JSON report stays readable. */
 const clip = (s, n = 1200) => {
@@ -517,8 +572,40 @@ const protocolProbes = [
         for (const k of keys) {
           const v = map[k]
           if (!v || typeof v !== 'object') { artifactProblems.push(`${label}["${k}"] is not an object`); continue }
-          if (!CLASSES.includes(v.class)) {
-            artifactProblems.push(`${label}["${k}"] has class=${JSON.stringify(v.class)}, expected one of ${CLASSES.join(' | ')}`)
+          // schemaVersion 2: exactly one of `class` (unconditional) or `when`
+          // (value-conditional). Accepting both would be two sources of truth
+          // for one decision, which is how a pin drifts.
+          const hasClass = own(v, 'class')
+          const hasWhen = own(v, 'when')
+          if (hasClass === hasWhen) {
+            artifactProblems.push(`${label}["${k}"] must carry exactly one of class | when (has ${hasClass && hasWhen ? 'both' : 'neither'})`)
+          } else if (hasClass) {
+            if (!CLASSES.includes(v.class)) {
+              artifactProblems.push(`${label}["${k}"] has class=${JSON.stringify(v.class)}, expected one of ${CLASSES.join(' | ')}`)
+            }
+          } else {
+            const w = v.when
+            if (!w || typeof w !== 'object') artifactProblems.push(`${label}["${k}"].when is not an object`)
+            else {
+              if (typeof w.path !== 'string' || !w.path.trim()) {
+                artifactProblems.push(`${label}["${k}"].when.path is missing — nothing to read the value from`)
+              }
+              const vals = w.values && typeof w.values === 'object' ? Object.entries(w.values) : null
+              if (!vals || vals.length === 0) {
+                artifactProblems.push(`${label}["${k}"].when.values is empty — a conditional that matches nothing is the unconditional rule it replaced`)
+              } else {
+                for (const [val, cls] of vals) {
+                  if (!CLASSES.includes(cls)) artifactProblems.push(`${label}["${k}"].when.values["${val}"] = ${JSON.stringify(cls)}, expected one of ${CLASSES.join(' | ')}`)
+                }
+              }
+              // Deliberately narrower than CLASSES. Discriminating by value is a
+              // statement that the values matter, so an unrecognised one has to
+              // reach a human; `unknown: ignore` would be a rule that swallows
+              // exactly the case nobody anticipated.
+              if (w.unknown !== 'escalate') {
+                artifactProblems.push(`${label}["${k}"].when.unknown = ${JSON.stringify(w.unknown)}, must be "escalate" — a value-conditional rule may not fail open on an unmodelled value`)
+              }
+            }
           }
           // An unexplained classification is a convention, not a constraint —
           // the next person cannot tell a decision from a placeholder.
@@ -529,6 +616,15 @@ const protocolProbes = [
       }
       validateMap(pairsMap, 'pairs')
       validateMap(innerMap, 'innerPairs')
+      // The rule for a pair in NO list. Its absence was logged as a residual of
+      // cycle 1: the artifact enumerates a universe it also states is a sample,
+      // so "what happens to the ones I did not enumerate" is not an edge case,
+      // it is the guaranteed steady state. Pinned to `escalate` here rather than
+      // left to each renderer, because a renderer that drops the unrecognised
+      // goes silent, and silence is REVIEW-02's named worst outcome.
+      if (surface.defaultForUnknown !== 'escalate') {
+        artifactProblems.push(`defaultForUnknown = ${JSON.stringify(surface.defaultForUnknown)}, must be "escalate" — an unenumerated pair may not be silently dropped`)
+      }
       // Without a pinned minimum this probe passes on an empty stream: it would
       // observe nothing, find nothing unclassified, and report green having
       // measured nothing at all. This is the guard that makes it able to fire.
@@ -576,6 +672,15 @@ const protocolProbes = [
         }
       }
 
+      // The publication allow-list is the artifact's own key sets — the same
+      // committed file this probe asserts against, so the two cannot disagree.
+      // Bound once as a 1-arity closure: `.map(publishablePair)` would have
+      // handed map's index through as the second argument.
+      const pub = publishablePairIn(new Set([
+        ...Object.keys(pairsMap).filter((k) => !k.startsWith('_')),
+        ...Object.keys(innerMap).filter((k) => !k.startsWith('_')),
+      ]))
+
       const ws = ctx.makeWorkspace('p-stream-surface-union')
       const logPath = join(ws, 'hook-events.log')
       const res = await ctx.claude(
@@ -615,6 +720,8 @@ const protocolProbes = [
       const malformed = []
       const observed = new Set()
       const innerObserved = new Set()
+      const condUnresolved = new Set()
+      const condUnknownValues = new Set()
       // Top-level KEY NAMES per pair, so a FAIL is actionable. Naming an
       // unclassified pair and nothing else leaves the next person to guess at
       // `render | ignore | escalate`, and a guessed classification is precisely
@@ -635,15 +742,27 @@ const protocolProbes = [
         if (typeof e.type !== 'string' || !e.type) { malformed.push(`event with a ${typeof e.type} type`); continue }
         const sub = e.subtype
         if (sub !== undefined && sub !== null && typeof sub !== 'string') {
-          // publishablePair, not the bare type: line 624 above was hardened and
-          // this one was not, so a type name went verbatim into a public report
-          // at the exact moment the probe stopped understanding the stream.
-          malformed.push(`${publishablePair(e.type)} with non-string subtype`)
+          // Through the allow-list, not the bare type: the shape line above was
+          // hardened and this one was not, so a type name went verbatim into a
+          // public report at the exact moment the probe stopped understanding
+          // the stream.
+          malformed.push(`${pub(e.type)} with non-string subtype`)
           continue
         }
         const pairKey = sub === undefined || sub === null ? e.type : `${e.type}/${sub}`
         observed.add(pairKey)
         noteShape(shapes, pairKey, e)
+        // A `when` rule is only a constraint if its path resolves on the event
+        // it classifies. A path that never resolves silently never matches, so
+        // the pair falls through to nothing at all — a decoration rule, the
+        // shape this repo has now produced 23 times. Resolve it here so the
+        // rule is falsifiable by the same run that observes the pair.
+        const cond = own(pairsMap, pairKey) ? pairsMap[pairKey].when : null
+        if (cond && typeof cond.path === 'string') {
+          const val = cond.path.split('.').reduce((o, seg) => (o == null ? undefined : o[seg]), e)
+          if (val === undefined || val === null) condUnresolved.add(pairKey)
+          else if (!own(cond.values, String(val))) condUnknownValues.add(`${pairKey} via ${cond.path} = ${unpublishable(String(val))}`)
+        }
         if (e.type !== 'stream_event') continue
         const inner = e.event
         if (!inner || typeof inner !== 'object') { malformed.push('stream_event carrying no event object'); continue }
@@ -665,12 +784,12 @@ const protocolProbes = [
       // type of `constructor` or `toString` would read as already classified.
       const unknownPairs = [...observed].filter((k) => !own(pairsMap, k)).sort()
       const unknownInner = [...innerObserved].filter((k) => !own(innerMap, k)).sort()
-      // Everything below this line that leaves the probe goes through
-      // publishablePair. A pair that MATCHED the artifact came from our own
-      // committed file and is safe verbatim; an unmatched one is a novel string
-      // produced at the exact moment the probe stopped understanding the stream.
-      const pubUnknownPairs = unknownPairs.map(publishablePair)
-      const pubUnknownInner = unknownInner.map(publishablePair)
+      // Everything below this line that leaves the probe goes through `pub`.
+      // A pair that MATCHED the artifact came from our own committed file and is
+      // safe verbatim; an unmatched one is a novel string produced at the exact
+      // moment the probe stopped understanding the stream.
+      const pubUnknownPairs = unknownPairs.map(pub)
+      const pubUnknownInner = unknownInner.map(pub)
       const missingRequired = requiredPairs.filter((k) => !observed.has(k))
       const missingRequiredInner = requiredInner.filter((k) => !innerObserved.has(k))
 
@@ -690,12 +809,17 @@ const protocolProbes = [
       if (unknownInner.length) problems.push(`UNCLASSIFIED stream_event inner type(s): ${pubUnknownInner.join(', ')}`)
       if (missingRequired.length) problems.push(`required pair(s) never arrived: ${missingRequired.join(', ')}`)
       if (missingRequiredInner.length) problems.push(`required inner type(s) never arrived: ${missingRequiredInner.join(', ')}`)
+      if (condUnresolved.size) problems.push(`value-conditional rule(s) whose path never resolved on the event they classify — the rule cannot fire: ${[...condUnresolved].sort().join(', ')}`)
+      if (condUnknownValues.size) problems.push(`value-conditional rule(s) saw an UNPINNED value: ${[...condUnknownValues].sort().join(', ')}`)
 
       return {
         status: problems.length ? P.FAIL : P.PASS,
         detail: problems.length
-          ? `${problems.join(' | ')}. Classify the new pair(s) in tools/probe/stream-surface.json by hand — never widen the artifact to silence this.`
-          : `All ${observed.size} pair(s) and ${innerObserved.size} stream_event inner type(s) observed in this session are classified, and every pinned required pair arrived. ` +
+          ? `${problems.join(' | ')}. Classify the new pair(s) in tools/probe/stream-surface.json by hand — never widen the artifact to silence this. ` +
+            `An unpinned VALUE is reported as a fingerprint, not text: the pair and the path are from our own committed file and safe to print, the value is not. ` +
+            `Read it on a local run — the pair name and path above say exactly where to look.`
+          : `All ${observed.size} pair(s) and ${innerObserved.size} stream_event inner type(s) observed in this session are classified, every pinned required pair arrived, ` +
+            `and every value-conditional rule this run exercised resolved to a pinned value. ` +
             `SAMPLE OF ONE CONFIGURATION, not the closed set: no tool use, no subagent, no MCP server, no error result. ` +
             `Hooks that fired: ${hooksFired.length}.`,
         evidence: {
@@ -704,21 +828,29 @@ const protocolProbes = [
           // Engine vocabulary only. No event BODIES reach the report: system/init
           // alone carries cwd, session_id, and the operator's plugin/skill/agent
           // names, and this artifact is public (H10).
-          observedPairs: [...observed].sort().map(publishablePair),
+          observedPairs: [...observed].sort().map(pub),
           unknownPairs: pubUnknownPairs,
           // Key names only — enough to classify the pair by hand, no payload.
+          // Through publishableKey, not `pub`: these are event field names, a
+          // different vocabulary with a different pinned floor.
           unknownPairShapes: Object.fromEntries(
-            unknownPairs.map((k) => [publishablePair(k), [...(shapes[k] || [])].sort().map(publishablePair)])
+            unknownPairs.map((k) => [pub(k), [...(shapes[k] || [])].sort().map(publishableKey)])
           ),
           missingRequired,
-          observedInner: [...innerObserved].sort().map(publishablePair),
+          observedInner: [...innerObserved].sort().map(pub),
           unknownInner: pubUnknownInner,
           unknownInnerShapes: Object.fromEntries(
-            unknownInner.map((k) => [publishablePair(k), [...(innerShapes[k] || [])].sort().map(publishablePair)])
+            unknownInner.map((k) => [pub(k), [...(innerShapes[k] || [])].sort().map(publishableKey)])
           ),
           missingRequiredInner,
           nonJsonLineCount: nonJsonLines.length,
           malformedCount: malformed.length,
+          // Which value-conditional rules were actually exercised by this run.
+          // A rule nothing exercised is unproven, not proven — recorded so that
+          // is visible rather than assumed.
+          conditionalRulesExercised: [...observed].filter((k) => own(pairsMap, k) && pairsMap[k].when).sort(),
+          conditionalPathUnresolved: [...condUnresolved].sort(),
+          conditionalUnpinnedValues: [...condUnknownValues].sort(),
           // Not a failure: the artifact is deliberately a superset seeded from
           // other configurations. Reported so staleness is visible on sight.
           classifiedButUnobserved: Object.keys(pairsMap).filter((k) => !observed.has(k)).sort(),
