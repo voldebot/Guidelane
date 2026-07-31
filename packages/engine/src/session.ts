@@ -1,6 +1,8 @@
 // @MAP
-// types (30) | assertInitReceipt (120) | EngineSession (190)
-//   .send (250) | .finish (270) | stall watchdog (300) | denial + hook checks (350)
+// types (28) | assertInitReceipt (125) | EngineSession (186)
+//   .start (228) | .send (283) | .finish (306) | .stop (318) | .setDraining (334)
+//   stall watchdog (360) | framing (390) | dispatch (410)
+//   denial check (454) | hook check (483)
 // @END-MAP
 //
 // MAP: EngineSession — a live handle on one engine subprocess speaking
