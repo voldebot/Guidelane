@@ -81,6 +81,13 @@ service; anything commercial.
   `apiKeySource` as expected. A mismatch fails the phase in plain language
   *before* tokens are spent — this is the only defence against `--settings`
   being silently ignored in `-p`.
+- **"`model` as routed" is a trap: the receipt carries the RESOLVED id, not the
+  alias.** `--model haiku` reports `claude-haiku-4-5-20251001` and `--model
+  sonnet` reports `claude-sonnet-5` — one with a date suffix, one without, so
+  nothing may parse the id positionally. The obvious equality check against the
+  alias fails on *every healthy session*, and it did on the adapter's first live
+  run. Assert either an exact pinned id or dash-**segment** membership of the
+  alias; never a substring, which would also accept `claude-haikuish-9`.
 - **Registration is not reachability.** `mcp_servers[].status` races the init
   emit — measured `pending` on one run and `connected` on the next, with no
   later event correcting it — so no gate may key on `connected` or it flakes.
@@ -187,7 +194,12 @@ own quality gate, living *inside the helper written to prevent leaks*:
 `publishablePair` shape-gated names against a character class containing the
 underscore, so the two ADR-008 plugin shapes its own docstring named as its
 reason to exist published verbatim. Fixed 2026-07-31 with an allow-list keyed on
-a committed artifact. Expect the 24th.
+a committed artifact. **The 24th arrived the same day**, and it was
+`p-effort-model-fallback` — the sole evidence for ADR-004 crew routing — reading
+the model off a surface that does not carry it, publishing *"model reported as
+not surfaced in result"*, and passing on a zero exit for its entire life. It
+could not distinguish a session that honoured `--model` from one that ignored it.
+Expect the 25th.
 **Last sprint close**: 2026-07-31 (S0, post-audit hardening). Shipped: `tools/probe/`
 (30 probes, all green), ADR-007 + ADR-008 with two dated corrections, REVIEW-02
 (+§13 free Tier A answers), CI wiring, LICENSE, THIRD-PARTY-NOTICES, the two

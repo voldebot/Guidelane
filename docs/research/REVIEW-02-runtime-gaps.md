@@ -706,6 +706,93 @@ contradicted its own verdict**, and a reader trusting the artifact over the pros
 would have concluded the opposite of the finding. Evidence is now snapshotted
 before the kill and records `killedByProbeAfterwards: true`.
 
+## 20. Addendum — what the adapter's own first live run found (2026-07-31, S1-D)
+
+Four findings, none of them predicted. All four came from *running* the adapter
+against the real engine rather than from reading the stream spec, which is the
+same lesson S0 kept producing: a binary string is evidence a code path exists,
+not that it fires.
+
+### 20.1 `init.model` is the RESOLVED id, never the routed alias
+
+Measured: `--model haiku` → `claude-haiku-4-5-20251001`; `--model sonnet` →
+`claude-sonnet-5`. The adapter's first end-to-end run failed its own init receipt
+with `model is "claude-haiku-4-5-20251001", expected "haiku"`.
+
+ADR-008 §2 phrases the receipt as asserting "`model` as routed". That phrasing is
+the trap — what you route with is an alias and what comes back is an id, so the
+obvious equality check fails on every healthy session. Corrected in place in
+ADR-008; the receipt now takes `model` (exact id, for pinning a build) and
+`modelAlias` (dash-segment membership, for the family the crew router asked for).
+
+Note the two id shapes: one carries a date suffix and the other does not. Any
+rule that parses the id positionally is already wrong.
+
+**Consequence, instance 24 of the fail-open shape.**
+`p-effort-model-fallback` — the evidence for ADR-004 crew routing, load-bearing
+`high` — read the model off `--output-format json`, which does not carry it. It
+had been publishing `"model reported as not surfaced in result"` and passing on a
+zero exit for its entire life. It could not distinguish a session that honoured
+`--model` from one that ignored it, which is precisely the claim it exists to
+support. Now reads the init receipt and asserts; falsified by routing `sonnet`
+while asserting `haiku` (`routed --model haiku but claude-sonnet-5 answered`),
+then reverted and re-run green.
+
+`--effort` has **no receipt field at all**, so the probe records
+`effortAssertable: false`. A green result on that probe means the flags composed
+and the model routed — it has never meant effort was verified, and now says so.
+
+### 20.2 A second rate-limit window exists, and it is not sleepable
+
+Measured on a healthy session, hours after the one that produced ADR-007's
+Finding 3:
+
+```json
+{"status":"allowed_warning","resetsAt":1785985200,"rateLimitType":"seven_day",
+ "utilization":0.51,"isUsingOverage":false}
+```
+
+Three deltas against ADR-007: `status` has a third value (`allowed_warning`),
+`utilization` is a field the ADR does not record, and **`rateLimitType` can be
+`seven_day`**. ADR-007's "sleep to `resetsAt`" was written against a five-hour
+window where sleeping resumes the same night; a seven-day `resetsAt` can be days
+out. A Night Shift supervisor obeying that rule literally would go silent until
+next week while looking exactly like a working run. ADR-007 is corrected in
+place: sleep only when the wait fits the run's remaining budget, otherwise stop,
+park the work, and say so with the reset date.
+
+**How it was found is the point.** Nobody predicted `allowed_warning`. The
+adapter surfaced it because `stream-surface.json`'s `unknown: escalate` branch
+refused to drop a value it did not recognise — the fail-closed default doing the
+exact job it was written for, on its first real encounter with the unknown.
+It is now classified `render`: the user should be told they are half way through
+a weekly allowance, and interrupting them for it would be the alarm fatigue the
+schemaVersion 2 rewrite exists to prevent.
+
+### 20.3 The init receipt — the gate every phase passes through — had zero tests
+
+`assertInitReceipt` gates every stage before a token is spent (ADR-008), and it
+had no unit coverage whatsoever until its first live failure. The gate that
+guards everything else was itself unguarded. Now 14 tests, each written to be
+able to fire, including the two directions that matter most: an **absent** field
+must fail the gate rather than satisfy it, and the version compare must be
+numeric (`'2.1.9'` sorts above `'2.1.220'` as a string, and that error lets a
+version *below* the tested floor through).
+
+### 20.4 A failing gate that leaks a live session hides its own failure
+
+The first live failure left the `claude` child running, so node's event loop
+never drained; the test run hung for five minutes with an empty output file and
+the assertion error invisible until the process was killed by hand. The failure
+was fully diagnosed only *after* a manual `kill -9`.
+
+The narrow fix is test hygiene (`t.after` reaps the group). The general rule is
+not: **an authenticated process left running by a failure is a failure that
+spends quota while reporting nothing.** The stall watchdog already stops the
+session before reporting for exactly this reason; the same discipline has to hold
+at every exit path the orchestrator has, not only the one that was designed for
+it.
+
 ## 11. Addendum — the logged-out shape, measured for free (2026-07-30)
 
 The first CI run doubled as a B5 probe nobody had to pay for: a GitHub runner has
