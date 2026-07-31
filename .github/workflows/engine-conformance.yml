@@ -29,6 +29,14 @@ on:
       - 'tools/probe/**'
       - 'docs/research/S0-conformance-*'
       - '.github/workflows/engine-conformance.yml'
+      # Added S1: `packages/**` and the workspace root, because the `packages`
+      # job below type-checks and tests them. Without these paths the job exists
+      # but never fires on the commits that could break it — a gate that cannot
+      # trigger is the same decoration as a guard that cannot fail.
+      - 'packages/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.json'
   pull_request:
   schedule:
     # 04:00 UTC daily — a new CLI release should be caught before the owner
@@ -155,6 +163,50 @@ jobs:
             exit 1
           fi
           echo "Fresh report is clean."
+
+  # The workspace gate. Added S1, when `packages/engine` shipped 45 tests that
+  # nothing ran automatically — including the tests for `assertInitReceipt`, the
+  # gate every phase passes through before a token is spent. A test suite with no
+  # scheduled runner rots silently, which is the same failure mode as a guard
+  # that cannot fire, one refactor away.
+  #
+  # This needs no engine and no login, so it is genuinely free and belongs in the
+  # tier that runs on every push. The LIVE tests skip themselves: they are gated
+  # on GUIDELANE_LIVE=1, which is deliberately not set here — a runner has no
+  # subscription login and ADR-001 forbids putting one there.
+  packages:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # `npm ci` and not `npm install`: the lockfile is the pinned expectation,
+      # and a job that silently resolves a different dependency tree than the
+      # developer's is testing something other than what ships.
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Type-check
+        run: npm run typecheck
+
+      # The offline tier. `--if-present` in the root script means a package with
+      # no test script is skipped, so the count below is the real guard: it
+      # asserts the suite actually EXECUTED rather than trusting a zero exit from
+      # a run that matched no files.
+      - name: Test
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee /tmp/test-out.txt
+          PASSED=$(grep -oE '^# pass [0-9]+' /tmp/test-out.txt | grep -oE '[0-9]+' | head -1)
+          if [ -z "$PASSED" ] || [ "$PASSED" -lt 40 ]; then
+            echo "::error::Expected at least 40 passing tests, saw '${PASSED:-none}' — the suite did not run."
+            exit 1
+          fi
+          echo "Workspace suite executed: $PASSED passing."
 
   # REVIEW-01 #5's accepted remedy is "a nightly conformance probe against the
   # latest CLI". The pinned job above cannot do that by construction — it always
