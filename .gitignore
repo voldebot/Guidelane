@@ -2,6 +2,11 @@
 .claude/.filemap.lock
 docs/FILEMAP.md.bak
 
+# Overnight orchestrator transcripts. Full `claude -p` session JSON per phase —
+# prompts, tool calls, file contents, absolute paths. Never committed: this repo
+# is public and nothing here passes through tools/probe/lib/redact.mjs.
+.claude/overnight-logs/
+
 # Standard
 node_modules/
 dist/
