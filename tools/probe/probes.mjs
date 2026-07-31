@@ -2142,6 +2142,139 @@ const backpressureProbes = [
   },
 ]
 
+const lifecycleTerminatorProbes = [
+  {
+    id: 'p-phase-terminator',
+    title: 'A phase ends when stdin closes — never on its own, and not at the terminal result',
+    kind: 'fixture-call',
+    loadBearing: 'critical',
+    claim:
+      'With stdin held open a `-p` session does NOT exit after `result` — `result` is a per-turn event. Closing stdin is the terminator, and the process exits shortly after. Output continues to arrive after the close, so a closer must keep draining until the process ends.',
+    failureImpact:
+      'An adapter that waits for process exit after `result` hangs forever — the "run goes silent with no terminal event" class REVIEW-02 Tier A exists to prevent. One that treats `result` as session-end leaks a live engine process spending quota. One that closes stdin and stops reading truncates the phase output. All three are silent.',
+    docRefs: ['REVIEW-02 §15', 'REVIEW-02 §18', 'ADR-007'],
+    async run(ctx) {
+      const PROMPT = 'Reply with exactly: TERM_OK'
+      // Long enough that a session which was going to exit on its own would
+      // have, given results arrive at ~2-4s. Short enough not to tax a run.
+      const ALIVE_WINDOW_MS = 20_000
+      const EXIT_BUDGET_MS = 15_000
+
+      const startArm = (label) => {
+        const handle = ctx.claudeStreaming(
+          [
+            '-p',
+            '--input-format', 'stream-json',
+            '--output-format', 'stream-json',
+            '--verbose',
+            '--model', ctx.model,
+            '--tools', '',
+            '--no-session-persistence',
+          ],
+          { cwd: ctx.makeWorkspace(`p-phase-terminator-${label}`) }
+        )
+        const state = { firstResultAt: null, closedAt: null, bytesAfterClose: 0, exited: false, code: undefined, t0: Date.now() }
+        let buf = ''
+        handle.child.stdout.setEncoding('utf8')
+        handle.child.stdout.on('data', (c) => {
+          if (state.closedAt) state.bytesAfterClose += c.length
+          buf += c
+          const lines = buf.split('\n')
+          buf = lines.pop()
+          for (const l of lines) {
+            const s = l.trim()
+            if (!s || s[0] !== '{') continue
+            let e
+            try { e = JSON.parse(s) } catch { continue }
+            if (e.type === 'result' && state.firstResultAt === null) state.firstResultAt = Date.now() - state.t0
+          }
+        })
+        handle.child.on('close', (code) => { state.exited = true; state.code = code })
+        handle.child.stdin.write(ctx.userMessage(PROMPT))
+        return { handle, state }
+      }
+      const waitFor = (pred, budgetMs) => new Promise((resolve) => {
+        const started = Date.now()
+        const iv = setInterval(() => {
+          if (pred() || Date.now() - started > budgetMs) { clearInterval(iv); resolve(Date.now() - started) }
+        }, 50)
+      })
+
+      // ARM 1 — never close stdin. The claim under test is an ABSENCE (it does
+      // not exit), so the arm must first PROVE the session got as far as a
+      // terminal result; otherwise "still running" would just mean "still
+      // working" and the absence would say nothing.
+      const noClose = startArm('no-close')
+      await waitFor(() => noClose.state.firstResultAt !== null || noClose.state.exited, 90_000)
+      if (noClose.state.firstResultAt === null) {
+        noClose.handle.stop()
+        return {
+          status: P.INCONCLUSIVE,
+          detail: 'the no-close arm never reached a terminal result, so "it did not exit" says nothing — the session may simply have still been working.',
+          evidence: { noClose: { firstResultAt: noClose.state.firstResultAt, exitedOnItsOwn: noClose.state.exited } },
+        }
+      }
+      await waitFor(() => noClose.state.exited, ALIVE_WINDOW_MS)
+      // Snapshot BEFORE stop(). stop() SIGKILLs the child, which fires 'close'
+      // and flips state.exited — so publishing state.exited afterwards printed
+      // `exited: true` for the arm whose whole finding is that it did NOT exit,
+      // i.e. evidence that contradicted its own verdict. The assertion was
+      // right; the published evidence was not, which is worse than either.
+      const survivedOpenStdin = !noClose.state.exited
+      const noCloseSnapshot = {
+        firstResultAt: noClose.state.firstResultAt,
+        exitedOnItsOwn: noClose.state.exited,
+        codeIfExited: noClose.state.exited ? noClose.state.code ?? null : null,
+      }
+      noClose.handle.stop()
+
+      // ARM 2 — close stdin on the first result.
+      const closeArm = startArm('close-on-result')
+      await waitFor(() => closeArm.state.firstResultAt !== null || closeArm.state.exited, 90_000)
+      if (closeArm.state.firstResultAt === null) {
+        closeArm.handle.stop()
+        return {
+          status: P.INCONCLUSIVE,
+          detail: 'the close arm never reached a terminal result, so the terminator could not be exercised.',
+          evidence: { noClose: { ...noClose.state }, closeOnResult: { ...closeArm.state } },
+        }
+      }
+      closeArm.state.closedAt = Date.now()
+      closeArm.handle.child.stdin.end()
+      const exitLatency = await waitFor(() => closeArm.state.exited, EXIT_BUDGET_MS)
+      const exitedOnClose = closeArm.state.exited
+      closeArm.handle.stop()
+
+      const problems = []
+      if (!survivedOpenStdin) {
+        problems.push(
+          `with stdin OPEN the session exited on its own ${noClose.state.code === 0 ? 'cleanly' : `with code ${noClose.state.code}`} — the contract changed. ` +
+          'This is an IMPROVEMENT (waiting for process exit would become safe); re-pin deliberately and revisit the adapter lifecycle'
+        )
+      }
+      if (!exitedOnClose) {
+        problems.push(`closing stdin did NOT end the session within ${EXIT_BUDGET_MS}ms — there is then no known terminator at all, and every phase must be killed`)
+      } else if (closeArm.state.code !== 0) {
+        problems.push(`closing stdin ended the session with exit ${closeArm.state.code}, not 0 — a normal phase end must not look like a failure`)
+      }
+
+      return {
+        status: problems.length ? P.FAIL : P.PASS,
+        detail: problems.length
+          ? problems.join(' | ')
+          : `The terminator is stdin.end(). With stdin open the session reached result at ${noClose.state.firstResultAt}ms and was STILL ALIVE ${ALIVE_WINDOW_MS}ms later — so \`result\` is per-turn, not session-terminal, and an adapter that waits for process exit after it hangs forever. Closing stdin ended it with exit 0 in ${exitLatency}ms. ` +
+            `Adapter rule that follows: end a phase by closing stdin, then KEEP DRAINING stdout until the process 'close' event — output still arrives after the close — and treat "no exit within a bounded window after closing stdin" as the real stall signal.`,
+        evidence: {
+          noCloseArm: { ...noCloseSnapshot, stillAliveAfterMs: ALIVE_WINDOW_MS, killedByProbeAfterwards: true },
+          closeOnResultArm: { firstResultAt: closeArm.state.firstResultAt, exitLatencyMs: exitLatency, exited: exitedOnClose, code: closeArm.state.code ?? null, bytesAfterClose: closeArm.state.bytesAfterClose },
+          terminator: 'stdin.end()',
+          resultIsPerTurn: true,
+        },
+      }
+    },
+  },
+]
+
 const surfaceArtifactProbes = [
   {
     id: 'p-stream-surface-artifact',
@@ -2850,6 +2983,7 @@ export const probes = [
   ...pluginProbes,
   ...dialogProbes,
   ...backpressureProbes,
+  ...lifecycleTerminatorProbes,
   ...surfaceArtifactProbes,
   ...governanceProbes,
 ]

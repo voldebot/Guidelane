@@ -245,10 +245,14 @@ In addition to global gates (`~/.claude/CLAUDE.md` §6):
   **CLOSED**, A7 **ANSWERED** (a hook emitting a malformed payload is reported
   `outcome: "success"` — the orchestrator must validate hook stdout itself), A2
   partly answered and now CI-gated for free.
-  **And one hazard REVIEW-02 never listed**: with stdin held open a `-p` session
-  **never exits** and `result` is a *per-turn* event, so an adapter that waits for
-  process exit hangs forever — produced accidentally in 30 lines, and exactly the
-  silent-stall class Tier A exists to prevent.
+  **And one hazard REVIEW-02 never listed, found accidentally and then settled**:
+  with stdin held open a `-p` session **never exits** and `result` is a *per-turn*
+  event. **The terminator is `stdin.end()`** — exit 0 in ~530 ms, same latency
+  whether closed immediately or 10 s later, so it is the close and not a timer.
+  Output keeps arriving *after* the close, so a closer that stops reading
+  truncates the phase. Adapter lifecycle: stdin open for multi-turn → `end()` on
+  the final `result` → drain to the process `close` event → **"no exit within a
+  bounded window after closing stdin" is the real stall signal**.
 - **No probe may assert on model output.** Three probes were written that way and
   all three were wrong: two asked the model to describe its own tools (measures
   the model, not the engine), and the third asked whether the model *chose* to

@@ -663,6 +663,49 @@ has — *a guard that cannot fire is decoration* — has a corollary it did not:
 **a falsification test needs its own proof that it armed the right thing.** The
 third was caught by printing the diff before running; that is now the practice.
 
+## 19. Addendum — the phase terminator, measured (2026-07-31, S1-D)
+
+The hazard §15 found by accident: with stdin held open a `-p` session does not
+exit after `result`. Four arms settle what actually ends a phase.
+
+| Arm | first `result` | stdin closed | process exited | after the close |
+|---|---|---|---|---|
+| A — close stdin immediately (what `spawnCapture` does) | 3,346 ms | 0 ms | exit 0 @ 3,871 ms | **6,243 bytes still arrived** |
+| B — close on the first `result` | 2,404 ms | 2,404 ms | exit 0 | **+539 ms** |
+| C — wait 10 s after `result`, then close | 4,261 ms | 14,262 ms | exit 0 | **+524 ms** |
+| D — never close (control) | 2,294 ms | never | **SIGKILL at 75 s** | never exited |
+
+**The terminator is `stdin.end()`.** Arm C is the proof: the exit follows the
+*close* by 524 ms, statistically identical to arm B's 539 ms, so it is the close
+that ends the session and not any elapsed-time rule. Arm D shows the session will
+otherwise sit open indefinitely.
+
+**Arm A gives a second rule the adapter needs**: 6,243 bytes arrived *after* stdin
+was closed. A closer that stops reading at the close **truncates the phase
+output** — potentially the assistant text, or the terminal `result` itself.
+
+### The adapter lifecycle this pins
+
+1. spawn, write the turn, and **keep stdin open** for multi-turn work;
+2. on the `result` of the final turn, `stdin.end()`;
+3. **keep draining stdout until the process `close` event** (~0.5 s);
+4. **no exit within a bounded window after closing stdin is the real stall
+   signal** — and, per §18, an inter-event silence watchdog must not fire while
+   the consumer is itself the cause of the silence.
+
+`p-phase-terminator` pins arms B and D by equality. If a future CLI makes the
+session exit on its own, the probe goes **red with "this is an IMPROVEMENT"** —
+waiting for process exit would become safe — to be re-pinned deliberately rather
+than discovered by an adapter that mysteriously stops hanging.
+
+**One defect caught inside the probe before it shipped**, worth naming because it
+is subtler than the fail-open shape: the no-close arm published `exited: true` in
+its evidence, because the snapshot was taken *after* the probe's own `stop()`
+SIGKILLed the child. The assertion was correct; the **published evidence
+contradicted its own verdict**, and a reader trusting the artifact over the prose
+would have concluded the opposite of the finding. Evidence is now snapshotted
+before the kill and records `killedByProbeAfterwards: true`.
+
 ## 11. Addendum — the logged-out shape, measured for free (2026-07-30)
 
 The first CI run doubled as a B5 probe nobody had to pay for: a GitHub runner has

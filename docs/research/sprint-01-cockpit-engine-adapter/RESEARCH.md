@@ -239,7 +239,16 @@ consumer is itself the cause — knowable, since the consumer is us.
 partly answered and CI-gated. The blocker list that gated S1's feed is done.
 
 **Stage S1-D — the adapter and the cockpit (45%)**
-13. [ ] **Phase lifecycle terminator** (new, from §3 D) — verify: a phase ends deterministically with no orphaned engine process. `result` is per-turn while stdin is open, so neither "wait for exit" nor "exit on result" is correct
+13. [x] **Phase lifecycle terminator** → **`stdin.end()`, measured** (REVIEW-02 §19). Exit 0 in ~530 ms after the close, and the same latency whether the close comes immediately or 10 s later — so it is the close that terminates, not a timer. Never closing → alive at 75 s. **And 6,243 bytes arrive AFTER the close**, so a closer that stops reading truncates the output. Pinned by `p-phase-terminator`
+
+> **The adapter lifecycle this settles, in four lines** — the reason this had to
+> come before `packages/engine` rather than after:
+> 1. keep stdin **open** for multi-turn work;
+> 2. `stdin.end()` on the final turn's `result`;
+> 3. **keep draining stdout until the process `close` event** (~0.5 s);
+> 4. **no exit within a bounded window after closing stdin = the real stall
+>    signal** — and the inter-event silence watchdog must not fire while the
+>    consumer is itself the cause (§18).
 14. [ ] `packages/engine`: session handle replacing `spawnCapture`, per-supervisor `SessionRegistry` — verify: the init receipt gate fails a phase in plain language before tokens are spent
 15. [ ] `apps/cockpit` **first commit imports `stream-surface.json`** — verify: `defaultForUnknown: escalate` is exercised by a test. Until this lands, that key is a pinned decision with no consumer, which is decoration by this repo's own definition
 
