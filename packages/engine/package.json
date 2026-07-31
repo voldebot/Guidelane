@@ -1,0 +1,17 @@
+{
+  "name": "@guidelane/engine",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "description": "Engine adapter: spawns the official claude CLI as a subprocess under the user's own login and speaks the measured stream-json contract (ADR-001, ADR-007, ADR-008).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "engines": {
+    "node": ">=22.6"
+  },
+  "scripts": {
+    "test": "node --test --experimental-strip-types test/*.test.ts"
+  }
+}

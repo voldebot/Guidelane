@@ -1,0 +1,7 @@
+{
+  "_comment": "A deliberately fail-open surface artifact. Exists so the loader's refusal can be proven to fire rather than assumed. Never used at runtime.",
+  "schemaVersion": 2,
+  "defaultForUnknown": "ignore",
+  "pairs": {},
+  "innerPairs": {}
+}

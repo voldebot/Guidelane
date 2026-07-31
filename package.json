@@ -1,0 +1,22 @@
+{
+  "name": "guidelane",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.6"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "npm run test --workspaces --if-present",
+    "probe": "node tools/probe/run.mjs",
+    "probe:live": "node tools/probe/run.mjs --live"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "typescript": "5.9.3"
+  }
+}

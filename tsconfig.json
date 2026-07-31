@@ -1,0 +1,38 @@
+{
+  // Type-CHECKING only. Node 22.6+ strips types natively, so `.ts` runs
+  // directly and nothing is emitted — there is no build artifact, no dist/, and
+  // a generated project can be read and run without a toolchain step. That is
+  // the eject guarantee applied to Guidelane's own source.
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "types": ["node"],
+
+    "noEmit": true,
+    // Imports carry the real `.ts` extension because Node's type stripping
+    // resolves the file on disk — there is no build step to rewrite them, and a
+    // rewritten specifier would point at a `.js` that never exists.
+    "allowImportingTsExtensions": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+
+    // Node's type stripping erases annotations without understanding them, so
+    // anything whose meaning depends on emit is banned rather than merely
+    // discouraged. A construct that type-checks but does not run is worse than
+    // a compile error.
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["packages/*/src/**/*.ts", "packages/*/test/**/*.ts"]
+}
