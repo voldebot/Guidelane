@@ -1,9 +1,10 @@
 // @MAP
-// REQUIRED_FLAGS (171) | help-text probes (207) | stream/protocol probes (400)
-// structured-output (865) | injection (932) | control+cost (1046)
-// session identity (1305) | mcp (1371) | plugin+hooks (1415)
-// governance/observational (1671) | isolation (1928) | lifecycle (2152)
-// probes export (2306)
+// publication allow-lists (62-160) | validateStreamSurface (164)
+// REQUIRED_FLAGS (323) | help-text probes (359) | stream/protocol probes (552)
+// structured-output (907) | injection (974) | control+cost (1088)
+// session identity (1347) | mcp (1413) | plugin+hooks (1457) | dialog (1839)
+// stream-surface artifact, FREE (1970) | governance/observational (2030)
+// isolation (2287) | lifecycle (2511) | probes export (2665)
 // @END-MAP
 //
 // MAP: The S0 probe matrix — one entry per falsifiable engine assumption the
@@ -1957,6 +1958,13 @@ const dialogProbes = [
         evidence: {
           arms: observed,
           expectedPairs: [...EXPECTED_PAIRS].sort(),
+          // Stated so a green here is not read as more than it is. This detects
+          // a new PAIR — including a new `system/*` subtype, which is the shape a
+          // dialog request would most plausibly take. It would NOT detect a
+          // request smuggled as a new FIELD on an existing event. That is
+          // unlikely for a request/response protocol (the client needs something
+          // to reply to) but it is an assumption, not a measurement.
+          detectsNewPairNotNewField: true,
           // Recorded, not asserted: measured in the S1-A1 spike, not pinned here
           // because each extra mode is another real engine call every run.
           alsoMeasuredInSpike: { auto: 'denials 1, no dialog', dontAsk: 'denials 2, no dialog' },
