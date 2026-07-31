@@ -551,6 +551,17 @@ const protocolProbes = [
       if (!requiredInner || requiredInner.length === 0) {
         artifactProblems.push('requiredInnerPairs is missing or empty — the probe would pass on an envelope with no content')
       }
+      // The same floor on the inner half. It was written for the outer half and
+      // applied to one of the two places, which left the exact attack the
+      // comment below describes open on the other: swap requiredInnerPairs for
+      // one cheap envelope-only entry and a stream carrying no text at all
+      // satisfies the subset check. Found by the cycle-1 second-opinion review.
+      const REQUIRED_INNER_FLOOR = ['event.type=content_block_delta', 'event.delta.type=text_delta']
+      for (const k of REQUIRED_INNER_FLOOR) {
+        if (requiredInner && !requiredInner.includes(k)) {
+          artifactProblems.push(`requiredInnerPairs omits "${k}", which is pinned in code — without it an envelope carrying no text satisfies the subset check`)
+        }
+      }
       for (const k of requiredPairs || []) {
         if (pairsMap && !own(pairsMap, k)) artifactProblems.push(`requiredPairs names "${k}", absent from pairs — that requirement can never be satisfied cleanly`)
       }
@@ -624,7 +635,10 @@ const protocolProbes = [
         if (typeof e.type !== 'string' || !e.type) { malformed.push(`event with a ${typeof e.type} type`); continue }
         const sub = e.subtype
         if (sub !== undefined && sub !== null && typeof sub !== 'string') {
-          malformed.push(`${e.type} with non-string subtype`)
+          // publishablePair, not the bare type: line 624 above was hardened and
+          // this one was not, so a type name went verbatim into a public report
+          // at the exact moment the probe stopped understanding the stream.
+          malformed.push(`${publishablePair(e.type)} with non-string subtype`)
           continue
         }
         const pairKey = sub === undefined || sub === null ? e.type : `${e.type}/${sub}`

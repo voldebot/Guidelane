@@ -468,6 +468,53 @@ check. The second matters more — the subset check alone passes on an empty str
    contains all five entries. Worth noting because the same reflex on a *tracked* file would have
    silently reverted real work.
 
+### Cycle 1 — second-opinion review landed AFTER the first commit; two fixes applied, five not
+The `general-purpose` review returned after commit `1d03844`. Two findings were fixed in a follow-up
+commit; the rest are on the record rather than done, because the cycle's time box was spent.
+
+**Fixed:**
+- **The code-side floor existed on the outer half only.** `requiredInnerPairs` was checked for
+  non-emptiness but had no pinned floor — so swapping it for one envelope-only entry made a stream
+  carrying *no text at all* satisfy the inner subset check. I wrote that exact guard and applied it
+  to one of the two places. Now `REQUIRED_INNER_FLOOR` mirrors it. Falsified free (returns before the
+  engine call): corrupt → `fail` naming the omission → restore → artifact byte-identical to committed.
+- **One leak channel.** The malformed-event message published `e.type` verbatim into a public report,
+  at exactly the moment the probe stopped understanding the stream. Now goes through
+  `publishablePair` like every other novel string. The sibling line one above it had already been
+  hardened; this one had been missed.
+
+**NOT fixed — read these before trusting the probe:**
+1. **`rate_limit_event` is classified `escalate` and it fires on every healthy session.** My own
+   evidence shows it in a 35-event trivial run that exited 0. A cockpit implementing this whitelist
+   literally would escalate on every phase, forever — manufacturing alarm fatigue, whose first
+   casualty is the one escalation that matters. The real problem is schema, not classification: two
+   of the three `escalate` entries are conditional on a *field value* (`rate_limit_event.status`,
+   `system/status.status`) and the one-class-per-pair artifact cannot express that. This is the most
+   important finding of the night and it is unfixed.
+2. **A JSONL framing break is invisible in my evidence.** A line starting with `{` that fails to
+   parse is dropped by `ctx.jsonLines` before my loop sees it, so it lands in neither
+   `nonJsonLineCount` nor `malformedCount` — the evidence would publish `0/0` about a broken stream.
+   The harness does force INCONCLUSIVE via `audit.degraded`, and INCONCLUSIVE is excluded from the
+   drift gate, so a permanent framing regression never turns the baseline red. REVIEW-02 B8 is this
+   probe's own subject matter and it is delegated to a counter the gate ignores.
+3. **`exit` is recorded and compared against nothing** (H5 Q3 verbatim). Concrete cost: if a flag is
+   renamed in a future CLI, the child exits non-zero with empty stdout and the probe reports
+   "required pair(s) never arrived: system/init, …" — a confident wrong claim about the engine, which
+   is the `p-autoupdate-governable` shape exactly.
+4. **The hook pairs are the stated reason for loading the plugin, and their absence passes silently.**
+   `system/hook_started` / `system/hook_response` are classified but not required.
+5. **The `_`-prefix filter in the artifact validator is an escape hatch**: a key starting with `_` is
+   un-validated *and* counts as classified.
+
+**Also flagged and accepted as residual**: the artifact can be widened to silence a red probe, and
+the only thing stopping that is a sentence in a failure message — a convention, not a constraint.
+`classifiedButUnobserved` in the evidence is the review signal for it.
+
+**Honesty note on validation**: after these two edits I ran `node --check` and the free falsification
+above (which exercises the new floor's code path). I did **not** make another `--live` run after
+them, so the last green live run is against the code as of commit `1d03844` plus two changes whose
+pass-path behaviour is unchanged by inspection. Not the same thing as measured.
+
 ### Cycle 1 scan notes (pre-flight evidence, not the item)
 - Free-tier pre-flight: `node tools/probe/run.mjs` → `13 pass · 0 fail · 0 partial · 0 inconclusive ·
   0 error · 17 skipped`. Baseline is healthy going in. **Per H2 this says nothing about any probe
