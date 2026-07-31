@@ -164,7 +164,17 @@ Guidelane/
 
 ## 5. Sprint state
 
-**Current sprint**: **S1 — cockpit + engine adapter. OPEN as of 2026-07-31.**
+**Current sprint**: **S1 — engine adapter. CLOSED 2026-07-31.** Shipped: all
+seven REVIEW-02 Tier A items closed or answered; the suite 30 → **36 probes,
+36 pass**; **`packages/engine`** (env scrub, isolation pair, `EngineSession` on
+the ADR-009 lifecycle, `SessionRegistry`, stream-surface classifier) with 58
+offline tests + 2 live; a workspace root; a CI `packages` job; ADR-009, plus
+in-place corrections to ADR-007 and ADR-008. **The cockpit (`apps/cockpit`) was
+NOT built and is the first item of the next sprint** — the adapter took the
+sprint, and the sprint-close audit took a third of it.
+
+*(Historical, kept because the plan's own framing is still the best guide to
+what S1 was.)*
 Sprint record: `docs/research/sprint-01-cockpit-engine-adapter/RESEARCH.md`
 (numbered `01` to match the project's own S-number; S0 predates the folder
 convention and lives in `docs/research/S0-conformance-report.md` + ADR-007/008).
@@ -216,8 +226,8 @@ Memory: `~/.claude/projects/-Users-talhamac-Desktop-Projects-Guidelane/memory/`
 
 ```bash
 # S0 engine conformance probe (DONE — keep it green; it gates every CLI upgrade)
-node tools/probe/run.mjs            # free tier: help-text + observational (13 probes)
-node tools/probe/run.mjs --live     # + 17 live probes (uses --model haiku)
+node tools/probe/run.mjs            # free tier: help-text + observational (14 probes)
+node tools/probe/run.mjs --live     # + 22 live probes (uses --model haiku)
 node tools/probe/run.mjs --list     # what it checks and why
 node tools/probe/run.mjs --only p-init-receipt,p-ambient-isolation
 node tools/probe/run.mjs --live --update-baseline   # after a deliberate status change
@@ -229,8 +239,18 @@ node tools/probe/run.mjs --live --update-baseline   # after a deliberate status 
 # Probes run SEQUENTIALLY on purpose: concurrent sessions race on the same
 # rate-limit window and make a limit event indistinguishable from a failure.
 
-# Next: S1 — localhost cockpit + engine adapter on the ADR-007/008 contract,
-# preceded by the REVIEW-02 Tier A protocol probes.
+# The workspace (S1). Node 22, npm workspaces, no build step — tests run TS
+# directly via --experimental-strip-types.
+npm ci                              # once
+npm run typecheck                   # tsc --noEmit, strict
+npm test                            # 58 offline tests; the live ones SKIP
+GUIDELANE_LIVE=1 npm test --workspace @guidelane/engine   # + 2 real engine calls
+# The live tier is opt-in because it spends real quota on the owner's own
+# subscription, and a CI runner has no login to spend (ADR-001).
+
+# Next: S2 — apps/cockpit on the ADR-009 contract. Render on `effective`, never
+# on the outer class: the stream_event envelope is pinned `render` and it is what
+# carries thinking_delta.
 ```
 
 Dev URL (reserved): `http://localhost:5180` (5173/5174 are used by other local projects)
@@ -248,6 +268,25 @@ In addition to global gates (`~/.claude/CLAUDE.md` §6):
 
 ## 8. Known limitations / debt
 
+- **`apps/cockpit` does not exist.** S1 was planned as "cockpit + engine adapter"
+  and shipped the adapter only: Tier A took the first half and the sprint-close
+  audit took a third of the rest. The adapter is now the *right* thing to build a
+  cockpit on — `EngineSession` emits `event(event, cls, inner, effective)` and
+  **`effective` is the class a renderer must obey**, because the outer class
+  alone renders raw chain-of-thought — but nothing renders anything yet.
+- **The child environment is a DENY-list, and the owner has to choose.** A stage
+  session inherits everything not denied, and it is an LLM agent with `Bash`
+  running unattended overnight: `GITHUB_TOKEN`, `NPM_TOKEN`, `DATABASE_URL` all
+  reach it. The deny-list was widened to a prefix rule after an audit measured
+  that the previous nine-key list caught **9 of ~100** auth/routing variables the
+  2.1.220 binary itself names. That closes the *routing* hole; it cannot close
+  the *secrets* hole. The correct end state is an allow-list, and flipping it
+  needs a live measurement that `claude` still authenticates under a minimal
+  environment on macOS. Not decided unilaterally — it can break every generated
+  project's build.
+- **Nothing installs a process-exit reaper.** `SessionRegistry.killAll()` exists
+  and has no production caller, so a supervisor that dies still leaves
+  `detached`, authenticated children running. This is Tier B1, the S2 exit gate.
 - **The S0 suite is strong on configuration and weak on runtime protocol.** It
   would pass green on a machine where the activity feed is unrenderable. The 7
   Tier A + 10 Tier B unknowns in `docs/research/REVIEW-02-runtime-gaps.md` are
@@ -348,10 +387,13 @@ In addition to global gates (`~/.claude/CLAUDE.md` §6):
 ## 9. Reference docs
 
 - `docs/architecture.md` — full architecture
-- `docs/decisions/` — ADR-001..008 (007 and 008 are measured, not reasoned)
+- `docs/decisions/` — ADR-001..009 (007, 008 and 009 are measured, not reasoned)
+- `docs/decisions/ADR-009-phase-lifecycle-and-session-handle.md` — **read before touching `packages/engine` or building the cockpit**
+- `packages/engine/README.md` — the five things a caller must know, short version
 - `docs/research/RESEARCH-01..04` — feasibility, product architecture, asset audit, context problem
 - `docs/research/REVIEW-01-independent-findings.md` — **governs v1 scope**
-- `docs/research/REVIEW-02-runtime-gaps.md` — **governs the S1 engine work list**
+- `docs/research/REVIEW-02-runtime-gaps.md` — **governed the S1 engine work list; §21 is the sprint-close audit**
+- `docs/research/sprint-01-cockpit-engine-adapter/RESEARCH.md` — the S1 record, closed
 - `docs/research/S0-conformance-report.md` — what the engine actually does, per probe
 - `docs/inquiries/` — drafted, unsent letters to Anthropic and z.ai (owner sends)
 - `tools/probe/README-ci.md` — why the conformance gate runs in two places

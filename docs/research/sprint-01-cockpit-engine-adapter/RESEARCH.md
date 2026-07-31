@@ -2,7 +2,8 @@
 sprint: "01"
 slug: "cockpit-engine-adapter"
 opened: "2026-07-31"
-status: "open"
+status: "closed"
+closed: "2026-07-31"
 ---
 
 # Sprint 01 — Cockpit + engine adapter
@@ -280,11 +281,54 @@ Add to PROJECT_MAP §6 at sprint close if not resolved.
 - **The orchestrator must validate hook stdout itself.** Measured (REVIEW-02 §16): a hook that emits an unparseable payload and exits 0 is reported `outcome: "success"`. Since ADR-006's dial is a `MessageDisplay` hook, "the engine said success" is not evidence the dial ran. Nothing in the codebase does this validation yet.
 - **Shape validation cannot see a wrong decision.** `p-stream-surface-artifact` proves the artifact is well-formed, and a well-formed artifact can still classify raw chain-of-thought as `render`. Exactly one classification is pinned in code against that; every other class remains an unguarded judgement call, by design.
 
-## 9. Sprint close summary (filled by /sprint-close)
+## 9. Sprint close summary
 
-- **Status**: {{ closed | abandoned | superseded }}
-- **ADRs written**: {{ }}
-- **PROJECT_MAP.md updates**: {{ }}
-- **FILEMAP.md changes**: {{ }}
-- **Memory updates**: {{ }}
-- **Closed by**: {{ /sprint-close on DATE }}
+- **Status**: **closed** (2026-07-31)
+- **Shipped**: all seven REVIEW-02 Tier A items closed or answered; the
+  conformance suite 30 → **36 probes, 36 pass**; `packages/engine` — the live
+  session handle the S0 close named as debt — with **58 offline tests + 2 live**;
+  a workspace root (npm workspaces, strict TS); a CI `packages` job; the shared
+  stream-surface validator.
+- **ADRs written**: **ADR-009** (phase lifecycle + session handle). **ADR-007**
+  corrected in place (`seven_day` is not sleepable). **ADR-008** corrected twice
+  in place (`init.model` is the resolved id, not the alias; "before tokens are
+  spent" is unachievable in `-p`).
+- **PROJECT_MAP.md updates**: §3 engine adapter and probe rows moved to *built*;
+  §4 gains ADR-009; §6 gains ten rows, including instances 24 and 25 of the
+  fail-open shape.
+- **FILEMAP.md changes**: first real code index — `packages/engine/src/*`.
+- **Memory updates**: `project-guidelane.md` + `MEMORY.md`.
+- **Quality gates run**: `/review` was unavailable in-session, so the gate was
+  two independent advisory passes (design review + adversarial security audit)
+  on read-only agents, per §16. **They found a critical fail-open in the init
+  receipt** — see §3 E. Full live suite green afterwards.
+
+### What I would tell the next sprint
+
+1. **The gate that guards everything else was the one with no tests and a
+   critical fail-open.** Not a coincidence: its correctness felt self-evident,
+   so nobody looked. Ask which component everything depends on, and check that
+   one first.
+2. **A test written by the author encodes the author's assumption about what the
+   code does.** My live test asserted the receipt failure fired, then sent a turn
+   and asserted the turn succeeded — it *documented* the gate failing to gate.
+   Only a reader with no assumption noticed the message and the code disagreed.
+3. **Measure before honouring a plan's own wording.** "Fail the phase before
+   tokens are spent" was in an accepted ADR and is not achievable; implementing
+   it literally produced a deadlock. One 20-line timing probe settled it.
+
+## 10. Next sprint's entry conditions
+
+- `apps/cockpit` can now be built against a measured contract: `EngineSession`
+  emits `event(event, cls, inner, effective)` and **`effective` is the one a
+  renderer obeys** — the outer class alone renders raw chain-of-thought.
+- **Unresolved, and the owner's call**: deny-list vs allow-list for the child
+  environment. The current deny-list is a prefix rule over five namespaces and
+  cannot protect `GITHUB_TOKEN`/`DATABASE_URL` from an unattended agent with
+  `Bash`. Needs a live measurement that `claude` authenticates under a minimal
+  environment on macOS before it can flip.
+- **Unimplemented and named**: nothing installs a process-exit reaper, so a
+  supervisor killed with `SIGKILL` still leaves detached children (Tier B1, the
+  S2 exit gate). `SessionRegistry.killAll()` exists and has no production caller.
+- **Night Shift cannot sleep a `seven_day` rate-limit window** (ADR-007
+  correction). The supervisor rule is S2 work and is not written.

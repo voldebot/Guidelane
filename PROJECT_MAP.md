@@ -2,8 +2,8 @@
 context_priority: high
 project: "Guidelane"
 created: "2026-07-30"
-last_sprint_close: "2026-07-31 (S0 — engine conformance, post-audit hardening)"
-current_sprint: "S1 — cockpit + engine adapter (opened 2026-07-31, gated on REVIEW-02 Tier A)"
+last_sprint_close: "2026-07-31 (S1 — engine adapter; Tier A complete, packages/engine shipped)"
+current_sprint: "S2 — the cockpit (not yet opened). S1 shipped the adapter; apps/cockpit is the first item."
 ---
 
 # Guidelane — Project Map
@@ -77,7 +77,7 @@ dial rides on.
 | Context | Responsibility | Key files | Status |
 |---|---|---|---|
 | Orchestrator | State machine Fikir→Hazır, gates G0–G6, artifact store, git snapshots, Night Shift supervisor, crew routing core | `packages/orchestrator/` (not yet created) | active (design) |
-| Engine adapter | Spawn official CLIs, stream-json codec, session profiles (role→model+effort), version governance, rate-limit pause | `packages/engine/` — **SHIPPED (S1)**: env scrub, isolation pair, live `EngineSession` on the ADR-009 lifecycle, `SessionRegistry`, stream-surface classifier. 45 offline tests + 2 opt-in live | active (built) |
+| Engine adapter | Spawn official CLIs, stream-json codec, session profiles (role→model+effort), version governance, rate-limit pause | `packages/engine/` — **SHIPPED (S1)**: env scrub, isolation pair, live `EngineSession` on the ADR-009 lifecycle, `SessionRegistry`, stream-surface classifier. **58 offline tests + 2 opt-in live** | active (built) |
 | Cockpit | Localhost UI: board, interview, blueprint approval, activity feed, verify screen, morning report, language dial | `apps/cockpit/` (not yet created) | active (design) |
 | Atlas | MCP server: architecture-first knowledge, quality standards, task patterns; project graph + impact maps; decision ledger; corpus builder + graph indexer | `packages/atlas/` (not yet created) | active (design) |
 | Behaviour pack | Claude Code plugin: persona, interviewer, translation hooks, fail-closed guards; dual surface | `packages/plugin/` (not yet created) | active (design) |
