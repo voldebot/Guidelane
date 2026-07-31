@@ -1975,6 +1975,173 @@ const dialogProbes = [
   },
 ]
 
+const backpressureProbes = [
+  {
+    id: 'p-backpressure-lossless',
+    title: 'When the consumer stops reading, the engine BLOCKS — it does not drop events, and the denial channel survives',
+    kind: 'fixture-call',
+    loadBearing: 'critical',
+    claim:
+      'A cockpit that stops draining stdout causes the engine to block on write. No stream-json line is dropped or truncated, and `tool_result.is_error` — the measured denial channel (A3a) — survives the pressure, unlike the `permission_denied` advisory frame the binary explicitly drops.',
+    failureImpact:
+      'REVIEW-02 A5 + A3b. If the stream were lossy under load, a slow renderer would silently lose events — including the evidence that a tool was DENIED, which is what a phase failure is detected from. A gate reading a lossy channel reports success for work that never happened.',
+    docRefs: ['REVIEW-02 §3 A5', 'REVIEW-02 §3 A3b', 'REVIEW-02 §12'],
+    async run(ctx) {
+      // A pipe on macOS is 64 KiB and Node's readable highWaterMark is another
+      // 64 KiB, so a burst LARGER than one pipe buffer arriving the moment we
+      // resume can only mean the writer was blocked with data queued behind it.
+      // That measurement is what makes this probe's verdict meaningful: the
+      // first version of this spike concluded "lossless" without ever proving
+      // the buffers filled, which would have been a confident claim about a
+      // session that never experienced backpressure.
+      const PIPE_BYTES = 65536
+      const SETTLE_MS = 4000
+      const PAUSE_MS = 55000
+      const BURST_WINDOW_MS = 250
+
+      const ws = ctx.makeWorkspace('p-backpressure-lossless')
+      const handle = ctx.claudeStreaming(
+        [
+          '-p',
+          '--input-format', 'stream-json',
+          '--output-format', 'stream-json',
+          '--verbose',
+          '--include-partial-messages',
+          // The tool is present and NOT allow-listed, so the session produces a
+          // DENIED tool_result early — that is the A3b subject. The bulk text
+          // that follows is what fills the buffers.
+          '--permission-mode', 'auto',
+          '--model', ctx.model,
+          '--no-session-persistence',
+        ],
+        { cwd: ws }
+      )
+      const { child } = handle
+      // `claudeStreaming` is a NEW spawn path, added for this probe because
+      // spawnCapture buffers everything and cannot answer "what does the engine
+      // do when nobody is listening". A new spawn path is a new opportunity to
+      // lose the ADR-008 isolation pair, and the last time isolation was applied
+      // anywhere other than the single chokepoint, 14 of 19 spawns were missing
+      // a flag while the report claimed otherwise. So it is asserted here, on
+      // the args the harness actually passed, not assumed from the call site.
+      const sourcesAt = handle.args.indexOf('--setting-sources')
+      if (!handle.args.includes('--strict-mcp-config') || sourcesAt === -1 || handle.args[sourcesAt + 1] !== '') {
+        handle.stop()
+        return {
+          status: P.FAIL,
+          detail:
+            'the streaming spawn path did not carry the ADR-008 isolation pair — this session would have inherited the operator\'s plugins, skills, agents and permission default. ' +
+            'Fix the path, never this assertion.',
+          evidence: { isolationApplied: false, sawStrictMcpConfig: handle.args.includes('--strict-mcp-config'), settingSourcesValue: sourcesAt === -1 ? null : handle.args[sourcesAt + 1] },
+        }
+      }
+
+      child.stdin.write(
+        ctx.userMessage(
+          'First, try to create a file named blocked.txt using your file writing tool. ' +
+            'Then, regardless of whether that worked, write the numbers 1 to 500, one per line, each followed by a short sentence.'
+        )
+      )
+      child.stdin.end()
+
+      const chunks = []
+      let phase = 'pre'
+      let preBytes = 0
+      let burstBytes = 0
+      let tailBytes = 0
+      child.stdout.pause()
+      child.stdout.on('data', (c) => {
+        chunks.push(c)
+        if (phase === 'pre') preBytes += c.length
+        else if (phase === 'burst') burstBytes += c.length
+        else tailBytes += c.length
+      })
+      let stderr = ''
+      child.stderr.setEncoding('utf8')
+      child.stderr.on('data', (c) => { stderr += c })
+
+      child.stdout.resume()
+      const timers = []
+      timers.push(setTimeout(() => { phase = 'paused'; child.stdout.pause() }, SETTLE_MS))
+      timers.push(setTimeout(() => {
+        phase = 'burst'
+        child.stdout.resume()
+        timers.push(setTimeout(() => { phase = 'tail' }, BURST_WINDOW_MS))
+      }, SETTLE_MS + PAUSE_MS))
+
+      const hardKill = setTimeout(() => handle.stop(), 300_000)
+      const code = await new Promise((resolve) => child.on('close', resolve))
+      for (const t of timers) clearTimeout(t)
+      clearTimeout(hardKill)
+      handle.stop()
+
+      const raw = Buffer.concat(chunks).toString('utf8')
+      const lines = raw.split('\n').map((s) => s.trim()).filter(Boolean)
+      let parsed = 0
+      let unparseable = 0
+      let deniedResults = 0
+      let terminal = null
+      for (const l of lines) {
+        if (l[0] !== '{') { unparseable += 1; continue }
+        let e
+        try { e = JSON.parse(l); parsed += 1 } catch { unparseable += 1; continue }
+        if (e.type === 'user') {
+          for (const b of e.message?.content ?? []) if (b && b.type === 'tool_result' && b.is_error === true) deniedResults += 1
+        }
+        if (e.type === 'result') terminal = e
+      }
+
+      const backpressureProven = burstBytes > PIPE_BYTES && tailBytes > 0
+      const evidence = {
+        exit: code,
+        totalBytes: raw.length,
+        bytesBeforePausing: preBytes,
+        burstBytesWithin250msOfResume: burstBytes,
+        pipeBytes: PIPE_BYTES,
+        bytesAfterBurst: tailBytes,
+        lines: lines.length,
+        parsed,
+        unparseable,
+        deniedToolResults: deniedResults,
+        terminal: terminal ? `${terminal.type}/${terminal.subtype}` : null,
+        permissionDenials: terminal && Array.isArray(terminal.permission_denials) ? terminal.permission_denials.length : 0,
+        backpressureProven,
+        stderr: clip(stderr, 300),
+      }
+
+      // INCONCLUSIVE, not FAIL. Whether the buffers fill depends on how much the
+      // model writes, which is model behaviour. A red here would claim the
+      // ENGINE changed on evidence that says only "this run did not generate
+      // enough output to apply pressure".
+      if (!backpressureProven) {
+        return {
+          status: P.INCONCLUSIVE,
+          detail:
+            `The buffers were never proven full — burst after resume was ${burstBytes} bytes against a ${PIPE_BYTES}-byte pipe` +
+            `${tailBytes > 0 ? '' : ', and nothing followed the burst so the session may simply have ended during the pause'}. ` +
+            `This run applied no measurable pressure and therefore says NOTHING about whether the stream is lossy.`,
+          evidence,
+        }
+      }
+
+      const problems = []
+      if (unparseable > 0) problems.push(`${unparseable} unparseable line(s) — the stream was DAMAGED under pressure, so no gate may trust it`)
+      if (deniedResults < 1) problems.push('the denied tool_result did not survive: `is_error` is LOSSY under pressure, and A3a\'s denial channel cannot be used as phase-failure evidence')
+      if (!terminal) problems.push('no terminal result event survived — a phase cannot tell completion from a stall under load')
+
+      return {
+        status: problems.length ? P.FAIL : P.PASS,
+        detail: problems.length
+          ? `${problems.join(' | ')} (backpressure WAS applied: ${burstBytes}-byte burst against a ${PIPE_BYTES}-byte pipe, ${tailBytes} bytes after)`
+          : `Backpressure proven and lossless. Undrained for ${PAUSE_MS / 1000}s, then ${burstBytes} bytes arrived within ${BURST_WINDOW_MS}ms — more than a ${PIPE_BYTES}-byte pipe can hold, so the writer WAS blocked with data queued — and ${tailBytes} further bytes followed, so the engine was alive and blocked rather than finished. ` +
+            `All ${lines.length} lines parsed, 0 damaged. The denied tool_result and the terminal result both survived. ` +
+            `So the engine BLOCKS rather than dropping: a slow cockpit loses nothing — but it STALLS the engine, which is a different hazard, and an inter-event stall watchdog must therefore not fire when the consumer is itself the cause.`,
+        evidence,
+      }
+    },
+  },
+]
+
 const surfaceArtifactProbes = [
   {
     id: 'p-stream-surface-artifact',
@@ -2682,6 +2849,7 @@ export const probes = [
   ...mcpProbes,
   ...pluginProbes,
   ...dialogProbes,
+  ...backpressureProbes,
   ...surfaceArtifactProbes,
   ...governanceProbes,
 ]

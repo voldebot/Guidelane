@@ -572,6 +572,97 @@ Stability checked over three consecutive runs: `pass`, identical counts each tim
 with `redacted_thinking` recorded as unreachable by this method rather than
 claimed absent.
 
+## 18. Addendum — A5 and A3b ANSWERED: the engine BLOCKS, and the denial channel is lossless (2026-07-31, S1-C)
+
+A5(b) and A3b are one experiment. The adapter's real question is: when the
+cockpit stops draining stdout — a slow renderer, a paused UI, a blocked disk
+write — does the engine (i) block until we read, (ii) drop events, or (iii) die?
+And if it is lossy, does `tool_result.is_error` survive?
+
+**The first attempt at this measurement was wrong and had to be redone.** It
+paused stdout for 20s, saw a complete stream, and concluded "lossless" — without
+ever proving the buffers had filled. That is a confident claim about a session
+that may never have experienced backpressure: the same shape as
+`p-autoupdate-governable` reading an absence off a surface that could not carry
+the thing.
+
+**The proof.** A macOS pipe is 64 KiB and Node's readable highWaterMark is
+another 64 KiB, so a burst *larger than one pipe buffer* arriving the instant we
+resume can only mean the writer was blocked with data queued behind it.
+
+| Measurement | Value |
+|---|---|
+| stdout undrained for | 55 s |
+| burst within 250 ms of resume | **99,715 – 121,970 bytes** (152–186 % of a 65,536-byte pipe) |
+| bytes still arriving after the burst | 83,314 – 134,571 |
+| lines / parsed / **unparseable** | 526 / 526 / **0** |
+| denied `tool_result` survived | **yes** (1) |
+| terminal `result/success` survived | **yes**, with `permission_denials: 1` |
+
+**A5(b): the engine BLOCKS. It does not drop and it does not die.** Bytes kept
+arriving after the burst, so it was alive and blocked rather than finished.
+
+**A3b: `tool_result.is_error` is LOSSLESS under pressure — CLOSED.** This
+vindicates A3a's choice of detector: the `permission_denied` *advisory* frame is
+explicitly droppable (`dropping oldest permission_denied advisory frames`), the
+structural `tool_result` is not. A gate may depend on it.
+
+**A5(a): the stall baseline.** With stdout drained normally, inter-chunk gaps were
+p50 **207 ms**, p95 **385 ms**, max **1,227 ms**. So an inter-event silence
+watchdog has a measured floor to sit above rather than a guessed one.
+
+**And a design consequence that is not in the table.** Because the engine blocks,
+a slow cockpit loses nothing — but it *stalls the engine*, and the stream goes
+legitimately silent. **An inter-event stall watchdog must therefore not fire when
+the consumer is itself the cause.** That is knowable, since the consumer is us.
+
+### The new spawn path, and why it is additive
+
+`spawnCapture` buffers everything and hands back a string, so this probe could
+not be written on top of it — the documented *"`spawnCapture` is a probe
+primitive, not an adapter"* debt, paid narrowly instead of by building the S1-D
+adapter early. `ctx.claudeStreaming` reuses `applyIsolation` and
+`scrubbedChildEnv` **directly** and increments the same audit counters, so there
+is still exactly one isolation and env-scrub path. A second implementation of a
+fail-closed boundary is how that boundary drifts, and this repo has the scars.
+
+The probe **asserts the isolation pair on the args the harness actually passed**,
+rather than trusting the new path. Falsified: spawning it `ambient: true` fails
+the probe with `sawStrictMcpConfig: false`.
+
+### A1 — answered as an absence, on the same evidence that closed A4
+
+No `control_request` frame has appeared in **any** session run across S1-A and
+S1-C — four permission modes, hook-failure arms, thinking arms, backpressure
+arms. `--help` exposes no `--permission-prompt-tool`; `--remote-control` is
+interactive-only and does not apply to `-p`. So the engine does not initiate a
+control request in print mode, and the REVIEW-02 §3 A1-vs-A2 contradiction over
+which subtypes belong to `system` versus `control_request` is **moot for the
+orchestrator**: you cannot mis-route a frame that is never sent.
+
+Honest scope: this is a statement about *observed behaviour across every
+configuration this suite exercises*, not about what exists in the binary. Per
+Principle 8 a binary string would not have settled it either. `p-no-headless-dialog`'s
+novel-pair guard is what would catch the day it changes.
+
+### A process finding worth more than any single measurement
+
+**Three falsification tests today silently did not test what they claimed**, and
+each was caught only because the result looked wrong:
+
+1. the `..` in a "refused path" was normalised away by `join()`, so the fixture
+   never refused and the hook really did run;
+2. an `&&` chain short-circuited on the probe runner's non-zero exit (baseline
+   drift from an unrecorded probe), so the falsification never executed at all
+   while printing nothing;
+3. a `{ cwd: ws }` anchor matched **four** call sites and the edit landed in a
+   different probe entirely.
+
+Each would have been reported as "guard falsified". The rule this repo already
+has — *a guard that cannot fire is decoration* — has a corollary it did not:
+**a falsification test needs its own proof that it armed the right thing.** The
+third was caught by printing the diff before running; that is now the practice.
+
 ## 11. Addendum — the logged-out shape, measured for free (2026-07-30)
 
 The first CI run doubled as a B5 probe nobody had to pay for: a GitHub runner has

@@ -236,12 +236,15 @@ In addition to global gates (`~/.claude/CLAUDE.md` §6):
   Tier A + 10 Tier B unknowns in `docs/research/REVIEW-02-runtime-gaps.md` are
   the honest debt; four Tier A items can make a run go silent with no terminal
   event, which is the worst possible failure in front of a non-coder.
-  **S1-A progress (2026-07-31)**: A4 **CLOSED** (the engine never asks headlessly
-  — `manual` is indistinguishable from `auto`, so Night Shift needs no
-  control-channel responder), A6 **CLOSED**, A7 **ANSWERED** (a hook emitting a
-  malformed payload is reported `outcome: "success"` — the orchestrator must
-  validate hook stdout itself), A2 partly answered and now CI-gated for free.
-  **Remaining: A1, A3b, A5** — all unblocked by the measured session handle.
+  **TIER A IS DONE (2026-07-31, S1-A + S1-C)**: A1 **CLOSED** (no `control_request`
+  is ever emitted in `-p`, so the A1-vs-A2 subtype contradiction is moot), A3b
+  **CLOSED** (`tool_result.is_error` is lossless under backpressure), A4
+  **CLOSED** (the engine never asks — `manual` is indistinguishable from `auto`,
+  so Night Shift needs no control-channel responder), A5 **CLOSED** (the engine
+  **blocks** rather than dropping; stall baseline p50 207 ms / max 1,227 ms), A6
+  **CLOSED**, A7 **ANSWERED** (a hook emitting a malformed payload is reported
+  `outcome: "success"` — the orchestrator must validate hook stdout itself), A2
+  partly answered and now CI-gated for free.
   **And one hazard REVIEW-02 never listed**: with stdin held open a `-p` session
   **never exits** and `result` is a *per-turn* event, so an adapter that waits for
   process exit hangs forever — produced accidentally in 30 lines, and exactly the

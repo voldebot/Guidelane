@@ -220,8 +220,23 @@ the constitution's calibration rule, and it is deliberately uneven.
 
 **Stage S1-C — rig-dependent Tier A (72%, unblocked earlier than planned)**
 10. [ ] A1 control channel — **already mostly answered as a side effect**: across ~12 sessions in the S1-A spikes (four permission modes, hook-failure arms, thinking arms) **no `control_request` frame has ever been emitted**, and A4 closed on the same evidence. What remains is narrow: confirm the engine never *initiates* one under a deliberately adversarial setup, at which point the REVIEW-02 §3 A1-vs-A2 subtype contradiction becomes **moot for the orchestrator** — you cannot mis-route a frame that is never sent. Verify: an adversarial arm that reaches a decision point and still emits nothing
-11. [ ] A5 stall baseline + stdout backpressure — verify: a measured inter-event silence threshold, not a wall-clock guess
-12. [ ] A3b does `is_error` survive backpressure — verify: denial detected under load, not only when idle
+11. [x] A5 → **the engine BLOCKS, it does not drop.** stdout undrained 55 s → a 99–122 KB burst against a 65,536-byte pipe with 83–135 KB still following: blocked with data queued, alive not finished. Stall baseline measured: p50 207 ms / p95 385 ms / max 1,227 ms. **A5 CLOSED**
+12. [x] A3b → **`tool_result.is_error` is LOSSLESS under pressure.** 526/526 lines parsed, 0 damaged, denial and terminal both survived. Vindicates A3a's detector choice. **A3b CLOSED**
+
+> **The measurement had to be redone.** The first attempt paused stdout for 20 s,
+> saw a complete stream, and concluded "lossless" — without ever proving the
+> buffers had filled. That is a confident claim about a session that may never
+> have experienced backpressure, i.e. `p-autoupdate-governable` again. The proof
+> that made it real: a burst larger than one pipe buffer can only mean the writer
+> was blocked with data queued.
+
+**Design consequence for S1-D, not in any table**: because the engine blocks, a
+slow cockpit loses nothing but **stalls the engine**, and the stream goes
+legitimately silent. An inter-event stall watchdog must not fire when the
+consumer is itself the cause — knowable, since the consumer is us.
+
+**Tier A COMPLETE**: A1 · A3b · A4 · A5 · A6 · A7 all closed or answered; A2
+partly answered and CI-gated. The blocker list that gated S1's feed is done.
 
 **Stage S1-D — the adapter and the cockpit (45%)**
 13. [ ] **Phase lifecycle terminator** (new, from §3 D) — verify: a phase ends deterministically with no orphaned engine process. `result` is per-turn while stdin is open, so neither "wait for exit" nor "exit on result" is correct

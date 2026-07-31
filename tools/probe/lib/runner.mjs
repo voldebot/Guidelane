@@ -581,6 +581,49 @@ export function makeContext({ opts, fixturesDir, suiteRoot, helpCache, audit }) 
   }
 
   /**
+   * Run the engine with the CALLER draining stdout.
+   *
+   * `spawnCapture` buffers everything and hands back a string, which is right for
+   * every probe that asks "what did the engine say". It cannot answer "what does
+   * the engine do when nobody is listening" — and that is REVIEW-02 A5's whole
+   * question, so the backpressure probe cannot be written on top of it. This is
+   * the documented `spawnCapture is a probe primitive, not an adapter` debt,
+   * paid narrowly rather than by building the S1-D adapter early.
+   *
+   * ADDITIVE ON PURPOSE: it reuses `applyIsolation` and `scrubbedChildEnv`
+   * directly and increments the same audit counters, so there is still exactly
+   * ONE isolation and env-scrub path. A second implementation of a fail-closed
+   * boundary is how that boundary drifts, and this repo has the scars.
+   *
+   * The caller gets the raw child. Nothing here caps output or enforces a
+   * timeout — a streaming caller owns its own lifecycle, and `stop()` reaps the
+   * process GROUP, because a grandchild holding the pipe is how the nightly job
+   * hung before.
+   */
+  const claudeStreaming = (args, { cwd, env: extraEnv, ambient = false } = {}) => {
+    const finalArgs = applyIsolation(claudeBin, args, { ambient })
+    const { env, removed } = scrubbedChildEnv(extraEnv === process.env ? {} : extraEnv)
+    audit.spawns += 1
+    for (const k of removed) audit.keysRemoved.add(k)
+    const child = spawn(claudeBin, finalArgs, {
+      cwd: cwd || suiteRoot,
+      env,
+      stdio: ['pipe', 'pipe', 'pipe'],
+      detached: true, // own process group, so stop() can reap grandchildren too
+    })
+    if (child.pid) LIVE_CHILDREN.add(child.pid)
+    return {
+      child,
+      args: finalArgs,
+      stop: () => {
+        try { if (child.pid) process.kill(-child.pid, 'SIGKILL') } catch { /* already gone */ }
+        try { child.kill('SIGKILL') } catch { /* already gone */ }
+        if (child.pid) LIVE_CHILDREN.delete(child.pid)
+      },
+    }
+  }
+
+  /**
    * Run the engine. Callers pass only the flags under test; the harness adds the
    * safety floor: a disposable cwd, a scrubbed env, a hard timeout, closed stdin,
    * and — for session invocations — the ADR-008 isolation pair.
@@ -650,6 +693,7 @@ export function makeContext({ opts, fixturesDir, suiteRoot, helpCache, audit }) 
     model: opts.model,
     help,
     claude,
+    claudeStreaming,
     jsonLines,
     userMessage,
     makeWorkspace,
