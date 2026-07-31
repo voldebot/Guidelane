@@ -99,6 +99,14 @@ service; anything commercial.
   backpressure, which needs the reactive rig.
 - **Language dial** (ADR-006): user-facing output in the user's language;
   *everything else* — code, comments, artifacts, ADRs, commit messages — English.
+  **Measured hole, 2026-07-31**: the dial is implemented by the `MessageDisplay`
+  rewrite, and that rewrite provably does **not** reach thinking blocks. In one
+  controlled same-run differential the assistant *text* block came back rewritten
+  while the *thinking* block kept its original reasoning verbatim. Content-bearing
+  thinking reaches `-p` stream-json by default on haiku with no reasoning flag, so
+  the cockpit must ignore `thinking` / `thinking_delta` / `signature_delta`
+  **by name** — ignoring them by omission fails open the first time the renderer
+  is rewritten. ADR-006 needs an amendment or a stated cockpit-side rule (S1).
 - **Review/audit sessions are read-only by construction** (`--tools` scoping),
   not by request.
 - **REVIEW-01 governs v1 scope; REVIEW-02 governs the S1 engine work list; a
@@ -145,6 +153,13 @@ Guidelane/
 ## 5. Sprint state
 
 **Current sprint**: **S1 — cockpit + engine adapter. OPEN as of 2026-07-31.**
+Sprint record: `docs/research/sprint-01-cockpit-engine-adapter/RESEARCH.md`
+(numbered `01` to match the project's own S-number; S0 predates the folder
+convention and lives in `docs/research/S0-conformance-report.md` + ADR-007/008).
+**Stage 0 is done**: night run #1's three findings were verified in a separate
+session, instance 23 was fixed, `stream-surface.json` went to schemaVersion 2
+after a healthy session proved its `rate_limit_event` class would have escalated
+every phase forever, and the branch landed on `main` at 31 probes / 31 pass.
 Gated on REVIEW-02 Tier A, which is decomposed by *dependency* rather than into
 seven equal parts: **S1-A** (A2, A4, A6, A7 — measurable on the existing harness,
 ~80% confidence), then **S1-B** (a ~40-line throwaway reactive rig, ~62%), then
@@ -162,7 +177,12 @@ gap list.
 inference failed open*. A guard that cannot fire is decoration; a convention is
 not a constraint; a counter with no pinned expectation falsifies nothing. The
 22nd instance was a guard added and falsified by CI within the hour, on the last
-day of the sprint. Expect the 23rd.
+day of the sprint. **The 23rd arrived on schedule** — found by the night run's
+own quality gate, living *inside the helper written to prevent leaks*:
+`publishablePair` shape-gated names against a character class containing the
+underscore, so the two ADR-008 plugin shapes its own docstring named as its
+reason to exist published verbatim. Fixed 2026-07-31 with an allow-list keyed on
+a committed artifact. Expect the 24th.
 **Last sprint close**: 2026-07-31 (S0, post-audit hardening). Shipped: `tools/probe/`
 (30 probes, all green), ADR-007 + ADR-008 with two dated corrections, REVIEW-02
 (+§13 free Tier A answers), CI wiring, LICENSE, THIRD-PARTY-NOTICES, the two
