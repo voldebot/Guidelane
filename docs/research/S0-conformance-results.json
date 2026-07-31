@@ -1,6 +1,6 @@
 {
   "version": "2.1.220 (Claude Code)",
-  "generatedAt": "2026-07-31T18:47:34.811Z",
+  "generatedAt": "2026-07-31T19:06:40.968Z",
   "suiteRoot": "<TMP>/guidelane-probe-<run>",
   "workspacesKept": false,
   "stoleStaleLock": false,
@@ -11,8 +11,8 @@
     "live": true,
     "only": null,
     "kinds": null,
-    "probesDefined": 35,
-    "probesRun": 35
+    "probesDefined": 36,
+    "probesRun": 36
   },
   "options": {
     "live": true,
@@ -27,7 +27,7 @@
       "CLAUDE_CODE_SIMPLE",
       "CLAUDE_CODE_SAFE_MODE"
     ],
-    "spawns": 42,
+    "spawns": 44,
     "ambientSpawns": 4,
     "autoUpdateOptOuts": 1,
     "expectedTimeouts": 2,
@@ -41,7 +41,7 @@
     ]
   },
   "counts": {
-    "pass": 35,
+    "pass": 36,
     "fail": 0,
     "partial": 0,
     "skip": 0,
@@ -70,7 +70,7 @@
         "declaredCount": 69
       },
       "observationFailures": null,
-      "ms": 203
+      "ms": 195
     },
     {
       "id": "p-bare-forbidden",
@@ -115,7 +115,7 @@
         ]
       },
       "observationFailures": null,
-      "ms": 0
+      "ms": 1
     },
     {
       "id": "p-doctor-exists",
@@ -134,7 +134,7 @@
         "present": true
       },
       "observationFailures": null,
-      "ms": 1
+      "ms": 0
     },
     {
       "id": "p-plugin-eval-exists",
@@ -154,7 +154,7 @@
         "hasEval": true
       },
       "observationFailures": null,
-      "ms": 193
+      "ms": 190
     },
     {
       "id": "p-plugin-validate-fixture",
@@ -175,7 +175,7 @@
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 346
+      "ms": 335
     },
     {
       "id": "p-kill-reaps-process-group",
@@ -194,10 +194,10 @@
         "timedOut": true,
         "parentSurvived": false,
         "grandchildSurvived": false,
-        "settleMs": 4006
+        "settleMs": 4004
       },
       "observationFailures": null,
-      "ms": 4008
+      "ms": 4006
     },
     {
       "id": "p-watchdog-settles-on-escaped-child",
@@ -212,15 +212,15 @@
       ],
       "failureImpact": "The single worst outcome the product can have: a run that stops with no output, no error, and no terminal event. In the nightly job it burns to the CI cap; in front of a non-coder it is \"the computer froze\".",
       "status": "pass",
-      "detail": "Escaped grandchild held the pipe open and 'close' never came, yet the call settled in 8004ms via the watchdog. A stuck session degrades into evidence instead of a silent hang. As designed, the escapee outlived the group kill — the probe reaped it itself.",
+      "detail": "Escaped grandchild held the pipe open and 'close' never came, yet the call settled in 8003ms via the watchdog. A stuck session degrades into evidence instead of a silent hang. As designed, the escapee outlived the group kill — the probe reaped it itself.",
       "evidence": {
-        "elapsedMs": 8004,
+        "elapsedMs": 8003,
         "timedOut": true,
         "escapeeOutlivedGroupKill": true,
-        "settleMs": 8004
+        "settleMs": 8002
       },
       "observationFailures": null,
-      "ms": 8006
+      "ms": 8003
     },
     {
       "id": "p-version-in-tested-range",
@@ -245,7 +245,7 @@
         "inRange": true
       },
       "observationFailures": null,
-      "ms": 114
+      "ms": 104
     },
     {
       "id": "p-init-receipt",
@@ -299,7 +299,7 @@
         "version": "2.1.220"
       },
       "observationFailures": null,
-      "ms": 3068
+      "ms": 3085
     },
     {
       "id": "p-ambient-isolation",
@@ -365,7 +365,7 @@
         "bothFlagsRequired": true
       },
       "observationFailures": null,
-      "ms": 9240
+      "ms": 8110
     },
     {
       "id": "p-messagedisplay-rewrite",
@@ -389,7 +389,7 @@
         "rewritten": true
       },
       "observationFailures": null,
-      "ms": 4863
+      "ms": 3838
     },
     {
       "id": "p-stream-json-roundtrip",
@@ -403,15 +403,15 @@
       ],
       "failureImpact": "The cockpit cannot render a live activity feed; the entire event-translation layer (R3 mechanism 3) has no input.",
       "status": "pass",
-      "detail": "Full round-trip. Event types: system, rate_limit_event, user, stream_event, assistant, result.",
+      "detail": "Full round-trip. Event types: system, user, stream_event, rate_limit_event, assistant, result.",
       "evidence": {
         "exit": 0,
-        "eventCount": 31,
+        "eventCount": 34,
         "types": [
           "system",
-          "rate_limit_event",
           "user",
           "stream_event",
+          "rate_limit_event",
           "assistant",
           "result"
         ],
@@ -450,7 +450,7 @@
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 6520
+      "ms": 4330
     },
     {
       "id": "p-usage-accounting",
@@ -491,40 +491,40 @@
         ],
         "usage": {
           "input_tokens": 10,
-          "cache_creation_input_tokens": 6415,
+          "cache_creation_input_tokens": 6419,
           "cache_read_input_tokens": 0,
-          "output_tokens": 51,
+          "output_tokens": 49,
           "server_tool_use": {
             "web_search_requests": 0,
             "web_fetch_requests": 0
           },
           "service_tier": "standard",
           "cache_creation": {
-            "ephemeral_1h_input_tokens": 6415,
+            "ephemeral_1h_input_tokens": 6419,
             "ephemeral_5m_input_tokens": 0
           },
           "inference_geo": "not_available",
           "iterations": [
             {
               "input_tokens": 10,
-              "output_tokens": 51,
+              "output_tokens": 49,
               "cache_read_input_tokens": 0,
-              "cache_creation_input_tokens": 6415,
+              "cache_creation_input_tokens": 6419,
               "cache_creation": {
                 "ephemeral_5m_input_tokens": 0,
-                "ephemeral_1h_input_tokens": 6415
+                "ephemeral_1h_input_tokens": 6419
               },
               "type": "message"
             }
           ],
           "speed": "standard"
         },
-        "cost": 0.013678999999999998,
-        "durationMs": 2370,
+        "cost": 0.013677,
+        "durationMs": 2844,
         "numTurns": 1
       },
       "observationFailures": null,
-      "ms": 3756
+      "ms": 4407
     },
     {
       "id": "p-stream-surface-union",
@@ -543,7 +543,7 @@
       "detail": "All 10 pair(s) and 11 stream_event inner type(s) observed in this session are classified, every pinned required pair arrived, and every value-conditional rule this run exercised resolved to a pinned value. SAMPLE OF ONE CONFIGURATION, not the closed set: no tool use, no subagent, no MCP server, no error result. Hooks that fired: 5.",
       "evidence": {
         "exit": 0,
-        "eventCount": 32,
+        "eventCount": 31,
         "observedPairs": [
           "assistant",
           "rate_limit_event",
@@ -597,7 +597,7 @@
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 3022
+      "ms": 4783
     },
     {
       "id": "p-json-schema",
@@ -638,11 +638,11 @@
           "duration_ms",
           "uuid"
         ],
-        "payloadPreview": "{\"productName\":\"HomeList\",\"audience\":\"Individual managing personal household shopping and groceries\",\"invariants\":[\"A list always has a name\",\"An item appears in exactly one state: pending or completed\",\"All changes persist between sessions\",\"Completed items can be unchecked and restored\",\"Deletes are permanent\"],\"acceptance\":[{\"given\":\"I open the app\",\"then\":\"I see my shopping list with all items and their completion status\"},{\"given\":\"I type a new item name and press add\",\"then\":\"the item appears at the bottom of my pending list\"},{\"given\":\"I click an item\",\"then\":\"it moves to completed and appears visually struck through\"},{\"given\":\"I click a completed item\",\"then\":\"it moves back to pendi…[975 chars]",
+        "payloadPreview": "{\"productName\":\"Shopping List\",\"audience\":\"One person managing household groceries and errands\",\"invariants\":[\"A list contains zero or more items\",\"Each item has a name and completion status\",\"Data persists across app sessions\",\"Only the owner can view or modify the list\"],\"acceptance\":[{\"given\":\"I open the app\",\"then\":\"I see my shopping list with all saved items\"},{\"given\":\"I want to add an item\",\"then\":\"I can type its name and tap Add\"},{\"given\":\"An item is on my list\",\"then\":\"I can tap it to mark it bought (visually distinct)\"},{\"given\":\"An item is on my list\",\"then\":\"I can swipe or long-press to delete it\"},{\"given\":\"I close the app\",\"then\":\"My list and item statuses are saved for next t…[707 chars]",
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 10042
+      "ms": 9979
     },
     {
       "id": "p-append-system-prompt",
@@ -663,7 +663,7 @@
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 3427
+      "ms": 2795
     },
     {
       "id": "p-agents-inline",
@@ -696,7 +696,7 @@
         "exit": 0
       },
       "observationFailures": null,
-      "ms": 53465
+      "ms": 31164
     },
     {
       "id": "p-max-budget-subscription",
@@ -719,11 +719,11 @@
         "terminalSubtype": "error_max_budget_usd",
         "budgetSubtype": true,
         "stderrMentionsBudget": false,
-        "stdout": "{\"is_error\":true,\"duration_api_ms\":1423,\"num_turns\":1,\"stop_reason\":null,\"session_id\":\"f3c0a9cf-292a-4524-9d5c-ad9a3f3a509b\",\"total_cost_usd\":0.000582,\"usage\":{\"input_tokens\":0,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"output_tokens\":0,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"modelUsage\":{\"cla…[1059 chars]",
+        "stdout": "{\"is_error\":true,\"duration_api_ms\":921,\"num_turns\":1,\"stop_reason\":null,\"session_id\":\"ff80a23f-e81a-43ec-94d8-fa1a5d3950f1\",\"total_cost_usd\":0.000582,\"usage\":{\"input_tokens\":0,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"output_tokens\":0,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"modelUsage\":{\"clau…[1057 chars]",
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 4352
+      "ms": 2515
     },
     {
       "id": "p-effort-model-fallback",
@@ -744,7 +744,7 @@
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 2823
+      "ms": 2782
     },
     {
       "id": "p-permission-allowlist",
@@ -774,7 +774,7 @@
         "permissionDeniedHookFired": false,
         "advisoryFrameSeen": false,
         "proseHintOnly": false,
-        "autoAloneStdout": "{\"type\":\"system\",\"subtype\":\"hook_started\",\"hook_id\":\"a127167c-7eb0-4c59-a475-cfe2932715e8\",\"hook_name\":\"SessionStart:startup\",\"hook_event\":\"SessionStart\",\"uuid\":\"96f10a27-be03-44c0-8bb2-240fd354d64a\",\"session_id\":\"82f3aacb-e38d-47bc-899b-2eb734de5f21\"}\n{\"type\":\"system\",\"subtype\":\"hook_response\",\"hoo…[14753 chars]",
+        "autoAloneStdout": "{\"type\":\"system\",\"subtype\":\"hook_started\",\"hook_id\":\"a9e9f6ac-d73a-4577-aa9e-0ed0ec1a0221\",\"hook_name\":\"SessionStart:startup\",\"hook_event\":\"SessionStart\",\"uuid\":\"dabc0b14-23be-416a-ad47-87db47a4b826\",\"session_id\":\"6c753db9-2fff-4114-a848-e6bedf711b5d\"}\n{\"type\":\"system\",\"subtype\":\"hook_response\",\"hoo…[19142 chars]",
         "allowListWrote": true,
         "allowListStdout": "WROTE_OK\n",
         "exits": {
@@ -783,7 +783,7 @@
         }
       },
       "observationFailures": null,
-      "ms": 14195
+      "ms": 21959
     },
     {
       "id": "p-session-identity",
@@ -799,9 +799,9 @@
       "status": "pass",
       "detail": "Session id honoured, resume kept context, fork produced a new id.",
       "evidence": {
-        "suppliedId": "9a64a5bb-7071-4822-8a36-5d0bf8b456c5",
+        "suppliedId": "06a5fd3d-98eb-4d39-bfef-fbc7d4048f0d",
         "resumeRecalled": true,
-        "forkedId": "5d0dae52-6e09-494e-9a73-2e6903d6712d",
+        "forkedId": "70c33375-fc22-47ec-b3a0-3883cbb5b792",
         "exits": {
           "first": 0,
           "second": 0,
@@ -809,7 +809,7 @@
         }
       },
       "observationFailures": null,
-      "ms": 11006
+      "ms": 17149
     },
     {
       "id": "p-mcp-strict-load",
@@ -826,11 +826,11 @@
       "detail": "MCP server loaded from the command line and its tool was callable under a fail-closed allow-list (mcp__<server>__<tool>).",
       "evidence": {
         "exit": 0,
-        "stdout": "{\"is_error\":false,\"duration_api_ms\":11135,\"num_turns\":3,\"stop_reason\":\"end_turn\",\"session_id\":\"4065413d-38a9-4740-94bf-ba2203bface9\",\"total_cost_usd\":0.0232289,\"usage\":{\"input_tokens\":28,\"cache_creation_input_tokens\":7125,\"cache_read_input_tokens\":66289,\"output_tokens\":341,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":7125,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"not_available\",\"iterations\":[{\"input_tokens\":8,\"output_tokens\":55,\"cache_read_input_tokens\":24538,\"cache_creation_input_tokens\":123,\"cache_creation\":{\"ephemeral_5m_input_tokens\":0,\"ephemeral_1h_input_tokens\":123},\"type\":\"message\"}],\"s…[1353 chars]",
+        "stdout": "{\"is_error\":false,\"duration_api_ms\":8307,\"num_turns\":3,\"stop_reason\":\"end_turn\",\"session_id\":\"91654f51-699c-40c4-a48d-d98d89b96ba0\",\"total_cost_usd\":0.023160199999999995,\"usage\":{\"input_tokens\":28,\"cache_creation_input_tokens\":7116,\"cache_read_input_tokens\":66282,\"output_tokens\":327,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":7116,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"not_available\",\"iterations\":[{\"input_tokens\":8,\"output_tokens\":54,\"cache_read_input_tokens\":24527,\"cache_creation_input_tokens\":125,\"cache_creation\":{\"ephemeral_5m_input_tokens\":0,\"ephemeral_1h_input_tokens\":125},\"type\":\"mes…[1374 chars]",
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 10702
+      "ms": 8511
     },
     {
       "id": "p-plugin-skill-headless",
@@ -851,7 +851,7 @@
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 3762
+      "ms": 4686
     },
     {
       "id": "p-hook-events-headless",
@@ -883,11 +883,11 @@
         "markerSurvived": true,
         "wroteFile": true,
         "hookEventsInStreamCount": 12,
-        "sampleHookEvent": "{\"type\":\"system\",\"subtype\":\"hook_started\",\"hook_id\":\"51a0c0e1-5320-406e-bd37-0f9d74b7b546\",\"hook_name\":\"SessionStart:startup\",\"hook_event\":\"SessionStart\",\"uuid\":\"3e703b26-b612-46d5-a2ac-72637fe02378\",\"session_id\":\"69536abb-07a2-4543-9a97-e71613b068cd\"}",
+        "sampleHookEvent": "{\"type\":\"system\",\"subtype\":\"hook_started\",\"hook_id\":\"587daeb3-f1ec-4715-bf19-38e915ae0964\",\"hook_name\":\"SessionStart:startup\",\"hook_event\":\"SessionStart\",\"uuid\":\"82604ad3-2f48-4875-95a9-d5aba3fdb037\",\"session_id\":\"ca611f5e-b4d5-40e8-b605-e11df4df8e35\"}",
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 6704
+      "ms": 9235
     },
     {
       "id": "p-plugin-bundled-mcp",
@@ -908,7 +908,7 @@
           "fixture": [
             "plugin:guidelane-probe:echo [connected]"
           ],
-          "ambientCount": 1
+          "ambientCount": 6
         },
         "strict": {
           "fixture": [],
@@ -927,7 +927,7 @@
         "initToolsCarriesMcpNames": false
       },
       "observationFailures": null,
-      "ms": 29291
+      "ms": 36892
     },
     {
       "id": "p-hook-failure-detectable",
@@ -1015,7 +1015,7 @@
         ]
       },
       "observationFailures": null,
-      "ms": 20101
+      "ms": 22544
     },
     {
       "id": "p-no-headless-dialog",
@@ -1065,7 +1065,7 @@
         "workspaceTrustDialog": "documented by --help as SKIPPED in non-interactive mode"
       },
       "observationFailures": null,
-      "ms": 8863
+      "ms": 8845
     },
     {
       "id": "p-backpressure-lossless",
@@ -1080,25 +1080,60 @@
       ],
       "failureImpact": "REVIEW-02 A5 + A3b. If the stream were lossy under load, a slow renderer would silently lose events — including the evidence that a tool was DENIED, which is what a phase failure is detected from. A gate reading a lossy channel reports success for work that never happened.",
       "status": "pass",
-      "detail": "Backpressure proven and lossless. Undrained for 55s, then 92460 bytes arrived within 250ms — more than a 65536-byte pipe can hold, so the writer WAS blocked with data queued — and 52231 further bytes followed, so the engine was alive and blocked rather than finished. All 326 lines parsed, 0 damaged. The denied tool_result and the terminal result both survived. So the engine BLOCKS rather than dropping: a slow cockpit loses nothing — but it STALLS the engine, which is a different hazard, and an inter-event stall watchdog must therefore not fire when the consumer is itself the cause.",
+      "detail": "Backpressure proven and lossless. Undrained for 55s, then 123002 bytes arrived within 250ms — more than a 65536-byte pipe can hold, so the writer WAS blocked with data queued — and 150917 further bytes followed, so the engine was alive and blocked rather than finished. All 603 lines parsed, 0 damaged. The denied tool_result and the terminal result both survived. So the engine BLOCKS rather than dropping: a slow cockpit loses nothing — but it STALLS the engine, which is a different hazard, and an inter-event stall watchdog must therefore not fire when the consumer is itself the cause.",
       "evidence": {
         "exit": 0,
-        "totalBytes": 153171,
-        "bytesBeforePausing": 8480,
-        "burstBytesWithin250msOfResume": 92460,
+        "totalBytes": 282051,
+        "bytesBeforePausing": 8132,
+        "burstBytesWithin250msOfResume": 123002,
         "pipeBytes": 65536,
-        "bytesAfterBurst": 52231,
-        "lines": 326,
-        "parsed": 326,
+        "bytesAfterBurst": 150917,
+        "lines": 603,
+        "parsed": 603,
         "unparseable": 0,
-        "deniedToolResults": 1,
+        "deniedToolResults": 2,
         "terminal": "result/success",
-        "permissionDenials": 1,
+        "permissionDenials": 2,
         "backpressureProven": true,
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 64180
+      "ms": 117213
+    },
+    {
+      "id": "p-phase-terminator",
+      "title": "A phase ends when stdin closes — never on its own, and not at the terminal result",
+      "kind": "fixture-call",
+      "loadBearing": "critical",
+      "claim": "With stdin held open a `-p` session does NOT exit after `result` — `result` is a per-turn event. Closing stdin is the terminator, and the process exits shortly after. Output continues to arrive after the close, so a closer must keep draining until the process ends.",
+      "docRefs": [
+        "REVIEW-02 §15",
+        "REVIEW-02 §18",
+        "ADR-007"
+      ],
+      "failureImpact": "An adapter that waits for process exit after `result` hangs forever — the \"run goes silent with no terminal event\" class REVIEW-02 Tier A exists to prevent. One that treats `result` as session-end leaks a live engine process spending quota. One that closes stdin and stops reading truncates the phase output. All three are silent.",
+      "status": "pass",
+      "detail": "The terminator is stdin.end(). With stdin open the session reached result at 4308ms and was STILL ALIVE 20000ms later — so `result` is per-turn, not session-terminal, and an adapter that waits for process exit after it hangs forever. Closing stdin ended it with exit 0 in 562ms. Adapter rule that follows: end a phase by closing stdin, then KEEP DRAINING stdout until the process 'close' event — output still arrives after the close — and treat \"no exit within a bounded window after closing stdin\" as the real stall signal.",
+      "evidence": {
+        "noCloseArm": {
+          "firstResultAt": 4308,
+          "exitedOnItsOwn": false,
+          "codeIfExited": null,
+          "stillAliveAfterMs": 20000,
+          "killedByProbeAfterwards": true
+        },
+        "closeOnResultArm": {
+          "firstResultAt": 3254,
+          "exitLatencyMs": 562,
+          "exited": true,
+          "code": 0,
+          "bytesAfterClose": 0
+        },
+        "terminator": "stdin.end()",
+        "resultIsPerTurn": true
+      },
+      "observationFailures": null,
+      "ms": 28254
     },
     {
       "id": "p-stream-surface-artifact",
@@ -1161,7 +1196,7 @@
         "checksShapeNotBehaviour": true
       },
       "observationFailures": null,
-      "ms": 3
+      "ms": 9
     },
     {
       "id": "p-version-readable",
@@ -1181,7 +1216,7 @@
         "parsed": "2.1.220"
       },
       "observationFailures": null,
-      "ms": 397
+      "ms": 143
     },
     {
       "id": "p-auth-mode-visibility",
@@ -1225,7 +1260,7 @@
         "parseFailed": false
       },
       "observationFailures": null,
-      "ms": 439
+      "ms": 638
     },
     {
       "id": "p-automode-classifier-pinned",
@@ -1253,7 +1288,7 @@
         "totalRules": 103
       },
       "observationFailures": null,
-      "ms": 1235
+      "ms": 3083
     },
     {
       "id": "p-autoupdate-governable",
@@ -1278,7 +1313,7 @@
         }
       },
       "observationFailures": null,
-      "ms": 2533
+      "ms": 4814
     },
     {
       "id": "p-rate-limit-signal",
@@ -1318,7 +1353,7 @@
         "note": "Only the healthy (\"allowed\") branch is observed here; the rejected branch is not provoked on purpose."
       },
       "observationFailures": null,
-      "ms": 2823
+      "ms": 4393
     }
   ],
   "exercisedVersion": "2.1.220 (Claude Code)"

@@ -35,6 +35,7 @@
     "p-hook-failure-detectable": "pass",
     "p-no-headless-dialog": "pass",
     "p-backpressure-lossless": "pass",
+    "p-phase-terminator": "pass",
     "p-stream-surface-artifact": "pass",
     "p-version-readable": "pass",
     "p-auth-mode-visibility": "pass",
