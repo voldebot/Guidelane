@@ -69,6 +69,44 @@ stream-json session emits
 
 `resetsAt` is epoch seconds. The supervisor does not have to guess.
 
+#### Correction, 2026-07-31 (evening) — there is a second window type, and it is not sleepable
+
+The block above records one window. A live run of the S1 engine adapter emitted a
+second one, on the same flags and the same model, hours later:
+
+```json
+{"type":"rate_limit_event","rate_limit_info":{
+  "status":"allowed_warning","resetsAt":1785985200,"rateLimitType":"seven_day",
+  "utilization":0.51,"isUsingOverage":false}}
+```
+
+Three corrections follow, and the third is a design change:
+
+1. **`status` has at least three values, not one.** `allowed_warning` is a
+   healthy session approaching a ceiling. The suite had only ever seen `allowed`,
+   and this value was surfaced by the adapter's fail-closed `unknown: escalate`
+   branch rather than by anyone predicting it — which is the branch working as
+   designed. It is now classified `render` in `tools/probe/stream-surface.json`.
+2. **`utilization`** (a 0–1 fraction) is a field this ADR did not record. It is
+   the only forward-looking number the engine gives: it says *how close*, where
+   `resetsAt` only says *when it ends*.
+3. **`seven_day` breaks "sleep to `resetsAt`".** That rule was written against a
+   five-hour window, where sleeping is the right answer — the run resumes the
+   same night. A seven-day window's `resetsAt` can be days out. A Night Shift
+   supervisor that obeys Finding 3 literally would go silent until next week
+   while looking exactly like a working run, which is the specific failure
+   REVIEW-02 names as the worst available outcome in front of a non-coder.
+   **The rule is therefore split by window type**: sleep only when the wait fits
+   inside the run's own remaining budget; otherwise stop the phase, park the
+   work, and say so in plain language with the reset date. The threshold is the
+   supervisor's, not the engine's — the engine reports, Guidelane decides.
+
+The probe (`p-rate-limit-signal`) asserts the *presence* of `status`,
+`rateLimitType` and `resetsAt`, not their values, so it did not and will not go
+red on this. That is deliberate: pinning the value set here would make the probe
+fail every time the vendor adds a window, which is drift the cockpit whitelist is
+built to absorb (`defaultForUnknown: escalate`) rather than a contract break.
+
 ## Decision
 
 **Finding 1 → Option B.** Every session runs `--permission-mode auto` with an
@@ -88,6 +126,9 @@ simply does not carry the MCP server. ADR-003 is corrected accordingly.
 `rate_limit_event`, sleeps to `resetsAt` on a limit, and reports window type
 and reset time in the morning report and the cockpit. Blind backoff-poll stays
 as the fallback for unknown non-zero exits, not as the primary mechanism.
+*Amended 2026-07-31 (see the correction under Finding 3): "sleeps to `resetsAt`"
+holds for `five_hour` and must NOT be applied to `seven_day` — a wait that
+outlasts the run stops the phase and tells the user, it does not sleep.*
 
 Confirmations recorded by the same run (no design change, but now measured
 rather than assumed): all 33 depended-on flags exist; `--bare`'s help text

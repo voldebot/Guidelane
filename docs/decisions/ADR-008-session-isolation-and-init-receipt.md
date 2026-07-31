@@ -89,8 +89,9 @@ the init receipt. The probe harness already does this; the product rule in
 **2. The init receipt is a gate, not telemetry.** Before a stage session is
 allowed to do any work, the orchestrator asserts on its init event:
 Atlas present in `mcp_servers` (see the status caveat below); expected plugin(s)
-in `plugins`; `permissionMode` as requested; `model` as routed;
-`claude_code_version` inside the tested range; `apiKeySource` consistent with the
+in `plugins`; `permissionMode` as requested; `model` as routed (**see the alias
+correction below — "as routed" is a trap**); `claude_code_version` inside the
+tested range; `apiKeySource` consistent with the
 detected auth mode. Any mismatch fails the phase **before** tokens are spent,
 with a plain-language cause. This single mechanism closes the
 silently-ignored-settings hazard, the silently-absent-Atlas hazard, and the
@@ -121,6 +122,42 @@ assertion someone would reasonably have written:
   `mcp__plugin_<plugin>_<server>__<tool>` for plugin-bundled servers.
 - `init.agents` **does** reflect `--agents`, so inline-agent registration is
   assertable on the receipt even though *dispatch* is a model decision.
+
+*Correction (measured 2026-07-31, evening — the adapter's first live run).*
+**`init.model` carries the RESOLVED model id, never the alias that was routed
+with.** `--model haiku` reports `claude-haiku-4-5-20251001`; `--model sonnet`
+reports `claude-sonnet-5`. The phrase "`model` as routed" above therefore
+describes an assertion that **fails on every healthy session** if written the
+obvious way, and it did: the engine adapter's first end-to-end run failed its own
+init receipt with `model is "claude-haiku-4-5-20251001", expected "haiku"`.
+
+The receipt now takes two distinct expectations, because they answer two
+different questions and conflating them is how the trap was set:
+
+- **`model`** — an exact resolved id, for pinning one build. It will fail the
+  day the vendor ships a new one, which is a deliberate re-pin, not a bug.
+- **`modelAlias`** — the family the crew router asked for, asserted as
+  **dash-delimited segment membership** in the resolved id
+  (`claude-haiku-4-5-20251001`.split('-') contains `haiku`). Segment membership
+  rather than substring: substring also accepts `claude-haikuish-9`, and a guard
+  that passes for the wrong reason is the defect this project keeps
+  rediscovering. It can fire — routing `opus` and being answered by haiku fails.
+
+Note the two id shapes above: one carries a date suffix and the other does not,
+so any rule that parses the id positionally is already wrong.
+
+*Consequence for the conformance suite, same day.* `p-effort-model-fallback` —
+the evidence for ADR-004 crew routing, load-bearing `high` — read the model off
+`--output-format json`, which does not carry it. It had been recording
+`"model reported as not surfaced in result"` and passing on a zero exit for its
+whole life, unable to tell a session that honoured `--model` from one that
+ignored it. It now reads the init receipt and asserts segment membership;
+falsified by routing `sonnet` while asserting `haiku`
+(`routed --model haiku but claude-sonnet-5 answered`). That is **instance 24** of
+the shape in `CLAUDE.md` §8 — recorded where it should have asserted, and the
+inference failed open. `--effort` has no receipt field at all, so the probe now
+records `effortAssertable: false` rather than letting a green result imply that
+effort was verified.
 
 **3. `MessageDisplay` rewriting is adopted as a real mechanism — with its fail-open
 caveat stated.** The engine emits the original text when a MessageDisplay hook
