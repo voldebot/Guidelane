@@ -1,6 +1,6 @@
 {
   "version": "2.1.220 (Claude Code)",
-  "generatedAt": "2026-07-31T18:15:46.831Z",
+  "generatedAt": "2026-07-31T18:47:34.811Z",
   "suiteRoot": "<TMP>/guidelane-probe-<run>",
   "workspacesKept": false,
   "stoleStaleLock": false,
@@ -11,8 +11,8 @@
     "live": true,
     "only": null,
     "kinds": null,
-    "probesDefined": 34,
-    "probesRun": 34
+    "probesDefined": 35,
+    "probesRun": 35
   },
   "options": {
     "live": true,
@@ -27,7 +27,7 @@
       "CLAUDE_CODE_SIMPLE",
       "CLAUDE_CODE_SAFE_MODE"
     ],
-    "spawns": 41,
+    "spawns": 42,
     "ambientSpawns": 4,
     "autoUpdateOptOuts": 1,
     "expectedTimeouts": 2,
@@ -41,7 +41,7 @@
     ]
   },
   "counts": {
-    "pass": 34,
+    "pass": 35,
     "fail": 0,
     "partial": 0,
     "skip": 0,
@@ -70,7 +70,7 @@
         "declaredCount": 69
       },
       "observationFailures": null,
-      "ms": 136
+      "ms": 203
     },
     {
       "id": "p-bare-forbidden",
@@ -134,7 +134,7 @@
         "present": true
       },
       "observationFailures": null,
-      "ms": 0
+      "ms": 1
     },
     {
       "id": "p-plugin-eval-exists",
@@ -154,7 +154,7 @@
         "hasEval": true
       },
       "observationFailures": null,
-      "ms": 121
+      "ms": 193
     },
     {
       "id": "p-plugin-validate-fixture",
@@ -175,7 +175,7 @@
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 236
+      "ms": 346
     },
     {
       "id": "p-kill-reaps-process-group",
@@ -197,7 +197,7 @@
         "settleMs": 4006
       },
       "observationFailures": null,
-      "ms": 4007
+      "ms": 4008
     },
     {
       "id": "p-watchdog-settles-on-escaped-child",
@@ -212,15 +212,15 @@
       ],
       "failureImpact": "The single worst outcome the product can have: a run that stops with no output, no error, and no terminal event. In the nightly job it burns to the CI cap; in front of a non-coder it is \"the computer froze\".",
       "status": "pass",
-      "detail": "Escaped grandchild held the pipe open and 'close' never came, yet the call settled in 8007ms via the watchdog. A stuck session degrades into evidence instead of a silent hang. As designed, the escapee outlived the group kill — the probe reaped it itself.",
+      "detail": "Escaped grandchild held the pipe open and 'close' never came, yet the call settled in 8004ms via the watchdog. A stuck session degrades into evidence instead of a silent hang. As designed, the escapee outlived the group kill — the probe reaped it itself.",
       "evidence": {
-        "elapsedMs": 8007,
+        "elapsedMs": 8004,
         "timedOut": true,
         "escapeeOutlivedGroupKill": true,
-        "settleMs": 8007
+        "settleMs": 8004
       },
       "observationFailures": null,
-      "ms": 8009
+      "ms": 8006
     },
     {
       "id": "p-version-in-tested-range",
@@ -245,7 +245,7 @@
         "inRange": true
       },
       "observationFailures": null,
-      "ms": 79
+      "ms": 114
     },
     {
       "id": "p-init-receipt",
@@ -299,7 +299,7 @@
         "version": "2.1.220"
       },
       "observationFailures": null,
-      "ms": 2638
+      "ms": 3068
     },
     {
       "id": "p-ambient-isolation",
@@ -365,7 +365,7 @@
         "bothFlagsRequired": true
       },
       "observationFailures": null,
-      "ms": 8679
+      "ms": 9240
     },
     {
       "id": "p-messagedisplay-rewrite",
@@ -389,7 +389,7 @@
         "rewritten": true
       },
       "observationFailures": null,
-      "ms": 3136
+      "ms": 4863
     },
     {
       "id": "p-stream-json-roundtrip",
@@ -406,7 +406,7 @@
       "detail": "Full round-trip. Event types: system, rate_limit_event, user, stream_event, assistant, result.",
       "evidence": {
         "exit": 0,
-        "eventCount": 23,
+        "eventCount": 31,
         "types": [
           "system",
           "rate_limit_event",
@@ -450,7 +450,7 @@
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 3028
+      "ms": 6520
     },
     {
       "id": "p-usage-accounting",
@@ -491,40 +491,40 @@
         ],
         "usage": {
           "input_tokens": 10,
-          "cache_creation_input_tokens": 6419,
+          "cache_creation_input_tokens": 6415,
           "cache_read_input_tokens": 0,
-          "output_tokens": 45,
+          "output_tokens": 51,
           "server_tool_use": {
             "web_search_requests": 0,
             "web_fetch_requests": 0
           },
           "service_tier": "standard",
           "cache_creation": {
-            "ephemeral_1h_input_tokens": 6419,
+            "ephemeral_1h_input_tokens": 6415,
             "ephemeral_5m_input_tokens": 0
           },
           "inference_geo": "not_available",
           "iterations": [
             {
               "input_tokens": 10,
-              "output_tokens": 45,
+              "output_tokens": 51,
               "cache_read_input_tokens": 0,
-              "cache_creation_input_tokens": 6419,
+              "cache_creation_input_tokens": 6415,
               "cache_creation": {
                 "ephemeral_5m_input_tokens": 0,
-                "ephemeral_1h_input_tokens": 6419
+                "ephemeral_1h_input_tokens": 6415
               },
               "type": "message"
             }
           ],
           "speed": "standard"
         },
-        "cost": 0.013657,
-        "durationMs": 2046,
+        "cost": 0.013678999999999998,
+        "durationMs": 2370,
         "numTurns": 1
       },
       "observationFailures": null,
-      "ms": 3363
+      "ms": 3756
     },
     {
       "id": "p-stream-surface-union",
@@ -597,7 +597,7 @@
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 2954
+      "ms": 3022
     },
     {
       "id": "p-json-schema",
@@ -638,11 +638,11 @@
           "duration_ms",
           "uuid"
         ],
-        "payloadPreview": "{\"productName\":\"Pantry\",\"audience\":\"Individual managing personal household groceries\",\"invariants\":[\"The list persists across sessions\",\"Each item has a name and checked state\",\"Checked items are visually distinguished\",\"A single person owns all items\"],\"acceptance\":[{\"given\":\"I open the app\",\"then\":\"I see my shopping list with all items I added before\"},{\"given\":\"I type a new item and press enter\",\"then\":\"it appears at the bottom of my list unchecked\"},{\"given\":\"I tap an item\",\"then\":\"it toggles between checked and unchecked\"},{\"given\":\"I swipe or long-press an item\",\"then\":\"I can delete it\"},{\"given\":\"I have checked items on my list\",\"then\":\"I can clear them all at once\"}]}",
+        "payloadPreview": "{\"productName\":\"HomeList\",\"audience\":\"Individual managing personal household shopping and groceries\",\"invariants\":[\"A list always has a name\",\"An item appears in exactly one state: pending or completed\",\"All changes persist between sessions\",\"Completed items can be unchecked and restored\",\"Deletes are permanent\"],\"acceptance\":[{\"given\":\"I open the app\",\"then\":\"I see my shopping list with all items and their completion status\"},{\"given\":\"I type a new item name and press add\",\"then\":\"the item appears at the bottom of my pending list\"},{\"given\":\"I click an item\",\"then\":\"it moves to completed and appears visually struck through\"},{\"given\":\"I click a completed item\",\"then\":\"it moves back to pendi…[975 chars]",
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 9189
+      "ms": 10042
     },
     {
       "id": "p-append-system-prompt",
@@ -663,7 +663,7 @@
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 2759
+      "ms": 3427
     },
     {
       "id": "p-agents-inline",
@@ -696,7 +696,7 @@
         "exit": 0
       },
       "observationFailures": null,
-      "ms": 47464
+      "ms": 53465
     },
     {
       "id": "p-max-budget-subscription",
@@ -719,11 +719,11 @@
         "terminalSubtype": "error_max_budget_usd",
         "budgetSubtype": true,
         "stderrMentionsBudget": false,
-        "stdout": "{\"is_error\":true,\"duration_api_ms\":1313,\"num_turns\":1,\"stop_reason\":null,\"session_id\":\"a73800e5-5626-4d1f-8559-b772c16afe5b\",\"total_cost_usd\":0.000597,\"usage\":{\"input_tokens\":0,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"output_tokens\":0,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"modelUsage\":{\"cla…[1059 chars]",
+        "stdout": "{\"is_error\":true,\"duration_api_ms\":1423,\"num_turns\":1,\"stop_reason\":null,\"session_id\":\"f3c0a9cf-292a-4524-9d5c-ad9a3f3a509b\",\"total_cost_usd\":0.000582,\"usage\":{\"input_tokens\":0,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"output_tokens\":0,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"modelUsage\":{\"cla…[1059 chars]",
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 3304
+      "ms": 4352
     },
     {
       "id": "p-effort-model-fallback",
@@ -744,7 +744,7 @@
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 3349
+      "ms": 2823
     },
     {
       "id": "p-permission-allowlist",
@@ -774,7 +774,7 @@
         "permissionDeniedHookFired": false,
         "advisoryFrameSeen": false,
         "proseHintOnly": false,
-        "autoAloneStdout": "{\"type\":\"system\",\"subtype\":\"hook_started\",\"hook_id\":\"b9679b0f-7e0e-4142-af90-c1e037c5ab93\",\"hook_name\":\"SessionStart:startup\",\"hook_event\":\"SessionStart\",\"uuid\":\"05f30b0a-a072-475d-aafb-d26ff1dc2af7\",\"session_id\":\"e940b9b3-ded6-44bf-a7e9-fee25353585f\"}\n{\"type\":\"system\",\"subtype\":\"hook_response\",\"hoo…[26370 chars]",
+        "autoAloneStdout": "{\"type\":\"system\",\"subtype\":\"hook_started\",\"hook_id\":\"a127167c-7eb0-4c59-a475-cfe2932715e8\",\"hook_name\":\"SessionStart:startup\",\"hook_event\":\"SessionStart\",\"uuid\":\"96f10a27-be03-44c0-8bb2-240fd354d64a\",\"session_id\":\"82f3aacb-e38d-47bc-899b-2eb734de5f21\"}\n{\"type\":\"system\",\"subtype\":\"hook_response\",\"hoo…[14753 chars]",
         "allowListWrote": true,
         "allowListStdout": "WROTE_OK\n",
         "exits": {
@@ -783,7 +783,7 @@
         }
       },
       "observationFailures": null,
-      "ms": 21416
+      "ms": 14195
     },
     {
       "id": "p-session-identity",
@@ -799,9 +799,9 @@
       "status": "pass",
       "detail": "Session id honoured, resume kept context, fork produced a new id.",
       "evidence": {
-        "suppliedId": "ce30e54a-0b92-4820-b481-ebdea9a40f05",
+        "suppliedId": "9a64a5bb-7071-4822-8a36-5d0bf8b456c5",
         "resumeRecalled": true,
-        "forkedId": "b7af0028-10e5-4b54-a323-dec8bb0f2f2d",
+        "forkedId": "5d0dae52-6e09-494e-9a73-2e6903d6712d",
         "exits": {
           "first": 0,
           "second": 0,
@@ -809,7 +809,7 @@
         }
       },
       "observationFailures": null,
-      "ms": 14269
+      "ms": 11006
     },
     {
       "id": "p-mcp-strict-load",
@@ -826,11 +826,11 @@
       "detail": "MCP server loaded from the command line and its tool was callable under a fail-closed allow-list (mcp__<server>__<tool>).",
       "evidence": {
         "exit": 0,
-        "stdout": "{\"is_error\":false,\"duration_api_ms\":8712,\"num_turns\":3,\"stop_reason\":\"end_turn\",\"session_id\":\"c586eb7e-0652-438d-8542-c4e3aaded41b\",\"total_cost_usd\":0.0237258,\"usage\":{\"input_tokens\":28,\"cache_creation_input_tokens\":7204,\"cache_read_input_tokens\":66328,\"output_tokens\":408,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":7204,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"not_available\",\"iterations\":[{\"input_tokens\":8,\"output_tokens\":47,\"cache_read_input_tokens\":24573,\"cache_creation_input_tokens\":167,\"cache_creation\":{\"ephemeral_5m_input_tokens\":0,\"ephemeral_1h_input_tokens\":167},\"type\":\"message\"}],\"sp…[1352 chars]",
+        "stdout": "{\"is_error\":false,\"duration_api_ms\":11135,\"num_turns\":3,\"stop_reason\":\"end_turn\",\"session_id\":\"4065413d-38a9-4740-94bf-ba2203bface9\",\"total_cost_usd\":0.0232289,\"usage\":{\"input_tokens\":28,\"cache_creation_input_tokens\":7125,\"cache_read_input_tokens\":66289,\"output_tokens\":341,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":7125,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"not_available\",\"iterations\":[{\"input_tokens\":8,\"output_tokens\":55,\"cache_read_input_tokens\":24538,\"cache_creation_input_tokens\":123,\"cache_creation\":{\"ephemeral_5m_input_tokens\":0,\"ephemeral_1h_input_tokens\":123},\"type\":\"message\"}],\"s…[1353 chars]",
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 8722
+      "ms": 10702
     },
     {
       "id": "p-plugin-skill-headless",
@@ -851,7 +851,7 @@
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 3464
+      "ms": 3762
     },
     {
       "id": "p-hook-events-headless",
@@ -883,11 +883,11 @@
         "markerSurvived": true,
         "wroteFile": true,
         "hookEventsInStreamCount": 12,
-        "sampleHookEvent": "{\"type\":\"system\",\"subtype\":\"hook_started\",\"hook_id\":\"0faa9e06-bcea-4bdb-9b40-b0ea1ad5f8d8\",\"hook_name\":\"SessionStart:startup\",\"hook_event\":\"SessionStart\",\"uuid\":\"7f23c089-cfb9-4df5-b606-a452b6352566\",\"session_id\":\"7972f8c9-fd3f-419b-a0fc-24f1df0c727b\"}",
+        "sampleHookEvent": "{\"type\":\"system\",\"subtype\":\"hook_started\",\"hook_id\":\"51a0c0e1-5320-406e-bd37-0f9d74b7b546\",\"hook_name\":\"SessionStart:startup\",\"hook_event\":\"SessionStart\",\"uuid\":\"3e703b26-b612-46d5-a2ac-72637fe02378\",\"session_id\":\"69536abb-07a2-4543-9a97-e71613b068cd\"}",
         "stderr": ""
       },
       "observationFailures": null,
-      "ms": 7757
+      "ms": 6704
     },
     {
       "id": "p-plugin-bundled-mcp",
@@ -927,7 +927,7 @@
         "initToolsCarriesMcpNames": false
       },
       "observationFailures": null,
-      "ms": 22405
+      "ms": 29291
     },
     {
       "id": "p-hook-failure-detectable",
@@ -1015,7 +1015,7 @@
         ]
       },
       "observationFailures": null,
-      "ms": 19559
+      "ms": 20101
     },
     {
       "id": "p-no-headless-dialog",
@@ -1057,6 +1057,7 @@
           "system/thinking_tokens",
           "user"
         ],
+        "detectsNewPairNotNewField": true,
         "alsoMeasuredInSpike": {
           "auto": "denials 1, no dialog",
           "dontAsk": "denials 2, no dialog"
@@ -1064,7 +1065,40 @@
         "workspaceTrustDialog": "documented by --help as SKIPPED in non-interactive mode"
       },
       "observationFailures": null,
-      "ms": 8111
+      "ms": 8863
+    },
+    {
+      "id": "p-backpressure-lossless",
+      "title": "When the consumer stops reading, the engine BLOCKS — it does not drop events, and the denial channel survives",
+      "kind": "fixture-call",
+      "loadBearing": "critical",
+      "claim": "A cockpit that stops draining stdout causes the engine to block on write. No stream-json line is dropped or truncated, and `tool_result.is_error` — the measured denial channel (A3a) — survives the pressure, unlike the `permission_denied` advisory frame the binary explicitly drops.",
+      "docRefs": [
+        "REVIEW-02 §3 A5",
+        "REVIEW-02 §3 A3b",
+        "REVIEW-02 §12"
+      ],
+      "failureImpact": "REVIEW-02 A5 + A3b. If the stream were lossy under load, a slow renderer would silently lose events — including the evidence that a tool was DENIED, which is what a phase failure is detected from. A gate reading a lossy channel reports success for work that never happened.",
+      "status": "pass",
+      "detail": "Backpressure proven and lossless. Undrained for 55s, then 92460 bytes arrived within 250ms — more than a 65536-byte pipe can hold, so the writer WAS blocked with data queued — and 52231 further bytes followed, so the engine was alive and blocked rather than finished. All 326 lines parsed, 0 damaged. The denied tool_result and the terminal result both survived. So the engine BLOCKS rather than dropping: a slow cockpit loses nothing — but it STALLS the engine, which is a different hazard, and an inter-event stall watchdog must therefore not fire when the consumer is itself the cause.",
+      "evidence": {
+        "exit": 0,
+        "totalBytes": 153171,
+        "bytesBeforePausing": 8480,
+        "burstBytesWithin250msOfResume": 92460,
+        "pipeBytes": 65536,
+        "bytesAfterBurst": 52231,
+        "lines": 326,
+        "parsed": 326,
+        "unparseable": 0,
+        "deniedToolResults": 1,
+        "terminal": "result/success",
+        "permissionDenials": 1,
+        "backpressureProven": true,
+        "stderr": ""
+      },
+      "observationFailures": null,
+      "ms": 64180
     },
     {
       "id": "p-stream-surface-artifact",
@@ -1127,7 +1161,7 @@
         "checksShapeNotBehaviour": true
       },
       "observationFailures": null,
-      "ms": 1
+      "ms": 3
     },
     {
       "id": "p-version-readable",
@@ -1147,7 +1181,7 @@
         "parsed": "2.1.220"
       },
       "observationFailures": null,
-      "ms": 94
+      "ms": 397
     },
     {
       "id": "p-auth-mode-visibility",
@@ -1191,7 +1225,7 @@
         "parseFailed": false
       },
       "observationFailures": null,
-      "ms": 318
+      "ms": 439
     },
     {
       "id": "p-automode-classifier-pinned",
@@ -1219,7 +1253,7 @@
         "totalRules": 103
       },
       "observationFailures": null,
-      "ms": 1151
+      "ms": 1235
     },
     {
       "id": "p-autoupdate-governable",
@@ -1244,7 +1278,7 @@
         }
       },
       "observationFailures": null,
-      "ms": 2405
+      "ms": 2533
     },
     {
       "id": "p-rate-limit-signal",
@@ -1284,7 +1318,7 @@
         "note": "Only the healthy (\"allowed\") branch is observed here; the rejected branch is not provoked on purpose."
       },
       "observationFailures": null,
-      "ms": 3031
+      "ms": 2823
     }
   ],
   "exercisedVersion": "2.1.220 (Claude Code)"
