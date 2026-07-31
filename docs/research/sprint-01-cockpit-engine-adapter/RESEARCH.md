@@ -102,8 +102,47 @@ Three tests before shipping any guard (PROJECT_MAP Principle 9): **can it fire?*
 
 `spawnCapture` buffers everything, closes stdin immediately, and times out on
 wall-clock. A1, A5 and A3b's backpressure half are therefore **structurally**
-unmeasurable with it — not hard, impossible. That is what makes the throwaway
-reactive rig a gate rather than a task.
+unmeasurable with it — not hard, impossible. That is what makes the reactive rig
+a gate rather than a task.
+
+### D — The S1-B gate was measured before the plan was committed to (2026-07-31)
+
+A `/loophole-loop` pass tested the plan's most expensive assumption instead of
+honouring it. **30 lines, one engine call, and the gate passed.**
+
+Spawned `-p --input-format stream-json --output-format stream-json` under the
+isolation pair, wrote one message, and **deliberately did not close stdin**.
+On observing `result #1` the harness wrote a *second* message in reaction to it.
+The engine consumed it and answered with the marker that appears nowhere in the
+first turn:
+
+```
+  +3206ms  result #1  subtype=success
+  +3206ms  >>> wrote message 2 in reaction to result #1
+  +9177ms  assistant: "RIG_SECOND_OK"
+  +9326ms  result #2  subtype=success
+```
+
+So the S1-B exit criterion — *observe an event mid-stream and write a reply the
+engine visibly acts on* — is **already satisfied**, and A1/A5/A3b are reachable
+far sooner than the dependency split assumed.
+
+**The unasked-for finding, which matters more.** After `result #2` the process
+**did not exit**. It sat there until a 90-second timeout killed it (exit `null`,
+SIGKILL). With stdin held open, `result` is a **per-turn** event, not a session
+terminal event. Consequences the plan had not named:
+
+- an adapter that waits for process exit after `result` **hangs forever** — which
+  is precisely the "the run goes silent with no terminal event" class REVIEW-02
+  Tier A exists to prevent, produced accidentally in 30 lines;
+- an adapter that treats `result` as session-end while stdin is open **leaks a
+  live engine process**, and `tools/probe/lib/runner.mjs`'s process-group kill is
+  the only thing that has ever cleaned those up;
+- phase lifecycle therefore needs an **explicit terminator** (close stdin, or a
+  documented control message). Which one is correct is unmeasured.
+
+Corollary for S2: two turns ran on one session, so the "fresh-session cost
+premium vs long session" benchmark has a working mechanism ahead of schedule.
 
 ## 4. Options considered
 
@@ -146,23 +185,36 @@ the constitution's calibration rule, and it is deliberately uneven.
 3. [x] Fix the value-conditional schema flaw (schemaVersion 2 + `defaultForUnknown`) — verify: all five new guards falsified, then restored to green
 4. [ ] Full `--live --update-baseline`, remove the overnight guard, land the branch — verify: exit 0, CI green after push
 
-**Stage S1-A — Tier A items measurable on the existing harness (~80%)**
-5. [ ] A4 `request_user_dialog` — verify: an engine-emitted field pinned against an expectation, never model prose
-6. [ ] A7 hook fail-open detectability — verify: a deliberately failing hook is distinguishable from a hook that did not run
-7. [ ] A6 residuals: `redacted_thinking`, and variation by model/effort — verify: observed pairs classified in the artifact
-8. [ ] A2 residual (a): a free `observational` probe for artifact validity so CI gates it — verify: red artifact turns CI red on a push
+> **Revised by the `/loophole-loop` pass of 2026-07-31.** The original split was
+> S1-A (~80%) → S1-B (~62%) → S1-C (~58%). Two of those numbers were wrong.
+> S1-B's gate was measured and passed (§3 D), and S1-A's 80% was an **average
+> hiding two items whose measurability is itself the unknown**. Both corrected
+> below rather than left as a sound-looking number.
 
-**Stage S1-B — the throwaway reactive rig (~62%) — HARD GATE**
-9. [ ] ~40-line rig with a live session handle — verify: **it observes an event mid-stream and writes a reply the engine visibly acts on.** If it cannot, stop and re-scope S1-C
+**Stage S1-A0 — the two items whose mechanism is already known (88%)**
+*Batched into ONE `--live --update-baseline`: each new probe costs ~25 min and
+~18 real calls, so adding them one at a time costs four re-baselines.*
+5. [ ] A7 hook fail-open detectability — verify: a deliberately failing hook is distinguishable from a hook that never ran, asserted on `system/hook_response` (`exit_code`, `outcome`, `stderr` measured to exist)
+6. [ ] A2 residual (a): a free `observational` probe for artifact validity so CI gates it — verify: corrupt the artifact and confirm the **free** tier goes red
 
-**Stage S1-C — rig-dependent Tier A (~58%, blocked on stage S1-B)**
-10. [ ] A1 control channel — verify: an unanswered `control_request` is distinguishable from a stall
+**Stage S1-A1 — a measurability spike, NOT a probe (50% both measurable · 90% the spike answers decisively)**
+*Written as a spike because I cannot name a headless trigger for either. Answer
+"can this be triggered at all?" in ~30 minutes before committing probe code.*
+7. [ ] A4 `request_user_dialog` — spike: find a headless trigger, or **prove there is none** and re-scope A4 to "the engine never asks headlessly"
+8. [ ] A6 residual `redacted_thinking` — spike: redaction is model/safety-triggered and may not be forceable; if not, record the limit instead of writing a probe that can never fire
+
+**Stage S1-B — the reactive session handle (95%) — GATE ALREADY PASSED**
+9. [ ] Promote the 30-line feasibility harness (§3 D) into `packages/engine`'s session handle. **NOT throwaway** — that framing was wrong the moment it worked. It gets a design review gate instead of an imagined deletion
+
+**Stage S1-C — rig-dependent Tier A (72%, unblocked earlier than planned)**
+10. [ ] A1 control channel — verify: an unanswered `control_request` is distinguishable from a stall; settles the REVIEW-02 §3 A1-vs-A2 subtype contradiction for free
 11. [ ] A5 stall baseline + stdout backpressure — verify: a measured inter-event silence threshold, not a wall-clock guess
 12. [ ] A3b does `is_error` survive backpressure — verify: denial detected under load, not only when idle
 
-**Stage S1-D — the adapter and the cockpit (unestimated until S1-C lands)**
-13. [ ] `packages/engine`: live session handle replacing `spawnCapture`, per-supervisor `SessionRegistry` — verify: the init receipt gate fails a phase in plain language before tokens are spent
-14. [ ] `apps/cockpit`: whitelist renderer that **imports** `stream-surface.json` — verify: the classification column finally has a consumer, and `defaultForUnknown: escalate` is exercised
+**Stage S1-D — the adapter and the cockpit (45%)**
+13. [ ] **Phase lifecycle terminator** (new, from §3 D) — verify: a phase ends deterministically with no orphaned engine process. `result` is per-turn while stdin is open, so neither "wait for exit" nor "exit on result" is correct
+14. [ ] `packages/engine`: session handle replacing `spawnCapture`, per-supervisor `SessionRegistry` — verify: the init receipt gate fails a phase in plain language before tokens are spent
+15. [ ] `apps/cockpit` **first commit imports `stream-surface.json`** — verify: `defaultForUnknown: escalate` is exercised by a test. Until this lands, that key is a pinned decision with no consumer, which is decoration by this repo's own definition
 
 ## 7. Quality gates for this sprint
 
@@ -183,6 +235,9 @@ Add to PROJECT_MAP §6 at sprint close if not resolved.
 - **`rate_limit_info` carries three fields ADR-007's recorded contract does not mention**: `overageStatus`, `overageDisabledReason`, `isUsingOverage`. Measured on a healthy session. Harmless today; ADR-007's contract is now known to be incomplete rather than wrong.
 - **Only `rate_limit_info.status = "allowed"` has ever been observed.** The pause branch — the one Night Shift exists for — is still unmeasured and handled defensively.
 - **`system/status` value set is enumerated to exactly one value** (`requesting`). `unknown: escalate` covers the rest, which is a safe default, not knowledge.
+- **A `-p` session with stdin held open never exits, and `result` is per-turn.** Measured (§3 D). The phase lifecycle needs an explicit terminator and nobody has measured which one is correct — close stdin, or a control message. This is a Tier-A-class hazard that REVIEW-02 did not list.
+- **`defaultForUnknown: escalate` has no consumer and therefore protects nothing today.** It is a pinned decision in a JSON file that no code reads. Named here because "a guard that cannot fire is decoration" is this repo's own rule and this one is mine.
+- **The `--live` re-baseline cost is a planning constraint, not a footnote**: ~25 minutes and ~18 real engine calls on the owner's subscription per new probe, unless probes are batched.
 
 ## 9. Sprint close summary (filled by /sprint-close)
 
