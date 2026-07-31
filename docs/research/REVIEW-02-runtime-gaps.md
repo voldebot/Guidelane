@@ -490,7 +490,7 @@ does not assert.
 
 Falsified eight ways (fail-open `unknown`, deleted `defaultForUnknown`, removed
 floor entries on both halves, a gutted reason, `class` and `when` both present, a
-corrupt file). The eighth attempt **passed**, correctly and instructively:
+corrupt file). The ninth attempt **passed**, correctly and instructively:
 reclassifying a thinking block to `render` is a valid *shape*. Shape validation
 cannot see a product disaster, so **one classification is now pinned in code** —
 `thinking`, `thinking_delta` and `signature_delta` must be `ignore`, on the
@@ -498,6 +498,79 @@ measured ground that they carry raw chain-of-thought that the language dial
 provably does not touch (§15). Deliberately not generalised to every class: the
 rest are genuinely decisions, and pinning them would freeze the artifact against
 its own purpose.
+
+## 17. Addendum — A4 ANSWERED as an absence, and A6's residuals closed (2026-07-31, S1-A1)
+
+Both were run as **spikes first, probes second**. The loophole-loop pass had
+flagged that I could not name a headless trigger for either, and writing probe
+code before knowing that risks a probe that can never fire — the shape this repo
+has produced 23 times.
+
+### A4 — the engine never asks
+
+With the write tool **present and not pre-approved**, all four permission modes
+behave the same way, and none of them asks:
+
+| `--permission-mode` | `tool_result.is_error` | `result.permission_denials` | dialog / control frame |
+|---|---|---|---|
+| `auto` | true | 1 | **none** |
+| **`manual`** — literally "ask the user" | true | 1 | **none** |
+| `dontAsk` | true | 2 | **none** |
+| `plan` | 3 allowed, 1 denied | 0 | **none** |
+
+`manual` is indistinguishable from `auto` headlessly. `--help` separately
+documents that the **workspace trust dialog is skipped** in non-interactive mode.
+
+So A4's exit criterion resolves to the cheap form the loophole-loop predicted:
+*prove the engine never asks*. **Night Shift needs no control-channel responder
+to run unattended**, and no `request_user_dialog` can silently degrade because
+none is ever sent.
+
+`p-no-headless-dialog` pins this — and the pin is built so the absence means
+something. Each arm must **prove the permission decision was actually reached**
+(a denied `tool_result` plus a counted `permission_denial`) before "no dialog
+appeared" is read at all. Without that gate this probe would be
+`p-autoupdate-governable` again: a confident absence from a surface that never
+had the thing.
+
+Two design corrections worth recording, because both were mistakes I made and
+caught rather than reasoned around:
+
+- **The first spike used `--tools ''`**, which *removes* the tool rather than
+  withholding permission for it. "The engine did not ask" measured on a session
+  with nothing to ask about is worth nothing. Re-run with the tool present.
+- **A `plan`-mode arm was written and removed.** In plan mode the model is told
+  to plan rather than act, so whether it attempts a write is a *model* choice —
+  and its first run proved it by never reaching the decision. Related: when the
+  decision point is not reached the probe now reports **INCONCLUSIVE, not FAIL**.
+  A red there would be a confident claim that the *engine* changed, on evidence
+  that says only "the model did not try this time".
+
+Stability checked over three consecutive runs: `pass`, identical counts each time.
+
+### A6 residuals — effort does not matter, the model does
+
+| Arm | thinking chars | `redacted_thinking` | inner types |
+|---|---|---|---|
+| haiku, `--effort` low → max (5 levels) | 157–299 | **0** | all three, every level |
+| haiku, no `--effort` | 287 | 0 | all three |
+| **sonnet `--effort high`** | **0** | 0 | **`text` only** |
+
+1. **Effort changes the volume, not the surface.** The three thinking types
+   appear at every level, so the artifact's classification already covers them.
+2. **`redacted_thinking` never appeared** in seven arms. It is not forceable with
+   an ordinary prompt, so the limit is **recorded rather than probed** — a probe
+   that cannot fire is decoration.
+3. **The model changes the union.** Sonnet emitted no thinking surface at all
+   under identical flags. The entire conformance suite runs on `--model haiku`,
+   so `stream-surface.json` is *haiku's* universe; `_modelDependence` now says so
+   in the artifact itself. A cockpit validated here and run on another model is
+   validated against a different stream — which matters directly, because ADR-004
+   routes different roles to different models.
+
+**Disposition**: A4 → **CLOSED** (answered as a pinned absence). A6 → **CLOSED**,
+with `redacted_thinking` recorded as unreachable by this method rather than
+claimed absent.
 
 ## 11. Addendum — the logged-out shape, measured for free (2026-07-30)
 

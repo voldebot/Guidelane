@@ -106,7 +106,12 @@ service; anything commercial.
   thinking reaches `-p` stream-json by default on haiku with no reasoning flag, so
   the cockpit must ignore `thinking` / `thinking_delta` / `signature_delta`
   **by name** — ignoring them by omission fails open the first time the renderer
-  is rewritten. ADR-006 needs an amendment or a stated cockpit-side rule (S1).
+  is rewritten, and the classification is now pinned in code, not only in the
+  artifact. **The exposure is per-model, not global**: five effort levels change
+  only the volume, but `--model sonnet` emitted no thinking surface at all under
+  identical flags. Since ADR-004 routes different roles to different models, "we
+  tested the feed" is a claim about one model's stream. ADR-006 needs an
+  amendment or a stated cockpit-side rule (S1).
 - **Review/audit sessions are read-only by construction** (`--tools` scoping),
   not by request.
 - **REVIEW-01 governs v1 scope; REVIEW-02 governs the S1 engine work list; a
@@ -231,6 +236,16 @@ In addition to global gates (`~/.claude/CLAUDE.md` §6):
   Tier A + 10 Tier B unknowns in `docs/research/REVIEW-02-runtime-gaps.md` are
   the honest debt; four Tier A items can make a run go silent with no terminal
   event, which is the worst possible failure in front of a non-coder.
+  **S1-A progress (2026-07-31)**: A4 **CLOSED** (the engine never asks headlessly
+  — `manual` is indistinguishable from `auto`, so Night Shift needs no
+  control-channel responder), A6 **CLOSED**, A7 **ANSWERED** (a hook emitting a
+  malformed payload is reported `outcome: "success"` — the orchestrator must
+  validate hook stdout itself), A2 partly answered and now CI-gated for free.
+  **Remaining: A1, A3b, A5** — all unblocked by the measured session handle.
+  **And one hazard REVIEW-02 never listed**: with stdin held open a `-p` session
+  **never exits** and `result` is a *per-turn* event, so an adapter that waits for
+  process exit hangs forever — produced accidentally in 30 lines, and exactly the
+  silent-stall class Tier A exists to prevent.
 - **No probe may assert on model output.** Three probes were written that way and
   all three were wrong: two asked the model to describe its own tools (measures
   the model, not the engine), and the third asked whether the model *chose* to

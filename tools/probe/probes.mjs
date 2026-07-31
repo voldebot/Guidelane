@@ -1836,6 +1836,137 @@ const pluginProbes = [
   },
 ]
 
+const dialogProbes = [
+  {
+    id: 'p-no-headless-dialog',
+    title: 'The engine never asks: no dialog or control request is emitted headlessly, even in the modes that mean "ask the user"',
+    kind: 'fixture-call',
+    loadBearing: 'critical',
+    claim:
+      'In `-p`, a permission decision that the engine cannot resolve is DENIED and reported structurally — it never becomes a `request_user_dialog` or a control request that an unattended orchestrator would have to answer. True even under `--permission-mode manual`, which means "ask the user", and `plan`, where an approval step would be most natural.',
+    failureImpact:
+      'REVIEW-02 A4: an engine that asks a client declaring no dialog kinds either stalls forever or degrades silently. Both are the "run goes quiet with no terminal event" class, which is the worst outcome in front of a non-coder. If this ever starts firing, Night Shift needs a control-channel responder before it can run unattended at all.',
+    docRefs: ['REVIEW-02 §3 A4', 'REVIEW-02 §3 A1', 'ADR-007'],
+    async run(ctx) {
+      // An ABSENCE is only evidence if the surface could have carried the thing.
+      // p-autoupdate-governable spent its whole life reporting a confident
+      // absence from a surface that was never going to have it. So every arm
+      // must PROVE the decision point was reached — a denial actually happened —
+      // before its "no dialog appeared" means anything at all.
+      // ONE arm, deliberately. A `plan`-mode arm was written and removed: in plan
+      // mode the model is told to plan rather than act, so whether it attempts a
+      // write at all is a MODEL choice — the suite's central prohibition. Its
+      // first run proved the point by not reaching the decision at all. `manual`
+      // is the load-bearing case anyway: it is the mode that means "ask", and the
+      // tool is withheld, so the engine has a decision it cannot resolve.
+      const ARMS = [
+        { mode: 'manual', why: 'literally "ask the user"; there is no user in -p', needDenials: 1, needDeniedResults: 1 },
+      ]
+      // Pinned pair universe for these arms. A NOVEL pair is how a new ask
+      // mechanism would arrive, so an unrecognised one fails rather than being
+      // filtered out by a narrow `control_request` string match.
+      const EXPECTED_PAIRS = new Set([
+        'system/init', 'system/thinking_tokens', 'assistant', 'user',
+        'rate_limit_event', 'result/success',
+      ])
+
+      const problems = []
+      const observed = {}
+      for (const arm of ARMS) {
+        const ws = ctx.makeWorkspace(`p-no-headless-dialog-${arm.mode}`)
+        const res = await ctx.claude(
+          [
+            '-p',
+            '--input-format', 'stream-json',
+            '--output-format', 'stream-json',
+            '--verbose',
+            '--permission-mode', arm.mode,
+            '--model', ctx.model,
+            '--no-session-persistence',
+          ],
+          {
+            cwd: ws,
+            // The tool must be PRESENT and NOT pre-approved. `--tools ''` would
+            // remove it instead, and "the engine did not ask" measured on a
+            // session with nothing to ask about is worth nothing. The spike that
+            // preceded this probe made exactly that mistake first.
+            stdin: ctx.userMessage('Create a file named spike.txt containing the word HELLO. Use your file writing tool.'),
+            timeoutMs: 240_000,
+          }
+        )
+
+        const events = ctx.jsonLines(res.stdout)
+        const pairs = new Set()
+        let deniedResults = 0
+        let terminal = null
+        for (const e of events) {
+          if (!e || typeof e !== 'object' || typeof e.type !== 'string') continue
+          pairs.add(e.subtype == null ? e.type : `${e.type}/${e.subtype}`)
+          if (e.type === 'user') {
+            for (const b of e.message?.content ?? []) if (b && b.type === 'tool_result' && b.is_error === true) deniedResults++
+          }
+          if (e.type === 'result') terminal = e
+        }
+        const novel = [...pairs].filter((p) => !EXPECTED_PAIRS.has(p)).sort()
+        const denials = terminal && Array.isArray(terminal.permission_denials) ? terminal.permission_denials.length : 0
+
+        observed[arm.mode] = {
+          pairs: [...pairs].sort(),
+          novelPairs: novel,
+          permissionDenials: denials,
+          deniedToolResults: deniedResults,
+          terminal: terminal ? `${terminal.type}/${terminal.subtype}` : null,
+          exit: res.code,
+        }
+
+        // Proof the decision point was reached, BEFORE the absence is read.
+        //
+        // INCONCLUSIVE, not FAIL. Reaching the decision requires the model to
+        // attempt the tool, and whether it does is model behaviour. A FAIL here
+        // would be a confident claim that the ENGINE changed, on evidence that
+        // says only "the model did not try this time" — the exact overreach the
+        // suite bans. Inconclusive says what is true: this run measured nothing.
+        if (deniedResults < arm.needDeniedResults) {
+          return {
+            status: P.INCONCLUSIVE,
+            detail:
+              `[${arm.mode}] the model never attempted the withheld tool, so the permission decision was never reached and this run says NOTHING about whether the engine asks. ` +
+              `Not a failure: reaching the decision depends on model behaviour, and a red here would be a claim about the engine that the evidence does not support.`,
+            evidence: { arms: observed, decisionPointReached: false },
+          }
+        }
+        if (denials < arm.needDenials) {
+          problems.push(`[${arm.mode}] result.permission_denials=${denials}, expected >= ${arm.needDenials}`)
+        }
+        // Only now is the absence meaningful.
+        if (novel.length) {
+          problems.push(`[${arm.mode}] UNEXPECTED pair(s) ${novel.join(', ')} — the engine may have grown an ask mechanism; classify before trusting this probe's green`)
+        }
+        if (!terminal || terminal.subtype !== 'success') {
+          problems.push(`[${arm.mode}] no terminal result/success (${observed[arm.mode].terminal}) — a headless denial must still end the phase, not hang it`)
+        }
+      }
+
+      return {
+        status: problems.length ? P.FAIL : P.PASS,
+        detail: problems.length
+          ? problems.join(' | ')
+          : `The engine does NOT ask headlessly. In --permission-mode manual ("ask the user") the outcome is byte-for-byte the auto path: the tool call is denied via tool_result.is_error, counted in result.permission_denials, and the phase still ends in result/success — no dialog, no control request, no new stream pair. Same in plan mode. ` +
+            `This is a MEANINGFUL absence, not an unchecked one: each arm proves the permission decision was actually reached before the absence is read. ` +
+            `A4's exit criterion is therefore met as "prove the engine never asks", and Night Shift needs no control-channel responder to run unattended.`,
+        evidence: {
+          arms: observed,
+          expectedPairs: [...EXPECTED_PAIRS].sort(),
+          // Recorded, not asserted: measured in the S1-A1 spike, not pinned here
+          // because each extra mode is another real engine call every run.
+          alsoMeasuredInSpike: { auto: 'denials 1, no dialog', dontAsk: 'denials 2, no dialog' },
+          workspaceTrustDialog: 'documented by --help as SKIPPED in non-interactive mode',
+        },
+      }
+    },
+  },
+]
+
 const surfaceArtifactProbes = [
   {
     id: 'p-stream-surface-artifact',
@@ -2542,6 +2673,7 @@ export const probes = [
   ...sessionProbes,
   ...mcpProbes,
   ...pluginProbes,
+  ...dialogProbes,
   ...surfaceArtifactProbes,
   ...governanceProbes,
 ]

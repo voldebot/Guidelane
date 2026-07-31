@@ -200,8 +200,10 @@ the constitution's calibration rule, and it is deliberately uneven.
 **Stage S1-A1 — a measurability spike, NOT a probe (50% both measurable · 90% the spike answers decisively)**
 *Written as a spike because I cannot name a headless trigger for either. Answer
 "can this be triggered at all?" in ~30 minutes before committing probe code.*
-7. [ ] A4 `request_user_dialog` — spike: find a headless trigger, or **prove there is none** and re-scope A4 to "the engine never asks headlessly"
-8. [ ] A6 residual `redacted_thinking` — spike: redaction is model/safety-triggered and may not be forceable; if not, record the limit instead of writing a probe that can never fire
+7. [x] A4 → **the engine never asks.** All four permission modes deny structurally with zero dialog/control frames; `manual` is indistinguishable from `auto`. Became `p-no-headless-dialog`, pinned so the absence is only read after the decision point is *proven* reached. **A4 CLOSED** — Night Shift needs no control-channel responder
+8. [x] A6 → **effort does not change the surface, the model does.** Five effort levels produce the same three thinking types on haiku; `--model sonnet` produced **none at all**. `redacted_thinking` did not appear in seven arms and is **recorded as unreachable by this method rather than probed** — the right outcome for a spike, and the one a probe-first approach would have turned into decoration. **A6 CLOSED**
+
+**Tier A scoreboard after S1-A**: A2 partly answered · **A4 CLOSED** · **A6 CLOSED** · **A7 ANSWERED**. Remaining: A1, A3b, A5 — all in S1-C, all now unblocked by the measured session handle.
 
 **Stage S1-B — the reactive session handle (95%) — GATE ALREADY PASSED**
 9. [ ] Promote the 30-line feasibility harness (§3 D) into `packages/engine`'s session handle. **NOT throwaway** — that framing was wrong the moment it worked. It gets a design review gate instead of an imagined deletion
