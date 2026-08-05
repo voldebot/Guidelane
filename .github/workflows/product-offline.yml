@@ -30,7 +30,6 @@ jobs:
     env:
       CI: '1'
       S2_BASE: 952cdf52dffb3acc47fc3918c97183b456eb0cf3
-      S2_EVIDENCE_DIR: ${{ runner.temp }}/guidelane-s2-gates
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -47,6 +46,19 @@ jobs:
 
       - name: Install pinned browser revisions
         run: npx playwright install --with-deps chromium webkit
+
+      - name: Prepare isolated evidence root
+        run: |
+          set -euo pipefail
+          case "${RUNNER_TEMP:-}" in
+            /*) ;;
+            *) echo "::error::RUNNER_TEMP must be an absolute path"; exit 1 ;;
+          esac
+          S2_EVIDENCE_DIR="${RUNNER_TEMP}/guidelane-s2-gates"
+          case "$S2_EVIDENCE_DIR" in
+            "$GITHUB_WORKSPACE"|"$GITHUB_WORKSPACE"/*) echo "::error::Evidence must stay outside the workspace"; exit 1 ;;
+          esac
+          printf 'S2_EVIDENCE_DIR=%s\n' "$S2_EVIDENCE_DIR" >> "$GITHUB_ENV"
 
       - name: Capture immutable source identity
         run: |

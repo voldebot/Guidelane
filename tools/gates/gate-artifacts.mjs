@@ -1,22 +1,10 @@
 import { lstat, readdir, readFile } from 'node:fs/promises'
 import { relative, resolve } from 'node:path'
-import { artifactsArgument, ensureSourceManifest, gitSourcePaths, main, sha256 } from './lib.mjs'
+import { artifactsArgument, ensureSourceManifest, main, sha256 } from './lib.mjs'
+import { assertClean, scanSourceInputs } from './source-redaction.mjs'
 
-const allowedIdentity = 'guidelane@local.invalid' // Required repository-local generated-project identity; no other address is allowed.
-const sensitive = /\/Users\/[A-Za-z]|\/home\/[A-Za-z]|\/var\/folders\/|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}|\b(?:sk-[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})\b/i
-const credentialEnvironment = /\b(?:ANTHROPIC_API_KEY|OPENAI_API_KEY|DATABASE_URL|GH_TOKEN|GITHUB_TOKEN|GITHUB_PERSONAL_ACCESS_TOKEN|NPM_TOKEN)\b\s*=/
 const technicalUi = /(?:stderr|thinking|reasoning|terminal output|diff --git|\/Users\/|\/home\/|api[_ -]?key|password)/i
 const root = resolve(new URL('../..', import.meta.url).pathname)
-// This is a payload fixture whose purpose is to contain hostile literals. It is
-// still read and counted below; only its literal content is classified out of
-// the redaction assertion. No executable test source has this exception.
-const hostileLiteralFixture = 'packages/orchestrator/test-fixtures/redaction-hostile-payloads.json'
-// These are the literal policy patterns used to detect leaks, not leaked
-// values. Keep this list finite: a real path must never be normalized away.
-const redactionPolicyTokens = Object.freeze([
-  '/users/[a-z]', '/home/[a-z]', '/var/folders/',
-  '/private/var/folders/...', '/var/folders/...', '/users/talhamac/...',
-])
 const attemptEvidenceKinds = new Set([
   'guidelane.local-web.attempt-authority',
   'guidelane.local-web.attempt-candidate',
@@ -50,30 +38,6 @@ const final29PlatformSkips = new Map([
 const exactArray = (value, expected) => Array.isArray(value) && value.length === expected.length && value.every((entry, index) => entry === expected[index])
 const exactSet = (actual, expected) => actual.size === expected.size && [...expected].every((entry) => actual.has(entry))
 const browserExecutionKey = ({ scenarioId, variant, browser, viewport }) => `${scenarioId}:${variant}:${browser}:${viewport}`
-async function scanSourceInputs() {
-  const paths = gitSourcePaths(root)
-  if (paths.length < 20) throw new Error(`source scan coverage is implausibly small (${paths.length})`)
-  let scannedSourceFiles = 0; let scannedSourceBytes = 0
-  for (const file of paths) {
-    const absolute = resolve(root, file)
-    let info
-    try { info = await lstat(absolute) } catch { throw new Error(`unreadable source path ${file}`) }
-    if (info.isSymbolicLink() || !info.isFile()) throw new Error(`source scan path must be a regular file, not a symlink: ${file}`)
-    // A bounded scanner must never claim to have processed a source it did not
-    // read. A large source is therefore a hard failure, not a silent omission.
-    if (info.size > 2_000_000) throw new Error(`source scan limit exceeded: ${file}`)
-    let bytes
-    try { bytes = await readFile(absolute) } catch { throw new Error(`unreadable source content ${file}`) }
-    if (bytes.length !== info.size) throw new Error(`source scan byte count changed while reading: ${file}`)
-    scannedSourceFiles += 1; scannedSourceBytes += bytes.length
-    if (file !== hostileLiteralFixture) {
-      const text = bytes.toString('utf8')
-      assertCleanSource(text, file)
-      if (file.startsWith('apps/cockpit/src/') && /\.tsx?$/.test(file) && !file.endsWith('/protocol.ts') && technicalUi.test(text)) throw new Error(`forbidden technical UI contract text in ${file}`)
-    }
-  }
-  return { scannedSourceFiles, scannedSourceBytes }
-}
 async function filesUnder(directory) {
   const rootInfo = await lstat(directory)
   if (rootInfo.isSymbolicLink() || !rootInfo.isDirectory()) throw new Error('evidence root must be a real directory, not a symlink')
@@ -89,12 +53,6 @@ async function filesUnder(directory) {
   }
   await walk(directory)
   return results
-}
-function assertClean(text, label) { const normalized = text.replaceAll(allowedIdentity, '[required-local-identity]'); if (sensitive.test(normalized) || credentialEnvironment.test(normalized)) throw new Error(`redaction violation in ${label}`) }
-function assertCleanSource(text, label) {
-  let normalized = text
-  for (const token of redactionPolicyTokens) normalized = normalized.replaceAll(token, '[redaction-policy-token]')
-  assertClean(normalized, label)
 }
 function isRecord(value) { return typeof value === 'object' && value !== null && !Array.isArray(value) }
 function hasExactKeys(value, keys) {
@@ -224,11 +182,21 @@ function cockpitInventory(inventory) {
 }
 
 const validateOnly = process.argv.includes('--validate-only')
+const sourceOnly = process.argv.includes('--source-only')
 
 await main('artifacts', async () => {
   let sourceScan = { scannedSourceFiles: 0, scannedSourceBytes: 0 }
   if (!process.argv.includes('--evidence-only')) {
-    sourceScan = await scanSourceInputs()
+    sourceScan = await scanSourceInputs(root, {
+      onSourceText: (text, file) => {
+        if (file.startsWith('apps/cockpit/src/') && /\.tsx?$/.test(file) && !file.endsWith('/protocol.ts') && technicalUi.test(text)) throw new Error(`forbidden technical UI contract text in ${file}`)
+      },
+    })
+  }
+  if (sourceOnly) {
+    if (validateOnly || process.argv.includes('--evidence-only') || artifactsArgument()) throw new Error('--source-only cannot be combined with evidence arguments')
+    console.log(`Source redaction scan passed: ${sourceScan.scannedSourceFiles} files, ${sourceScan.scannedSourceBytes} bytes.`)
+    return sourceScan
   }
   const artifacts = artifactsArgument()
   if (!artifacts) throw new Error('--artifacts is required; no evidence tree is not a clean result')
@@ -336,4 +304,4 @@ await main('artifacts', async () => {
     if (!indexed.has(path)) throw new Error(`unindexed evidence file ${path}`)
   }
   return { ...sourceScan, evidenceFiles: files.length, declaredExecutionEvidence, executedEvidence }
-}, { prepareArtifacts: !validateOnly, publishResults: !validateOnly })
+}, { prepareArtifacts: !validateOnly && !sourceOnly, publishResults: !validateOnly && !sourceOnly })
