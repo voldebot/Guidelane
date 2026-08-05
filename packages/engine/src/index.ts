@@ -23,5 +23,5 @@ export type { StreamClass, Classification } from './surface.ts'
 
 export { applyIsolation, assertIsolated, isSessionInvocation, ISOLATION_PAIR } from './isolation.ts'
 
-export { scrubbedEnv, DENIED_ENV_KEYS, FORBIDDEN_STATE_KEYS, BACKEND_ROUTING_KEYS } from './env.ts'
+export { scrubbedEnv, DENIED_ENV_KEYS, FORBIDDEN_STATE_KEYS, BACKEND_ROUTING_KEYS, ENGINE_ENV_ALLOWLIST } from './env.ts'
 export type { ScrubbedEnv } from './env.ts'

@@ -1,0 +1,22 @@
+{
+  "name": "@guidelane/local-web-profile",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "description": "Deterministic, ejectable Guidelane Local Web profile and failure harness.",
+  "engines": {
+    "node": ">=22.6"
+  },
+  "scripts": {
+    "generate": "node --experimental-strip-types src/cli.ts generate",
+    "normal": "node --experimental-strip-types src/cli.ts normal",
+    "seeded": "node --experimental-strip-types src/cli.ts seeded",
+    "profile": "node --experimental-strip-types src/cli.ts normal",
+    "profile:seeded": "node --experimental-strip-types src/cli.ts seeded",
+    "test:profile": "node --experimental-strip-types src/cli.ts normal",
+    "test:profile:seeded": "node --experimental-strip-types src/cli.ts seeded",
+    "test": "node --test --test-concurrency=1 --experimental-strip-types test/*.test.ts",
+    "typecheck": "tsc --noEmit --target ES2023 --module nodenext --moduleResolution nodenext --types node --allowImportingTsExtensions --strict --noUncheckedIndexedAccess --exactOptionalPropertyTypes --verbatimModuleSyntax --erasableSyntaxOnly src/*.ts test/*.test.ts"
+  }
+}

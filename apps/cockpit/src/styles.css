@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+:root { --focus-indicator: #182534; --surface-canvas: #f4eedf; --surface-rail: #e9dfc9; --surface-input: #fffaf0; --surface-primary: #c88719; --surface-primary-hover: #d79928; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #182534; background: var(--surface-canvas); font-synthesis: none; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 960px; min-height: 100vh; }
+button { font: inherit; }
+button:focus-visible, h1:focus-visible, textarea:focus-visible { outline-offset: 4px; }
+:focus-visible { outline: 3px solid var(--focus-indicator); }
+.cockpit { min-height: 100vh; display: grid; grid-template-columns: 262px minmax(0, 1fr); }
+.rail { grid-column: 1; grid-row: 1; padding: 28px 22px; background: var(--surface-rail); border-right: 1px solid #cfc1a3; display: flex; flex-direction: column; }
+.brand { font-weight: 800; letter-spacing: .04em; font-size: 1.1rem; margin: 0 0 32px 10px; }
+.rail ol { list-style: none; padding: 0; margin: 0; flex: 1; }
+.rail li { border-left: 2px solid #b9ab8d; padding: 0 0 20px 18px; position: relative; display: grid; gap: 3px; color: #59636a; }
+.rail li::before { content: ""; position: absolute; left: -6px; top: 3px; width: 10px; height: 10px; border-radius: 50%; background: #f4eedf; border: 2px solid #b9ab8d; }
+.rail li span:first-child { font-weight: 800; font-size: .76rem; letter-spacing: .08em; }.rail li span:nth-child(2) { font-weight: 650; }.rail small { font-size: .72rem; line-height: 1.25; }
+.rail li.active { color: #182534; border-color: #c88719; }.rail li.active::before { background: #c88719; border-color: #c88719; }.rail li.complete { color: #285a43; border-color: #5e856f; }.rail li.complete::before { background: #285a43; border-color: #285a43; }
+.language { grid-column: 1; grid-row: 1; align-self: end; justify-self: start; margin: 28px 22px; color: #182534; background: transparent; border: 1px solid #7d715a; padding: 9px 13px; cursor: pointer; }
+main { grid-column: 2; grid-row: 1; padding: 44px clamp(38px, 7vw, 116px); max-width: 1200px; width: 100%; }
+.masthead { border-bottom: 1px solid #cfc1a3; padding-bottom: 15px; display: flex; justify-content: space-between; gap: 24px; color: #4f5d65; }.masthead p { margin: 0; letter-spacing: .08em; text-transform: uppercase; font-size: .76rem; font-weight: 750; }.masthead span { font-size: .85rem; }
+.now { padding: clamp(46px, 10vh, 105px) 0 52px; max-width: 760px; }.now h1 { font-size: clamp(2.35rem, 5.3vw, 4.9rem); line-height: 1.02; letter-spacing: -.055em; margin: 0; font-weight: 760; }.status-copy { font-family: Georgia, serif; font-size: 1.23rem; line-height: 1.55; max-width: 590px; margin: 24px 0; color: #3e4f5a; }.prompt { margin: 28px 0 12px; font-weight: 650; }.primary { background: var(--surface-primary); color: #182534; border: 1px solid #8f5d0d; padding: 13px 20px; font-weight: 780; cursor: pointer; }.primary:hover { background: var(--surface-primary-hover); }.warning { color: #7b351d; }.accepted { color: #285a43; font-weight: 750; }
+.idea-field { display: grid; gap: 8px; max-width: 620px; margin: 0 0 16px; }.idea-field label { font-weight: 750; }.idea-field textarea { resize: vertical; min-height: 88px; padding: 11px; border: 1px solid #7d715a; background: var(--surface-input); color: #182534; line-height: 1.45; }.idea-field textarea::placeholder { color: #59636a; opacity: 1; }
+.evidence { border-top: 2px solid #182534; padding: 22px 0; display: flex; justify-content: space-between; gap: 42px; }.evidence p { margin: 0 0 5px; text-transform: uppercase; letter-spacing: .09em; font-weight: 800; font-size: .72rem; }.evidence h2 { font-family: Georgia, serif; font-weight: 500; margin: 0; font-size: 1.25rem; }.evidence dl { margin: 0; min-width: 240px; }.evidence dl div { border-bottom: 1px solid #cfc1a3; padding: 8px 0; }.evidence dt { font-weight: 750; font-size: .82rem; }.evidence dd { margin: 2px 0 0; color: #285a43; font-size: .85rem; }
+@media (max-height: 780px) { .rail { padding-top: 20px; }.brand { margin-bottom: 20px; }.rail li { padding-bottom: 12px; }.now { padding-top: 44px; padding-bottom: 34px; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }

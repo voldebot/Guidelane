@@ -1,0 +1,2378 @@
+{
+  "schemaVersion": 1,
+  "sprint": "s2-novice-pilot",
+  "minimumByCategory": {
+    "artifact-state-authority": 8,
+    "recovery-b1": 9,
+    "minimal-environment": 4,
+    "http-websocket-protocol": 9,
+    "engine-failure-mapping": 9,
+    "cockpit-novice-journey": 19,
+    "local-web-normal": 7,
+    "local-web-seeded": 7,
+    "process-identity-security": 1,
+    "cockpit-final-34": 1,
+    "cockpit-final-36": 5,
+    "cockpit-final-37": 1,
+    "local-web-git-security": 1,
+    "local-web-orphan-cleanup": 2,
+    "local-web-lease-supervisor": 23
+  },
+  "requiredBehaviorCoverage": {
+    "artifact-atomic-temp-write-interruption": "S2-ART-01",
+    "artifact-missing-evidence": "S2-ART-03",
+    "artifact-corrupt-digest": "S2-ART-04",
+    "artifact-unknown-schema": "S2-ART-05",
+    "artifact-manifest-ahead-git-behind": "S2-ART-10",
+    "artifact-git-ahead-manifest-behind": "S2-ART-07",
+    "artifact-stale-revision": "S2-ART-09",
+    "artifact-second-lock-holder": "S2-ART-06",
+    "artifact-turkish-utf8-byte-identity": "S2-ART-08",
+    "failure-denial": "S2-FAIL-10",
+    "failure-hook": "S2-FAIL-11",
+    "failure-rate-limit-five-hour": "S2-FAIL-12",
+    "failure-rate-limit-seven-day": "S2-FAIL-13",
+    "failure-interruption": "S2-FAIL-14",
+    "failure-framing": "S2-FAIL-15",
+    "failure-io": "S2-FAIL-16",
+    "failure-receipt": "S2-FAIL-17",
+    "failure-recovery": "S2-FAIL-18",
+    "failure-unknown": "S2-FAIL-19",
+    "failure-stall": "S2-FAIL-20",
+    "b1-detached-fake-engine-process-group": "S2-B1-01",
+    "b1-supervisor-sigkill": "S2-B1-01",
+    "b1-process-table-reap-proof": "S2-B1-01",
+    "b1-interrupted-terminal-record": "S2-B1-03",
+    "b1-restart-reconciliation": "S2-B1-02",
+    "b1-distinct-next-attempt": "S2-B1-06",
+    "environment-explicit-allow-list": "S2-ENV-01",
+    "environment-secret-like-variables-absent": "S2-ENV-02",
+    "environment-locale-preserved": "S2-ENV-01",
+    "environment-api-key-source-none": "S2-ENV-04",
+    "http-loopback-only": "S2-HTTP-01",
+    "http-origin-validation": "S2-HTTP-01",
+    "http-token-replay": "S2-HTTP-01",
+    "http-invalid-cookie": "S2-HTTP-03",
+    "http-malformed-command": "S2-HTTP-06",
+    "http-semantic-only-serialization": "S2-HTTP-04",
+    "http-revision-gap-snapshot": "S2-HTTP-07",
+    "http-disconnect-reconnect": "S2-HTTP-05",
+    "http-utf8-command-payload": "S2-HTTP-08",
+    "cockpit-g0-g6-turkish-first": "S2-CPT-01",
+    "cockpit-statuses": "S2-CPT-03",
+    "cockpit-reopen-snapshot": "S2-CPT-01",
+    "cockpit-forbidden-data-absent": "S2-CPT-07",
+    "cockpit-keyboard-focus": "S2-CPT-06",
+    "cockpit-axe": "S2-CPT-06",
+    "cockpit-wait-controls": "S2-CPT-04",
+    "cockpit-recovery-state": "S2-CPT-05",
+    "local-web-normal-lint": "S2-LW-01",
+    "local-web-normal-type": "S2-LW-02",
+    "local-web-normal-unit": "S2-LW-03",
+    "local-web-normal-build": "S2-LW-04",
+    "local-web-normal-boot-health": "S2-LW-05",
+    "local-web-normal-axe": "S2-LW-06",
+    "local-web-normal-smoke": "S2-LW-07",
+    "local-web-seeded-lint": "S2-SEED-01",
+    "local-web-seeded-type": "S2-SEED-02",
+    "local-web-seeded-unit": "S2-SEED-03",
+    "local-web-seeded-build": "S2-SEED-04",
+    "local-web-seeded-boot": "S2-SEED-05",
+    "local-web-seeded-axe": "S2-SEED-06",
+    "local-web-seeded-smoke": "S2-SEED-07",
+    "final29-g5-active-rejection": "S2-F29-G5-ACTIVE",
+    "final29-g6-completion-reopen": "S2-F29-G6-COMPLETION",
+    "final29-two-attempt-ambiguity": "S2-F29-RECOVERY-MULTIPLICITY-02",
+    "final29-three-attempt-ambiguity": "S2-F29-RECOVERY-MULTIPLICITY-03",
+    "final29-artifact-safe-root-unsafe-ancestor": "S2-F29-ARTIFACT-ROOT-01",
+    "final29-artifact-foreign-ancestor": "S2-F29-ARTIFACT-ROOT-02",
+    "final29-cockpit-unsafe-static-leaf": "S2-F29-COCKPIT-ROOT-01",
+    "final29-cockpit-unsafe-static-ancestor": "S2-F29-COCKPIT-ROOT-02",
+    "final29-cockpit-foreign-static-owner": "S2-F29-COCKPIT-ROOT-03",
+    "final29-local-web-unsafe-cwd": "S2-F29-LOCAL-WEB-ANCHOR-01",
+    "final29-local-web-unsafe-tmpdir": "S2-F29-LOCAL-WEB-ANCHOR-02",
+    "final29-local-web-safe-anchors": "S2-F29-LOCAL-WEB-ANCHOR-03",
+    "final29-cockpit-keyboard-order": "S2-F29-CPT-TAB",
+    "final30-success-marker-crash": "S2-F30-SUCCESS-MARKER",
+    "final39-local-web-trusted-git-boundary": "S2-F39-LOCAL-WEB-GIT-01",
+    "final44-local-web-orphan-cleanup": "S2-F44-LOCAL-WEB-ORPHAN-CLEANUP",
+    "final44-local-web-observer-rejection-cleanup": "S2-F44-LOCAL-WEB-OBSERVER-FAILURE",
+    "final45-controller-loss-lease-eof-cleanup": "S2-F45-LEASE-EOF-01",
+    "final45-boot-evidence-persistence-cleanup": "S2-F45-BOOT-EVIDENCE-02",
+    "final45-stale-identity-no-parent-negative-pgid": "S2-F45-STALE-IDENTITY-03",
+    "final45-malformed-supervisor-control-fails-closed": "S2-F45-CONTROL-04",
+    "final45-finite-completion-and-timeout-cleanup": "S2-F45-FINITE-05",
+    "final45-production-source-no-parent-negative-pgid": "S2-F45-SOURCE-06",
+    "final46-observation-outage-reap-without-parent-authority": "S2-F46-OBSERVATION-OUTAGE-01",
+    "final46-self-group-signal-failure-fail-stop": "S2-F46-SELF-GROUP-SIGNAL-02",
+    "final46-attempt-authority-is-fresh-and-terminal": "S2-F46-ATTEMPT-AUTHORITY-03",
+    "final46-authority-and-terminal-binding-fail-closed": "S2-F46-AUTHORITY-BINDING-04",
+    "final46-source-structural-signal-and-redaction-boundary": "S2-F46-SOURCE-STRUCTURAL-05",
+    "final56-leader-loss-cleanup": "S2-F56-LEADER-KILL-01",
+    "final56-supervisor-close-auto-reap": "S2-F56-LEADER-CLOSE-AUTOREAP-09",
+    "final56-lease-revocation": "S2-F56-LEASE-REVOCATION-10",
+    "final56-spawn-failure-cleanup": "S2-F56-SPAWN-FAILURE-03",
+    "final56-ack-stop-race": "S2-F56-GUARDIAN-ACK-STOP-RACE-04",
+    "final56-ack-stop-ordering": "S2-F56-GUARDIAN-ACK-STOP-ORDERING-05",
+    "final56-fd3-relay-isolation": "S2-F56-GUARDIAN-FD3-RELAY-ISOLATION-06",
+    "final56-result-plane": "S2-F56-GUARDIAN-RESULT-PLANE-07",
+    "final56-lease-permissions": "S2-F56-GUARDIAN-LEASE-PERMISSIONS-08",
+    "final56-source-structural-signal": "S2-F56-SOURCE-STRUCTURAL-02",
+    "final56-liveness-pipe": "S2-F56-REGRESSION-LIVENESS-PIPE-11",
+    "final56-result-relay-fail-closed": "S2-F56-REGRESSION-RESULT-RELAY-12"
+  },
+  "scenarios": [
+    {
+      "id": "S2-ART-01",
+      "category": "artifact-state-authority",
+      "file": "packages/orchestrator/test/artifacts.test.ts",
+      "testName": "publishes an immutable run",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": {
+        "source": "orchestrator-tap",
+        "selector": "publishes an immutable run and atomically advances the canonical manifest"
+      }
+    },
+    {
+      "id": "S2-ART-02",
+      "category": "artifact-state-authority",
+      "file": "packages/orchestrator/test/artifacts.test.ts",
+      "testName": "does not overwrite an immutable attempt",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": {
+        "source": "orchestrator-tap",
+        "selector": "does not overwrite an immutable attempt when a caller reuses its identity"
+      }
+    },
+    {
+      "id": "S2-ART-03",
+      "category": "artifact-state-authority",
+      "file": "packages/orchestrator/test/artifacts.test.ts",
+      "testName": "missing machine evidence",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": {
+        "source": "orchestrator-tap",
+        "selector": "fails closed into recovery-required for missing machine evidence"
+      }
+    },
+    {
+      "id": "S2-ART-04",
+      "category": "artifact-state-authority",
+      "file": "packages/orchestrator/test/artifacts.test.ts",
+      "testName": "corrupt evidence digest",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": {
+        "source": "orchestrator-tap",
+        "selector": "fails closed into recovery-required for corrupt evidence digest"
+      }
+    },
+    {
+      "id": "S2-ART-05",
+      "category": "artifact-state-authority",
+      "file": "packages/orchestrator/test/artifacts.test.ts",
+      "testName": "unknown artifact schema",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": {
+        "source": "orchestrator-tap",
+        "selector": "fails closed into recovery-required for unknown artifact schema"
+      }
+    },
+    {
+      "id": "S2-ART-06",
+      "category": "artifact-state-authority",
+      "file": "packages/orchestrator/test/artifacts.test.ts",
+      "testName": "permits exactly one holder",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": {
+        "source": "orchestrator-tap",
+        "selector": "permits exactly one holder for a project lock"
+      }
+    },
+    {
+      "id": "S2-ART-07",
+      "category": "artifact-state-authority",
+      "file": "packages/orchestrator/test/artifacts.test.ts",
+      "testName": "git-ahead / manifest-behind",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": {
+        "source": "orchestrator-tap",
+        "selector": "marks git-ahead / manifest-behind state recovery-required rather than claiming the old result succeeded"
+      }
+    },
+    {
+      "id": "S2-ART-08",
+      "category": "artifact-state-authority",
+      "file": "packages/orchestrator/test/protocol.test.ts",
+      "testName": "preserves Turkish text",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": {
+        "source": "orchestrator-tap",
+        "selector": "preserves Turkish text by its exact UTF-8 bytes and digest"
+      }
+    },
+    {
+      "id": "S2-ART-09",
+      "category": "artifact-state-authority",
+      "file": "packages/orchestrator/test/artifacts.test.ts",
+      "testName": "S2-ART-STALE-REVISION",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": {
+        "source": "orchestrator-tap",
+        "selector": "S2-ART-STALE-REVISION rejects a stale publish and leaves the canonical manifest at its prior revision"
+      }
+    },
+    {
+      "id": "S2-ART-10",
+      "category": "artifact-state-authority",
+      "file": "packages/orchestrator/test/artifacts.test.ts",
+      "testName": "S2-ART-MANIFEST-AHEAD",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": {
+        "source": "orchestrator-tap",
+        "selector": "S2-ART-MANIFEST-AHEAD fails closed when the durable manifest head is ahead of the supplied git head"
+      }
+    },
+    {
+      "id": "S2-B1-01",
+      "category": "recovery-b1",
+      "file": "packages/orchestrator/test/server-and-recovery.test.ts",
+      "testName": "an unwrapped orphan receipt fails closed without signalling its engine group or allowing reuse",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": {
+        "source": "orchestrator-tap",
+        "selector": "B1-01 rejects a receipt that lacks a live production wrapper identity"
+      }
+    },
+    {
+      "id": "S2-B1-02",
+      "category": "recovery-b1",
+      "file": "packages/orchestrator/test/server-and-recovery.test.ts",
+      "testName": "B1-02 invalid receipt coordinates",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": {
+        "source": "orchestrator-tap",
+        "selector": "B1-02 invalid receipt coordinates durably recovers the canonical snapshot and never signals an unverifiable process group"
+      }
+    },
+    {
+      "id": "S2-B1-03",
+      "category": "recovery-b1",
+      "file": "packages/orchestrator/test/hardening.test.ts",
+      "testName": "B1-03 a reconciled interruption remains a durable terminal record across restart and does not re-begin its attempt",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": {
+        "source": "orchestrator-tap",
+        "selector": "B1-03 a reconciled interruption remains a durable terminal record across restart and does not re-begin its attempt"
+      }
+    },
+    {
+      "id": "S2-B1-04",
+      "category": "recovery-b1",
+      "file": "packages/orchestrator/test/server-and-recovery.test.ts",
+      "testName": "missing start identity",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": {
+        "source": "orchestrator-tap",
+        "selector": "B1-04 missing start identity durably recovers the canonical snapshot and never signals an unverifiable process group"
+      }
+    },
+    {
+      "id": "S2-B1-05",
+      "category": "recovery-b1",
+      "file": "packages/orchestrator/test/server-and-recovery.test.ts",
+      "testName": "mismatched start identity",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": {
+        "source": "orchestrator-tap",
+        "selector": "B1-05 mismatched start identity durably recovers the canonical snapshot and never signals an unverifiable process group"
+      }
+    },
+    {
+      "id": "S2-B1-06",
+      "category": "recovery-b1",
+      "file": "packages/orchestrator/test/server-and-recovery.test.ts",
+      "testName": "an unwrapped orphan receipt fails closed without signalling its engine group or allowing reuse",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": {
+        "source": "orchestrator-tap",
+        "selector": "B1-06 interrupted work cannot resume and the next attempt has a distinct identity"
+      }
+    },
+    {
+      "id": "S2-FINAL-22-PROCESS-LEAK-01",
+      "category": "recovery-b1",
+      "file": "packages/orchestrator/test/final-22-process-leak.test.ts",
+      "testName": "S2-FINAL-22-PROCESS-LEAK-01 durable spawn ledger reaps only its recorded engine group and descendants",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": {
+        "source": "orchestrator-tap",
+        "selector": "S2-FINAL-22-PROCESS-LEAK-01 durable spawn ledger reaps only its recorded engine group and descendants"
+      }
+    },
+    {
+      "id": "S2-FINAL-22-PROCESS-LEAK-02",
+      "category": "recovery-b1",
+      "file": "packages/orchestrator/test/final-22-process-leak.test.ts",
+      "testName": "S2-FINAL-22-PROCESS-LEAK-02 injected assertion failure remains observable and the parent recovery probe reaps its durable ledger",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": {
+        "source": "orchestrator-tap",
+        "selector": "S2-FINAL-22-PROCESS-LEAK-02 injected assertion failure remains observable and the parent recovery probe reaps its durable ledger"
+      }
+    },
+    {
+      "id": "S2-FINAL-22-PROCESS-LEAK-03",
+      "category": "recovery-b1",
+      "file": "packages/orchestrator/test/final-22-process-leak.test.ts",
+      "testName": "S2-FINAL-22-PROCESS-LEAK-03 a SIGKILLed test runner is recoverable only through a separate durable-ledger probe",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": {
+        "source": "orchestrator-tap",
+        "selector": "S2-FINAL-22-PROCESS-LEAK-03 a SIGKILLed test runner is recoverable only through a separate durable-ledger probe"
+      }
+    },
+    {
+      "id": "S2-FINAL-22-PROCESS-LEAK-04",
+      "category": "recovery-b1",
+      "file": "packages/orchestrator/test/final-22-process-leak.test.ts",
+      "testName": "S2-FINAL-22-PROCESS-LEAK-04 an unverifiable or PID-reused ledger identity is never signalled",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": {
+        "source": "orchestrator-tap",
+        "selector": "S2-FINAL-22-PROCESS-LEAK-04 an unverifiable or PID-reused ledger identity is never signalled"
+      }
+    },
+    {
+      "id": "S2-ENV-01",
+      "category": "minimal-environment",
+      "file": "packages/orchestrator/test/protocol.test.ts",
+      "testName": "uses a true minimal child environment",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": {
+        "source": "orchestrator-tap",
+        "selector": "uses a true minimal child environment, retaining only portable operating context"
+      }
+    },
+    {
+      "id": "S2-ENV-02",
+      "category": "minimal-environment",
+      "file": "packages/engine/test/env.test.ts",
+      "testName": "a denied key present",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": {
+        "source": "offline-tap",
+        "selector": "a denied key present in the parent environment is removed"
+      }
+    },
+    {
+      "id": "S2-ENV-03",
+      "category": "minimal-environment",
+      "file": "packages/engine/test/env.test.ts",
+      "testName": "auto-update is disabled",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": {
+        "source": "offline-tap",
+        "selector": "auto-update is disabled in every child"
+      }
+    },
+    {
+      "id": "S2-ENV-04",
+      "category": "minimal-environment",
+      "file": "packages/engine/test/receipt.test.ts",
+      "testName": "apiKeySource is asserted",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": {
+        "source": "offline-tap",
+        "selector": "apiKeySource is asserted, so a routed-away backend fails the phase"
+      }
+    },
+    {
+      "id": "S2-HTTP-01",
+      "category": "http-websocket-protocol",
+      "file": "packages/orchestrator/test/server-and-recovery.test.ts",
+      "testName": "loopback API consumes",
+      "layer": "integration",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": {
+        "source": "orchestrator-tap",
+        "selector": "loopback API consumes one 128-bit launch token once and enforces Origin, Host, and SameSite session trust"
+      }
+    },
+    {
+      "id": "S2-HTTP-02",
+      "category": "http-websocket-protocol",
+      "file": "packages/orchestrator/test/server-and-recovery.test.ts",
+      "testName": "S2-HTTP-COMPAT-10",
+      "layer": "integration",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": {
+        "source": "orchestrator-tap",
+        "selector": "S2-HTTP-COMPAT-10 authenticated canonical snapshot GET permits omitted Origin but never relaxes mutating routes"
+      }
+    },
+    {
+      "id": "S2-HTTP-03",
+      "category": "http-websocket-protocol",
+      "file": "packages/orchestrator/test/hardening.test.ts",
+      "testName": "launch-token exchange is single-winner",
+      "layer": "integration",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": {
+        "source": "orchestrator-tap",
+        "selector": "launch-token exchange is single-winner under concurrency, expires, and old server sessions do not survive restart"
+      }
+    },
+    {
+      "id": "S2-HTTP-04",
+      "category": "http-websocket-protocol",
+      "file": "packages/orchestrator/test/hardening.test.ts",
+      "testName": "authenticated WebSocket emits",
+      "layer": "integration",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": {
+        "source": "orchestrator-tap",
+        "selector": "an authenticated WebSocket emits only semantic revisioned events and ignores inbound command frames"
+      }
+    },
+    {
+      "id": "S2-HTTP-05",
+      "category": "http-websocket-protocol",
+      "file": "packages/orchestrator/test/hardening.test.ts",
+      "testName": "snapshot reads accept omitted Origin",
+      "layer": "integration",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": {
+        "source": "orchestrator-tap",
+        "selector": "snapshot reads accept omitted Origin with a session while commands and project creation remain strict"
+      }
+    },
+    {
+      "id": "S2-HTTP-06",
+      "category": "http-websocket-protocol",
+      "file": "packages/orchestrator/test/protocol.test.ts",
+      "testName": "rejects unknown, malformed",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": {
+        "source": "orchestrator-tap",
+        "selector": "rejects unknown, malformed, and technically smuggled command bodies before state changes"
+      }
+    },
+    {
+      "id": "S2-HTTP-07",
+      "category": "http-websocket-protocol",
+      "file": "packages/orchestrator/test/protocol.test.ts",
+      "testName": "returns a canonical snapshot",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": {
+        "source": "orchestrator-tap",
+        "selector": "returns a canonical snapshot, not a partial event stream, after a revision gap"
+      }
+    },
+    {
+      "id": "S2-HTTP-08",
+      "category": "http-websocket-protocol",
+      "file": "packages/orchestrator/test/protocol.test.ts",
+      "testName": "preserves Turkish text",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": {
+        "source": "orchestrator-tap",
+        "selector": "HTTP-08 loopback JSON command preserves exact UTF-8 Turkish input bytes"
+      }
+    },
+    {
+      "id": "S2-HTTP-09",
+      "category": "http-websocket-protocol",
+      "file": "packages/orchestrator/test/protocol.test.ts",
+      "testName": "redacts raw engine material",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": {
+        "source": "orchestrator-tap",
+        "selector": "redacts raw engine material semantically instead of serializing a disguised copy"
+      }
+    },
+    {
+      "id": "S2-FAIL-01",
+      "category": "engine-failure-mapping",
+      "file": "packages/engine/test/session.test.ts",
+      "testName": "receipt MISMATCH",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": {
+        "source": "offline-tap",
+        "selector": "a receipt MISMATCH stops the session and blocks every later send"
+      }
+    },
+    {
+      "id": "S2-FAIL-02",
+      "category": "engine-failure-mapping",
+      "file": "packages/engine/test/session.test.ts",
+      "testName": "ABSENT receipt",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": {
+        "source": "offline-tap",
+        "selector": "an ABSENT receipt fails the gate instead of satisfying it"
+      }
+    },
+    {
+      "id": "S2-FAIL-03",
+      "category": "engine-failure-mapping",
+      "file": "packages/engine/test/session.test.ts",
+      "testName": "unreadable line",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": {
+        "source": "offline-tap",
+        "selector": "an unreadable line is REPORTED, never silently skipped"
+      }
+    },
+    {
+      "id": "S2-FAIL-04",
+      "category": "engine-failure-mapping",
+      "file": "packages/engine/test/session.test.ts",
+      "testName": "diagnostic stream flood",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": {
+        "source": "offline-tap",
+        "selector": "a diagnostic stream flood does not deadlock the phase, and the bounded tail is kept"
+      }
+    },
+    {
+      "id": "S2-FAIL-05",
+      "category": "engine-failure-mapping",
+      "file": "packages/engine/test/session.test.ts",
+      "testName": "watchdog DOES fire",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": {
+        "source": "offline-tap",
+        "selector": "the watchdog DOES fire when the engine goes quiet after being asked"
+      }
+    },
+    {
+      "id": "S2-FAIL-06",
+      "category": "engine-failure-mapping",
+      "file": "packages/engine/test/session.test.ts",
+      "testName": "EPIPE is a failure",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": {
+        "source": "offline-tap",
+        "selector": "an EPIPE is a failure event, not an uncaught exception that kills the run"
+      }
+    },
+    {
+      "id": "S2-FAIL-07",
+      "category": "engine-failure-mapping",
+      "file": "packages/orchestrator/test/lifecycle-contract.test.ts",
+      "testName": "S2-FAIL-07 explicit recovery failure vocabulary can never be classified or published as success",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": {
+        "source": "orchestrator-tap",
+        "selector": "S2-FAIL-07 explicit recovery failure vocabulary can never be classified or published as success"
+      }
+    },
+    {
+      "id": "S2-FAIL-08",
+      "category": "engine-failure-mapping",
+      "file": "packages/engine/test/receipt.test.ts",
+      "testName": "every problem is reported",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": {
+        "source": "offline-tap",
+        "selector": "every problem is reported, not just the first"
+      }
+    },
+    {
+      "id": "S2-FAIL-09",
+      "category": "engine-failure-mapping",
+      "file": "packages/engine/test/session.test.ts",
+      "testName": "engine-authored prose is redacted",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": {
+        "source": "offline-tap",
+        "selector": "engine-authored prose is redacted before it reaches a failure record"
+      }
+    },
+    {
+      "id": "S2-FAIL-10",
+      "category": "engine-failure-mapping",
+      "file": "packages/orchestrator/test/final-18-contract.test.ts",
+      "testName": "publishes an immutable non-success failure receipt that survives reopen",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "S2-FINAL-18-FAILURE-06-denial publishes an immutable non-success failure receipt that survives reopen" }
+    },
+    {
+      "id": "S2-FAIL-11",
+      "category": "engine-failure-mapping",
+      "file": "packages/orchestrator/test/final-18-contract.test.ts",
+      "testName": "publishes an immutable non-success failure receipt that survives reopen",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "S2-FINAL-18-FAILURE-06-hook publishes an immutable non-success failure receipt that survives reopen" }
+    },
+    {
+      "id": "S2-FAIL-12",
+      "category": "engine-failure-mapping",
+      "file": "packages/orchestrator/test/final-18-contract.test.ts",
+      "testName": "publishes an immutable non-success failure receipt that survives reopen",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "S2-FINAL-18-FAILURE-06-rate_limit_five_hour publishes an immutable non-success failure receipt that survives reopen" }
+    },
+    {
+      "id": "S2-FAIL-13",
+      "category": "engine-failure-mapping",
+      "file": "packages/orchestrator/test/final-18-contract.test.ts",
+      "testName": "publishes an immutable non-success failure receipt that survives reopen",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "S2-FINAL-18-FAILURE-06-rate_limit_seven_day publishes an immutable non-success failure receipt that survives reopen" }
+    },
+    {
+      "id": "S2-FAIL-14",
+      "category": "engine-failure-mapping",
+      "file": "packages/orchestrator/test/final-18-contract.test.ts",
+      "testName": "publishes an immutable non-success failure receipt that survives reopen",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "S2-FINAL-18-FAILURE-06-interrupted publishes an immutable non-success failure receipt that survives reopen" }
+    },
+    {
+      "id": "S2-FAIL-15",
+      "category": "engine-failure-mapping",
+      "file": "packages/orchestrator/test/final-18-contract.test.ts",
+      "testName": "publishes an immutable non-success failure receipt that survives reopen",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "S2-FINAL-18-FAILURE-06-framing publishes an immutable non-success failure receipt that survives reopen" }
+    },
+    {
+      "id": "S2-FAIL-16",
+      "category": "engine-failure-mapping",
+      "file": "packages/orchestrator/test/final-18-contract.test.ts",
+      "testName": "publishes an immutable non-success failure receipt that survives reopen",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "S2-FINAL-18-FAILURE-06-io publishes an immutable non-success failure receipt that survives reopen" }
+    },
+    {
+      "id": "S2-FAIL-17",
+      "category": "engine-failure-mapping",
+      "file": "packages/orchestrator/test/final-18-contract.test.ts",
+      "testName": "publishes an immutable non-success failure receipt that survives reopen",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "S2-FINAL-18-FAILURE-06-receipt publishes an immutable non-success failure receipt that survives reopen" }
+    },
+    {
+      "id": "S2-FAIL-18",
+      "category": "engine-failure-mapping",
+      "file": "packages/orchestrator/test/final-18-contract.test.ts",
+      "testName": "publishes an immutable non-success failure receipt that survives reopen",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "S2-FINAL-18-FAILURE-06-recovery publishes an immutable non-success failure receipt that survives reopen" }
+    },
+    {
+      "id": "S2-FAIL-19",
+      "category": "engine-failure-mapping",
+      "file": "packages/orchestrator/test/final-18-contract.test.ts",
+      "testName": "publishes an immutable non-success failure receipt that survives reopen",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "S2-FINAL-18-FAILURE-06-unknown_event publishes an immutable non-success failure receipt that survives reopen" }
+    },
+    {
+      "id": "S2-FAIL-20",
+      "category": "engine-failure-mapping",
+      "file": "packages/orchestrator/test/final-18-contract.test.ts",
+      "testName": "publishes an immutable non-success failure receipt that survives reopen",
+      "layer": "integration",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "S2-FINAL-18-FAILURE-06-stall publishes an immutable non-success failure receipt that survives reopen" }
+    },
+    {
+      "id": "S2-CPT-01",
+      "category": "cockpit-novice-journey",
+      "file": "apps/cockpit/e2e/novice-journey.spec.ts",
+      "testName": "CPT-E2E-G0-G6",
+      "layer": "e2e",
+      "authority": "machine",
+      "command": "npm run test:e2e:chromium",
+      "crossBrowser": true,
+      "browserCommands": [
+        "npm run test:e2e:chromium",
+        "npm run test:e2e:webkit"
+      ],
+      "viewports": [
+        "1280x800",
+        "1024x768"
+      ],
+      "browserEvidence": [
+        {
+          "variant": "g0-g6",
+          "title": "CPT-E2E-G0-G6 Turkish novice journey uses semantic activity and canonical reopen"
+        }
+      ],
+      "executionEvidence": {
+        "source": "browser",
+        "selector": "S2-CPT-01"
+      }
+    },
+    {
+      "id": "S2-CPT-02",
+      "category": "cockpit-novice-journey",
+      "file": "apps/cockpit/e2e/novice-journey.spec.ts",
+      "testName": "CPT-E2E-I18N-05",
+      "layer": "e2e",
+      "authority": "machine",
+      "command": "npm run test:e2e:chromium",
+      "crossBrowser": true,
+      "browserCommands": [
+        "npm run test:e2e:chromium",
+        "npm run test:e2e:webkit"
+      ],
+      "viewports": [
+        "1280x800",
+        "1024x768"
+      ],
+      "browserEvidence": [
+        {
+          "variant": "i18n",
+          "title": "CPT-E2E-I18N-05 Turkish defaults and English switch preserves the canonical state"
+        }
+      ],
+      "executionEvidence": {
+        "source": "browser",
+        "selector": "S2-CPT-02"
+      }
+    },
+    {
+      "id": "S2-CPT-03",
+      "category": "cockpit-novice-journey",
+      "file": "apps/cockpit/e2e/novice-journey.spec.ts",
+      "testName": "CPT-E2E-STATE-${state}",
+      "layer": "e2e",
+      "authority": "machine",
+      "command": "npm run test:e2e:chromium",
+      "crossBrowser": true,
+      "browserCommands": [
+        "npm run test:e2e:chromium",
+        "npm run test:e2e:webkit"
+      ],
+      "viewports": [
+        "1280x800",
+        "1024x768"
+      ],
+      "browserEvidence": [
+        {
+          "variant": "state-running",
+          "title": "CPT-E2E-STATE-running has text, not color-only, novice status"
+        },
+        {
+          "variant": "state-waiting",
+          "title": "CPT-E2E-STATE-waiting has text, not color-only, novice status"
+        },
+        {
+          "variant": "state-retrying",
+          "title": "CPT-E2E-STATE-retrying has text, not color-only, novice status"
+        },
+        {
+          "variant": "state-stopped",
+          "title": "CPT-E2E-STATE-stopped has text, not color-only, novice status"
+        },
+        {
+          "variant": "state-interrupted",
+          "title": "CPT-E2E-STATE-interrupted has text, not color-only, novice status"
+        },
+        {
+          "variant": "state-needs-user",
+          "title": "CPT-E2E-STATE-needs-user has text, not color-only, novice status"
+        },
+        {
+          "variant": "state-rate-limit",
+          "title": "CPT-E2E-STATE-rate-limit has text, not color-only, novice status"
+        },
+        {
+          "variant": "state-recovery-required",
+          "title": "CPT-E2E-STATE-recovery-required has text, not color-only, novice status"
+        },
+        {
+          "variant": "gate-card-status",
+          "title": "CPT-E2E-GATES-17 each gate card renders its own state rather than the overall run state"
+        }
+      ],
+      "executionEvidence": {
+        "source": "browser",
+        "selector": "S2-CPT-03"
+      }
+    },
+    {
+      "id": "S2-CPT-04",
+      "category": "cockpit-novice-journey",
+      "file": "apps/cockpit/e2e/novice-journey.spec.ts",
+      "testName": "CPT-E2E-WAIT-${state}",
+      "layer": "e2e",
+      "authority": "machine",
+      "command": "npm run test:e2e:chromium",
+      "crossBrowser": true,
+      "browserCommands": [
+        "npm run test:e2e:chromium",
+        "npm run test:e2e:webkit"
+      ],
+      "viewports": [
+        "1280x800",
+        "1024x768"
+      ],
+      "browserEvidence": [
+        {
+          "variant": "wait-running",
+          "title": "CPT-E2E-WAIT-running-14 running work is wait-only and has no stale decision control"
+        },
+        {
+          "variant": "wait-retrying",
+          "title": "CPT-E2E-WAIT-retrying-14 running work is wait-only and has no stale decision control"
+        }
+      ],
+      "executionEvidence": {
+        "source": "browser",
+        "selector": "S2-CPT-04"
+      }
+    },
+    {
+      "id": "S2-CPT-05",
+      "category": "cockpit-novice-journey",
+      "file": "apps/cockpit/e2e/novice-journey.spec.ts",
+      "testName": "CPT-E2E-RECOVERY-15",
+      "layer": "e2e",
+      "authority": "machine",
+      "command": "npm run test:e2e:chromium",
+      "crossBrowser": true,
+      "browserCommands": [
+        "npm run test:e2e:chromium",
+        "npm run test:e2e:webkit"
+      ],
+      "viewports": [
+        "1280x800",
+        "1024x768"
+      ],
+      "browserEvidence": [
+        {
+          "variant": "recovery-tr",
+          "title": "CPT-E2E-RECOVERY-15 recovery replaces stale decisions with one refresh action and labels prior evidence honestly"
+        },
+        {
+          "variant": "recovery-en",
+          "title": "CPT-E2E-RECOVERY-EN-16 English recovery keeps one refresh action and separates previous evidence from current state"
+        }
+      ],
+      "executionEvidence": {
+        "source": "browser",
+        "selector": "S2-CPT-05"
+      }
+    },
+    {
+      "id": "S2-CPT-06",
+      "category": "cockpit-novice-journey",
+      "file": "apps/cockpit/e2e/novice-journey.spec.ts",
+      "testName": "CPT-E2E-A11Y-13",
+      "layer": "e2e",
+      "authority": "machine",
+      "command": "npm run test:e2e:chromium",
+      "crossBrowser": true,
+      "browserCommands": [
+        "npm run test:e2e:chromium",
+        "npm run test:e2e:webkit"
+      ],
+      "viewports": [
+        "1280x800",
+        "1024x768"
+      ],
+      "browserEvidence": [
+        {
+          "variant": "a11y",
+          "title": "CPT-E2E-A11Y-13 keyboard order and axe are clean at the desktop support floor"
+        }
+      ],
+      "executionEvidence": {
+        "source": "browser",
+        "selector": "S2-CPT-06"
+      }
+    },
+    {
+      "id": "S2-CPT-07",
+      "category": "cockpit-novice-journey",
+      "file": "apps/cockpit/e2e/novice-journey.spec.ts",
+      "testName": "CPT-E2E-REDACTION-02",
+      "layer": "e2e",
+      "authority": "machine",
+      "command": "npm run test:e2e:chromium",
+      "crossBrowser": true,
+      "browserCommands": [
+        "npm run test:e2e:chromium",
+        "npm run test:e2e:webkit"
+      ],
+      "viewports": [
+        "1280x800",
+        "1024x768"
+      ],
+      "browserEvidence": [
+        {
+          "variant": "redaction",
+          "title": "CPT-E2E-REDACTION-02 unsafe WebSocket material never renders and instead reloads the canonical snapshot"
+        }
+      ],
+      "executionEvidence": {
+        "source": "browser",
+        "selector": "S2-CPT-07"
+      }
+    },
+    {
+      "id": "S2-CPT-08",
+      "category": "cockpit-novice-journey",
+      "file": "apps/cockpit/e2e/novice-journey.spec.ts",
+      "testName": "CPT-E2E-LAUNCH-04",
+      "layer": "e2e",
+      "authority": "machine",
+      "command": "npm run test:e2e:chromium",
+      "crossBrowser": true,
+      "browserCommands": [
+        "npm run test:e2e:chromium",
+        "npm run test:e2e:webkit"
+      ],
+      "viewports": [
+        "1280x800",
+        "1024x768"
+      ],
+      "browserEvidence": [
+        {
+          "variant": "launch",
+          "title": "CPT-E2E-LAUNCH-04 exchanges a fragment token once, removes it, stays same-origin, and starts from the canonical snapshot"
+        }
+      ],
+      "executionEvidence": {
+        "source": "browser",
+        "selector": "S2-CPT-08"
+      }
+    },
+    {
+      "id": "S2-CPT-09", "category": "cockpit-novice-journey", "file": "apps/cockpit/e2e/final-22-failures.spec.ts", "testName": "CPT-E2E-FINAL-22-FAILURE-${failure.code}", "layer": "e2e", "authority": "machine", "command": "npm run test:e2e:chromium", "crossBrowser": true,
+      "browserCommands": ["npm run test:e2e:chromium", "npm run test:e2e:webkit"], "viewports": ["1280x800", "1024x768"],
+      "browserEvidence": [{ "variant": "failure-receipt", "title": "CPT-E2E-FINAL-22-FAILURE-receipt renders the real receipt failure safely" }],
+      "executionEvidence": { "source": "browser", "selector": "S2-CPT-09" }
+    },
+    {
+      "id": "S2-CPT-10", "category": "cockpit-novice-journey", "file": "apps/cockpit/e2e/final-22-failures.spec.ts", "testName": "CPT-E2E-FINAL-22-FAILURE-${failure.code}", "layer": "e2e", "authority": "machine", "command": "npm run test:e2e:chromium", "crossBrowser": true,
+      "browserCommands": ["npm run test:e2e:chromium", "npm run test:e2e:webkit"], "viewports": ["1280x800", "1024x768"],
+      "browserEvidence": [{ "variant": "failure-denial", "title": "CPT-E2E-FINAL-22-FAILURE-denial renders the real denial failure safely" }],
+      "executionEvidence": { "source": "browser", "selector": "S2-CPT-10" }
+    },
+    {
+      "id": "S2-CPT-11", "category": "cockpit-novice-journey", "file": "apps/cockpit/e2e/final-22-failures.spec.ts", "testName": "CPT-E2E-FINAL-22-FAILURE-${failure.code}", "layer": "e2e", "authority": "machine", "command": "npm run test:e2e:chromium", "crossBrowser": true,
+      "browserCommands": ["npm run test:e2e:chromium", "npm run test:e2e:webkit"], "viewports": ["1280x800", "1024x768"],
+      "browserEvidence": [{ "variant": "failure-hook", "title": "CPT-E2E-FINAL-22-FAILURE-hook renders the real hook failure safely" }],
+      "executionEvidence": { "source": "browser", "selector": "S2-CPT-11" }
+    },
+    {
+      "id": "S2-CPT-12", "category": "cockpit-novice-journey", "file": "apps/cockpit/e2e/final-22-failures.spec.ts", "testName": "CPT-E2E-FINAL-22-FAILURE-${failure.code}", "layer": "e2e", "authority": "machine", "command": "npm run test:e2e:chromium", "crossBrowser": true,
+      "browserCommands": ["npm run test:e2e:chromium", "npm run test:e2e:webkit"], "viewports": ["1280x800", "1024x768"],
+      "browserEvidence": [{ "variant": "failure-stall", "title": "CPT-E2E-FINAL-22-FAILURE-stall renders the real stall failure safely" }],
+      "executionEvidence": { "source": "browser", "selector": "S2-CPT-12" }
+    },
+    {
+      "id": "S2-CPT-13", "category": "cockpit-novice-journey", "file": "apps/cockpit/e2e/final-22-failures.spec.ts", "testName": "CPT-E2E-FINAL-22-FAILURE-${failure.code}", "layer": "e2e", "authority": "machine", "command": "npm run test:e2e:chromium", "crossBrowser": true,
+      "browserCommands": ["npm run test:e2e:chromium", "npm run test:e2e:webkit"], "viewports": ["1280x800", "1024x768"],
+      "browserEvidence": [{ "variant": "failure-framing", "title": "CPT-E2E-FINAL-22-FAILURE-framing renders the real framing failure safely" }],
+      "executionEvidence": { "source": "browser", "selector": "S2-CPT-13" }
+    },
+    {
+      "id": "S2-CPT-14", "category": "cockpit-novice-journey", "file": "apps/cockpit/e2e/final-22-failures.spec.ts", "testName": "CPT-E2E-FINAL-22-FAILURE-${failure.code}", "layer": "e2e", "authority": "machine", "command": "npm run test:e2e:chromium", "crossBrowser": true,
+      "browserCommands": ["npm run test:e2e:chromium", "npm run test:e2e:webkit"], "viewports": ["1280x800", "1024x768"],
+      "browserEvidence": [{ "variant": "failure-io", "title": "CPT-E2E-FINAL-22-FAILURE-io renders the real io failure safely" }],
+      "executionEvidence": { "source": "browser", "selector": "S2-CPT-14" }
+    },
+    {
+      "id": "S2-CPT-15", "category": "cockpit-novice-journey", "file": "apps/cockpit/e2e/final-22-failures.spec.ts", "testName": "CPT-E2E-FINAL-22-FAILURE-${failure.code}", "layer": "e2e", "authority": "machine", "command": "npm run test:e2e:chromium", "crossBrowser": true,
+      "browserCommands": ["npm run test:e2e:chromium", "npm run test:e2e:webkit"], "viewports": ["1280x800", "1024x768"],
+      "browserEvidence": [{ "variant": "failure-rate-limit-five-hour", "title": "CPT-E2E-FINAL-22-FAILURE-rate_limit_five_hour renders the real rate_limit_five_hour failure safely" }],
+      "executionEvidence": { "source": "browser", "selector": "S2-CPT-15" }
+    },
+    {
+      "id": "S2-CPT-16", "category": "cockpit-novice-journey", "file": "apps/cockpit/e2e/final-22-failures.spec.ts", "testName": "CPT-E2E-FINAL-22-FAILURE-${failure.code}", "layer": "e2e", "authority": "machine", "command": "npm run test:e2e:chromium", "crossBrowser": true,
+      "browserCommands": ["npm run test:e2e:chromium", "npm run test:e2e:webkit"], "viewports": ["1280x800", "1024x768"],
+      "browserEvidence": [{ "variant": "failure-rate-limit-seven-day", "title": "CPT-E2E-FINAL-22-FAILURE-rate_limit_seven_day renders the real rate_limit_seven_day failure safely" }],
+      "executionEvidence": { "source": "browser", "selector": "S2-CPT-16" }
+    },
+    {
+      "id": "S2-CPT-17", "category": "cockpit-novice-journey", "file": "apps/cockpit/e2e/final-22-failures.spec.ts", "testName": "CPT-E2E-FINAL-22-FAILURE-${failure.code}", "layer": "e2e", "authority": "machine", "command": "npm run test:e2e:chromium", "crossBrowser": true,
+      "browserCommands": ["npm run test:e2e:chromium", "npm run test:e2e:webkit"], "viewports": ["1280x800", "1024x768"],
+      "browserEvidence": [{ "variant": "failure-interrupted", "title": "CPT-E2E-FINAL-22-FAILURE-interrupted renders the real interrupted failure safely" }],
+      "executionEvidence": { "source": "browser", "selector": "S2-CPT-17" }
+    },
+    {
+      "id": "S2-CPT-18", "category": "cockpit-novice-journey", "file": "apps/cockpit/e2e/final-22-failures.spec.ts", "testName": "CPT-E2E-FINAL-22-FAILURE-${failure.code}", "layer": "e2e", "authority": "machine", "command": "npm run test:e2e:chromium", "crossBrowser": true,
+      "browserCommands": ["npm run test:e2e:chromium", "npm run test:e2e:webkit"], "viewports": ["1280x800", "1024x768"],
+      "browserEvidence": [{ "variant": "failure-recovery", "title": "CPT-E2E-FINAL-22-FAILURE-recovery renders the real recovery failure safely" }],
+      "executionEvidence": { "source": "browser", "selector": "S2-CPT-18" }
+    },
+    {
+      "id": "S2-CPT-19", "category": "cockpit-novice-journey", "file": "apps/cockpit/e2e/final-22-failures.spec.ts", "testName": "CPT-E2E-FINAL-22-FAILURE-${failure.code}", "layer": "e2e", "authority": "machine", "command": "npm run test:e2e:chromium", "crossBrowser": true,
+      "browserCommands": ["npm run test:e2e:chromium", "npm run test:e2e:webkit"], "viewports": ["1280x800", "1024x768"],
+      "browserEvidence": [{ "variant": "failure-unknown-event", "title": "CPT-E2E-FINAL-22-FAILURE-unknown_event renders the real unknown_event failure safely" }],
+      "executionEvidence": { "source": "browser", "selector": "S2-CPT-19" }
+    },
+    {
+      "id": "S2-LW-01",
+      "category": "local-web-normal",
+      "file": "profiles/local-web/test/harness.test.ts",
+      "testName": "normal profile harness",
+      "layer": "profile",
+      "authority": "machine",
+      "command": "npm run test:profile:local-web",
+      "executionEvidence": {
+        "source": "native-gate",
+        "selector": "gate:lint"
+      }
+    },
+    {
+      "id": "S2-LW-02",
+      "category": "local-web-normal",
+      "file": "profiles/local-web/test/harness.test.ts",
+      "testName": "normal profile harness",
+      "layer": "profile",
+      "authority": "machine",
+      "command": "npm run test:profile:local-web",
+      "executionEvidence": {
+        "source": "native-gate",
+        "selector": "gate:type"
+      }
+    },
+    {
+      "id": "S2-LW-03",
+      "category": "local-web-normal",
+      "file": "profiles/local-web/test/harness.test.ts",
+      "testName": "normal profile harness",
+      "layer": "profile",
+      "authority": "machine",
+      "command": "npm run test:profile:local-web",
+      "executionEvidence": {
+        "source": "native-gate",
+        "selector": "gate:unit"
+      }
+    },
+    {
+      "id": "S2-LW-04",
+      "category": "local-web-normal",
+      "file": "profiles/local-web/test/harness.test.ts",
+      "testName": "normal profile harness",
+      "layer": "profile",
+      "authority": "machine",
+      "command": "npm run test:profile:local-web",
+      "executionEvidence": {
+        "source": "native-gate",
+        "selector": "gate:build"
+      }
+    },
+    {
+      "id": "S2-LW-05",
+      "category": "local-web-normal",
+      "file": "profiles/local-web/test/harness.test.ts",
+      "testName": "normal profile harness",
+      "layer": "profile",
+      "authority": "machine",
+      "command": "npm run test:profile:local-web",
+      "executionEvidence": {
+        "source": "native-gate",
+        "selector": "gate:boot"
+      }
+    },
+    {
+      "id": "S2-LW-06",
+      "category": "local-web-normal",
+      "file": "profiles/local-web/test/harness.test.ts",
+      "testName": "normal profile harness",
+      "layer": "profile",
+      "authority": "machine",
+      "command": "npm run test:profile:local-web",
+      "executionEvidence": {
+        "source": "native-gate",
+        "selector": "gate:axe"
+      }
+    },
+    {
+      "id": "S2-LW-07",
+      "category": "local-web-normal",
+      "file": "profiles/local-web/test/harness.test.ts",
+      "testName": "normal profile harness",
+      "layer": "profile",
+      "authority": "machine",
+      "command": "npm run test:profile:local-web",
+      "executionEvidence": {
+        "source": "native-gate",
+        "selector": "gate:smoke"
+      }
+    },
+    {
+      "id": "S2-SEED-01",
+      "category": "local-web-seeded",
+      "file": "profiles/local-web/test/harness.test.ts",
+      "testName": "seeded profile harness",
+      "layer": "profile",
+      "authority": "machine",
+      "command": "npm run test:profile:local-web:seeded",
+      "executionEvidence": {
+        "source": "native-seed-rejection",
+        "selector": "seed:lint"
+      }
+    },
+    {
+      "id": "S2-SEED-02",
+      "category": "local-web-seeded",
+      "file": "profiles/local-web/test/harness.test.ts",
+      "testName": "seeded profile harness",
+      "layer": "profile",
+      "authority": "machine",
+      "command": "npm run test:profile:local-web:seeded",
+      "executionEvidence": {
+        "source": "native-seed-rejection",
+        "selector": "seed:type"
+      }
+    },
+    {
+      "id": "S2-SEED-03",
+      "category": "local-web-seeded",
+      "file": "profiles/local-web/test/harness.test.ts",
+      "testName": "seeded profile harness",
+      "layer": "profile",
+      "authority": "machine",
+      "command": "npm run test:profile:local-web:seeded",
+      "executionEvidence": {
+        "source": "native-seed-rejection",
+        "selector": "seed:unit"
+      }
+    },
+    {
+      "id": "S2-SEED-04",
+      "category": "local-web-seeded",
+      "file": "profiles/local-web/test/harness.test.ts",
+      "testName": "seeded profile harness",
+      "layer": "profile",
+      "authority": "machine",
+      "command": "npm run test:profile:local-web:seeded",
+      "executionEvidence": {
+        "source": "native-seed-rejection",
+        "selector": "seed:build"
+      }
+    },
+    {
+      "id": "S2-SEED-05",
+      "category": "local-web-seeded",
+      "file": "profiles/local-web/test/harness.test.ts",
+      "testName": "seeded profile harness",
+      "layer": "profile",
+      "authority": "machine",
+      "command": "npm run test:profile:local-web:seeded",
+      "executionEvidence": {
+        "source": "native-seed-rejection",
+        "selector": "seed:boot"
+      }
+    },
+    {
+      "id": "S2-SEED-06",
+      "category": "local-web-seeded",
+      "file": "profiles/local-web/test/harness.test.ts",
+      "testName": "seeded profile harness",
+      "layer": "profile",
+      "authority": "machine",
+      "command": "npm run test:profile:local-web:seeded",
+      "executionEvidence": {
+        "source": "native-seed-rejection",
+        "selector": "seed:axe"
+      }
+    },
+    {
+      "id": "S2-INTENT-BINDING-01",
+      "category": "recovery-b1",
+      "file": "packages/orchestrator/test/intent-binding.test.ts",
+      "testName": "INTENT-BINDING-01 persists one canonical launch intent digest and nonce before the wrapper may start the target",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "INTENT-BINDING-01 persists one canonical launch intent digest and nonce before the wrapper may start the target" }
+    },
+    {
+      "id": "S2-INTENT-BINDING-02",
+      "category": "recovery-b1",
+      "file": "packages/orchestrator/test/intent-binding.test.ts",
+      "testName": "INTENT-BINDING-02 accepts only an armed GO whose exact payload agrees with the canonical intent",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "INTENT-BINDING-02 accepts only an armed GO whose exact payload agrees with the canonical intent" }
+    },
+    {
+      "id": "S2-INTENT-BINDING-03",
+      "category": "recovery-b1",
+      "file": "packages/orchestrator/test/intent-binding.test.ts",
+      "testName": "INTENT-BINDING-03 rejects a GO payload for intent B after arming intent A and starts no marker",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "INTENT-BINDING-03 rejects a GO payload for intent B after arming intent A and starts no marker" }
+    },
+    {
+      "id": "S2-INTENT-BINDING-04",
+      "category": "recovery-b1",
+      "file": "packages/orchestrator/test/intent-binding.test.ts",
+      "testName": "INTENT-BINDING-04 reopen rejects malformed and digest-mismatched persisted intents",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "INTENT-BINDING-04 reopen rejects malformed and digest-mismatched persisted intents" }
+    },
+    {
+      "id": "S2-INTENT-BINDING-05",
+      "category": "recovery-b1",
+      "file": "packages/orchestrator/test/intent-binding.test.ts",
+      "testName": "INTENT-BINDING-05 reopen rejects a persisted receipt whose nonce differs from its intent nonce",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "INTENT-BINDING-05 reopen rejects a persisted receipt whose nonce differs from its intent nonce" }
+    },
+    {
+      "id": "S2-PROJECT-ROOT-SYMLINK-01",
+      "category": "artifact-state-authority",
+      "file": "packages/orchestrator/test/artifacts.test.ts",
+      "testName": "PROJECT-ROOT-SYMLINK-01 ArtifactStore.open rejects an existing projectId symlink before mutation",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "PROJECT-ROOT-SYMLINK-01 ArtifactStore.open rejects an existing projectId symlink before mutation" }
+    },
+    {
+      "id": "S2-PROJECT-ROOT-SYMLINK-02",
+      "category": "artifact-state-authority",
+      "file": "packages/orchestrator/test/artifacts.test.ts",
+      "testName": "PROJECT-ROOT-SYMLINK-02 rejects without mutating the external target or creating lock or manifest metadata",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "PROJECT-ROOT-SYMLINK-02 rejects without mutating the external target or creating lock or manifest metadata" }
+    },
+    {
+      "id": "S2-SOURCE-MANIFEST-01",
+      "category": "artifact-state-authority",
+      "file": "tools/gates/source-manifest-regression.test.mjs",
+      "testName": "SOURCE-MANIFEST-01 captures every tracked and nonignored untracked source, including the stream probe schema and surface",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "SOURCE-MANIFEST-01 captures every tracked and nonignored untracked source, including the stream probe schema and surface" }
+    },
+    {
+      "id": "S2-SOURCE-MANIFEST-02",
+      "category": "artifact-state-authority",
+      "file": "tools/gates/source-manifest-regression.test.mjs",
+      "testName": "SOURCE-MANIFEST-02 a gate wrapper rejects a tracked source byte mutation after capture",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "SOURCE-MANIFEST-02 a gate wrapper rejects a tracked source byte mutation after capture" }
+    },
+    {
+      "id": "S2-SOURCE-MANIFEST-03",
+      "category": "artifact-state-authority",
+      "file": "tools/gates/source-manifest-regression.test.mjs",
+      "testName": "SOURCE-MANIFEST-03 a gate wrapper rejects an untracked nonignored source byte mutation after capture",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "SOURCE-MANIFEST-03 a gate wrapper rejects an untracked nonignored source byte mutation after capture" }
+    },
+    {
+      "id": "S2-SOURCE-MANIFEST-04",
+      "category": "artifact-state-authority",
+      "file": "tools/gates/source-manifest-regression.test.mjs",
+      "testName": "SOURCE-MANIFEST-04 rejects missing, duplicate, unreadable, symlinked, and digest-mismatched source manifests",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "SOURCE-MANIFEST-04 rejects missing, duplicate, unreadable, symlinked, and digest-mismatched source manifests" }
+    },
+    {
+      "id": "S2-LOCAL-WEB-TARGET-01",
+      "category": "artifact-state-authority",
+      "file": "profiles/local-web/test/generator.test.ts",
+      "testName": "LOCAL-WEB-TARGET-01 generates a new target directory with an initial repository",
+      "layer": "profile",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "LOCAL-WEB-TARGET-01 generates a new target directory with an initial repository" }
+    },
+    {
+      "id": "S2-LOCAL-WEB-TARGET-02",
+      "category": "artifact-state-authority",
+      "file": "profiles/local-web/test/generator.test.ts",
+      "testName": "LOCAL-WEB-TARGET-02 generates into an existing empty target directory",
+      "layer": "profile",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "LOCAL-WEB-TARGET-02 generates into an existing empty target directory" }
+    },
+    {
+      "id": "S2-LOCAL-WEB-TARGET-03",
+      "category": "artifact-state-authority",
+      "file": "profiles/local-web/test/generator.test.ts",
+      "testName": "LOCAL-WEB-TARGET-03 generator and CLI reject an existing non-empty target before writes or git init",
+      "layer": "profile",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "LOCAL-WEB-TARGET-03 generator and CLI reject an existing non-empty target before writes or git init" }
+    },
+    {
+      "id": "S2-LOCAL-WEB-TARGET-04",
+      "category": "artifact-state-authority",
+      "file": "profiles/local-web/test/generator.test.ts",
+      "testName": "LOCAL-WEB-TARGET-04 rejected existing targets preserve exact user bytes and no repository metadata",
+      "layer": "profile",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "LOCAL-WEB-TARGET-04 rejected existing targets preserve exact user bytes and no repository metadata" }
+    },
+    {
+      "id": "S2-SEED-07",
+      "category": "local-web-seeded",
+      "file": "profiles/local-web/test/harness.test.ts",
+      "testName": "seeded profile harness",
+      "layer": "profile",
+      "authority": "machine",
+      "command": "npm run test:profile:local-web:seeded",
+      "executionEvidence": {
+        "source": "native-seed-rejection",
+        "selector": "seed:smoke"
+      }
+    },
+    {
+      "id": "S2-F24-A",
+      "category": "engine-failure-mapping",
+      "file": "packages/orchestrator/test/final-24-contract.test.ts",
+      "testName": "S2-F24-A production failures originate from a launched G4 attempt, never direct G0 publication, and stopped retry creates a distinct attempt",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "S2-F24-A production failures originate from a launched G4 attempt, never direct G0 publication, and stopped retry creates a distinct attempt" }
+    },
+    {
+      "id": "S2-F24-H",
+      "category": "recovery-b1",
+      "file": "profiles/local-web/test/process-cleanup-regression.test.ts",
+      "testName": "S2-F24-H Local Web captures detached ownership after spawn without an unbounded receipt race",
+      "layer": "profile",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F24-H Local Web captures detached ownership after spawn without an unbounded receipt race" }
+    },
+    {
+      "id": "S2-F24-B",
+      "category": "recovery-b1",
+      "file": "packages/orchestrator/test/final-24-contract.test.ts",
+      "testName": "S2-F24-B exact reconciliation removes the recovery marker only after durable resolution history is appended",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "S2-F24-B exact reconciliation removes the recovery marker only after durable resolution history is appended" }
+    },
+    {
+      "id": "S2-F24-A-BROWSER",
+      "category": "engine-failure-mapping",
+      "file": "apps/cockpit/e2e/final-24-attempt-failure.spec.ts",
+      "testName": "CPT-E2E-FINAL-24-A browser loopback projects an attempt-bound G4 failure and exposes only the retry action",
+      "layer": "e2e",
+      "authority": "machine",
+      "command": "npm run test:e2e:chromium",
+      "crossBrowser": true,
+      "browserCommands": ["npm run test:e2e:chromium", "npm run test:e2e:webkit"],
+      "viewports": ["1280x800", "1024x768"],
+      "browserEvidence": [{ "variant": "attempt-bound-g4-failure", "title": "CPT-E2E-FINAL-24-A browser loopback projects an attempt-bound G4 failure and exposes only the retry action" }],
+      "executionEvidence": { "source": "browser", "selector": "S2-F24-A-BROWSER" }
+    },
+    {
+      "id": "S2-F24-C",
+      "category": "http-websocket-protocol",
+      "file": "packages/orchestrator/test/final-24-contract.test.ts",
+      "testName": "S2-F24-C an upgrade afterRevision boundary either emits the exact next revision or forces canonical GET convergence",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "S2-F24-C an upgrade afterRevision boundary either emits the exact next revision or forces canonical GET convergence" }
+    },
+    {
+      "id": "S2-F24-D",
+      "category": "artifact-state-authority",
+      "file": "tools/gates/final-24-redaction-contract.test.mjs",
+      "testName": "S2-F24-D redaction gate scans hardening and protocol-like files without blanket exclusions and reports truthful file and byte totals",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F24-D redaction gate scans hardening and protocol-like files without blanket exclusions and reports truthful file and byte totals" }
+    },
+    {
+      "id": "S2-F24-E",
+      "category": "artifact-state-authority",
+      "file": "packages/orchestrator/test/final-24-contract.test.ts",
+      "testName": "S2-F24-E unsafe group-writable data root is rejected before ArtifactStore reads or writes; same-UID concurrent directory swap is intentionally out of scope",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "S2-F24-E unsafe group-writable data root is rejected before ArtifactStore reads or writes; same-UID concurrent directory swap is intentionally out of scope" }
+    },
+    {
+      "id": "S2-F24-F",
+      "category": "local-web-normal",
+      "file": "profiles/local-web/test/generator.test.ts",
+      "testName": "S2-F24-F generated readiness binds health, axe, and smoke to a cryptographically random child BOOT_INSTANCE_NONCE",
+      "layer": "profile",
+      "authority": "machine",
+      "command": "npm run test:profile:local-web",
+      "executionEvidence": { "source": "native-gate", "selector": "final24:boot-instance-nonce" }
+    },
+    {
+      "id": "S2-F24-G",
+      "category": "recovery-b1",
+      "file": "packages/orchestrator/test/final-24-contract.test.ts",
+      "testName": "S2-F24-G a process receipt persists the exact wrapper command identity and nonce so an unobservable provider command can never be signalled",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "S2-F24-G a process receipt persists the exact wrapper command identity and nonce so an unobservable provider command can never be signalled" }
+    },
+    {
+      "id": "S2-F27-A",
+      "category": "minimal-environment",
+      "file": "packages/orchestrator/test/final-27-security-recovery.test.ts",
+      "testName": "S2-F27-A launchAttempt applies the production environment allow-list at the detached wrapper-to-target boundary",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "S2-F27-A launchAttempt applies the production environment allow-list at the detached wrapper-to-target boundary" }
+    },
+    {
+      "id": "S2-F27-B",
+      "category": "recovery-b1",
+      "file": "packages/orchestrator/test/final-27-security-recovery.test.ts",
+      "testName": "S2-F27-B a digest-valid manifest with non-array snapshot.gates reopens only as canonical recovery and remains publicly projectable",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "S2-F27-B a digest-valid manifest with non-array snapshot.gates reopens only as canonical recovery and remains publicly projectable" }
+    },
+    {
+      "id": "S2-F27-C",
+      "category": "recovery-b1",
+      "file": "packages/orchestrator/test/final-27-security-recovery.test.ts",
+      "testName": "S2-F27-C submitIdea from a valid persisted legacy R1 idea snapshot publishes canonical G1 or fails closed, never legacy blueprint_review/null",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "S2-F27-C submitIdea from a valid persisted legacy R1 idea snapshot publishes canonical G1 or fails closed, never legacy blueprint_review/null" }
+    },
+    {
+      "id": "S2-F27-D",
+      "category": "artifact-state-authority",
+      "file": "packages/orchestrator/test/final-27-security-recovery.test.ts",
+      "testName": "S2-F27-D an immutable terminal-run collision after exact G4 stop fails closed durably and blocks a replacement attempt",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "S2-F27-D an immutable terminal-run collision after exact G4 stop fails closed durably and blocks a replacement attempt" }
+    },
+    {
+      "id": "S2-F27-CPT-ACTIVITY-20",
+      "category": "cockpit-novice-journey",
+      "file": "apps/cockpit/e2e/novice-journey.spec.ts",
+      "testName": "CPT-E2E-FINAL-27-I18N-ACTIVITY-20 localizes an existing semantic activity after switching from Turkish to English",
+      "layer": "e2e",
+      "authority": "machine",
+      "command": "npm run test:e2e:chromium",
+      "crossBrowser": true,
+      "browserCommands": ["npm run test:e2e:chromium", "npm run test:e2e:webkit"],
+      "viewports": ["1280x800", "1024x768"],
+      "browserEvidence": [{ "variant": "localized-existing-activity", "title": "CPT-E2E-FINAL-27-I18N-ACTIVITY-20 localizes an existing semantic activity after switching from Turkish to English" }],
+      "executionEvidence": { "source": "browser", "selector": "S2-F27-CPT-ACTIVITY-20" }
+    },
+    {
+      "id": "S2-F27-CPT-GATE-PURPOSES-21",
+      "category": "cockpit-novice-journey",
+      "file": "apps/cockpit/e2e/novice-journey.spec.ts",
+      "testName": "CPT-E2E-FINAL-27-GATE-PURPOSES-21 presents every public machine gate with a distinct localized purpose and clear mixed state",
+      "layer": "e2e",
+      "authority": "machine",
+      "command": "npm run test:e2e:chromium",
+      "crossBrowser": true,
+      "browserCommands": ["npm run test:e2e:chromium", "npm run test:e2e:webkit"],
+      "viewports": ["1280x800", "1024x768"],
+      "browserEvidence": [{ "variant": "localized-gate-purposes", "title": "CPT-E2E-FINAL-27-GATE-PURPOSES-21 presents every public machine gate with a distinct localized purpose and clear mixed state" }],
+      "executionEvidence": { "source": "browser", "selector": "S2-F27-CPT-GATE-PURPOSES-21" }
+    },
+    {
+      "id": "S2-F27-CPT-FOCUS-22",
+      "category": "cockpit-final-27",
+      "file": "apps/cockpit/test/styles-contrast.test.ts",
+      "testName": "CPT-UNIT-FINAL-27-A11Y-FOCUS-22 exposes a CSS-token focus indicator with at least 3:1 contrast against every adjacent supported surface",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "CPT-UNIT-FINAL-27-A11Y-FOCUS-22 exposes a CSS-token focus indicator with at least 3:1 contrast against every adjacent supported surface" }
+    },
+    {
+      "id": "S2-F27-CPT-RECOVERY-MONOTONIC-27",
+      "category": "cockpit-final-27",
+      "file": "apps/cockpit/test/recovery-monotonicity.test.ts",
+      "testName": "CPT-RECOVERY-MONOTONIC-27 B-before-A recovery completion cannot replace the newest canonical snapshot",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "CPT-RECOVERY-MONOTONIC-27 B-before-A recovery completion cannot replace the newest canonical snapshot" }
+    },
+    {
+      "id": "S2-F27-GATE-IMMUTABLE",
+      "category": "final-27-gate-contract",
+      "file": "tools/gates/final-27-immutability-and-workflow-contract.test.mjs",
+      "testName": "S2-F27-GATE-IMMUTABLE validate-only leaves final result and index byte-identical on pass and mismatch failure",
+      "layer": "contract",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F27-GATE-IMMUTABLE validate-only leaves final result and index byte-identical on pass and mismatch failure" }
+    },
+    {
+      "id": "S2-F27-WORKFLOW",
+      "category": "final-27-gate-contract",
+      "file": "tools/gates/final-27-immutability-and-workflow-contract.test.mjs",
+      "testName": "S2-F27-WORKFLOW security permissions, checkout hardening, and evidence upload depend on successful final validation",
+      "layer": "contract",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F27-WORKFLOW security permissions, checkout hardening, and evidence upload depend on successful final validation" }
+    },
+    {
+      "id": "S2-F27-LOCAL-WEB-TARGET-05",
+      "category": "local-web-target-security",
+      "file": "profiles/local-web/test/target-path-security.test.ts",
+      "testName": "LOCAL-WEB-TARGET-05 generator and CLI refuse a symlinked existing ancestor before mutation",
+      "layer": "profile",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "LOCAL-WEB-TARGET-05 generator and CLI refuse a symlinked existing ancestor before mutation" }
+    },
+    {
+      "id": "S2-F27-LOCAL-WEB-TARGET-06",
+      "category": "local-web-target-security",
+      "file": "profiles/local-web/test/target-path-security.test.ts",
+      "testName": "LOCAL-WEB-TARGET-06 generator and CLI refuse group- or world-writable existing targets before mutation",
+      "layer": "profile",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "LOCAL-WEB-TARGET-06 generator and CLI refuse group- or world-writable existing targets before mutation" }
+    },
+    {
+      "id": "S2-F27-LOCAL-WEB-TARGET-07",
+      "category": "local-web-target-security",
+      "file": "profiles/local-web/test/target-path-security.test.ts",
+      "testName": "LOCAL-WEB-TARGET-07 generator and CLI refuse group- or world-writable nearest existing ancestors before mutation",
+      "layer": "profile",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "LOCAL-WEB-TARGET-07 generator and CLI refuse group- or world-writable nearest existing ancestors before mutation" }
+    },
+    {
+      "id": "S2-F27-LOCAL-WEB-TARGET-09",
+      "category": "local-web-target-security",
+      "file": "profiles/local-web/test/target-path-security.test.ts",
+      "testName": "LOCAL-WEB-TARGET-09 generator and CLI accept private, current-user temporary targets",
+      "layer": "profile",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "LOCAL-WEB-TARGET-09 generator and CLI accept private, current-user temporary targets" }
+    },
+    {
+      "id": "S2-F29-G5-ACTIVE",
+      "category": "recovery-b1",
+      "file": "packages/orchestrator/test/final-29-completion-contract.test.ts",
+      "testName": "S2-FINAL-29-G5 advancePhase cannot publish G5 while the real launched attempt remains active",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "S2-FINAL-29-G5 advancePhase cannot publish G5 while the real launched attempt remains active" }
+    },
+    {
+      "id": "S2-F29-G6-COMPLETION",
+      "category": "recovery-b1",
+      "file": "packages/orchestrator/test/final-29-completion-contract.test.ts",
+      "testName": "S2-FINAL-29-G6 completeAttempt terminalizes an exact live attempt, then publishes durable G5-to-G6 success",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "S2-FINAL-29-G6 completeAttempt terminalizes an exact live attempt, then publishes durable G5-to-G6 success" }
+    },
+    {
+      "id": "S2-F29-RECOVERY-MULTIPLICITY-02",
+      "category": "recovery-b1",
+      "file": "packages/orchestrator/test/recovery-integrity.test.ts",
+      "testName": "S2-ATTEMPT-RUNNING-MULTIPLICITY 2 individually digest-valid wrapper-bound running attempts latch recovery without signalling or selecting an active authority",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "S2-ATTEMPT-RUNNING-MULTIPLICITY 2 individually digest-valid wrapper-bound running attempts latch recovery without signalling or selecting an active authority" }
+    },
+    {
+      "id": "S2-F29-RECOVERY-MULTIPLICITY-03",
+      "category": "recovery-b1",
+      "file": "packages/orchestrator/test/recovery-integrity.test.ts",
+      "testName": "S2-ATTEMPT-RUNNING-MULTIPLICITY 3 individually digest-valid wrapper-bound running attempts latch recovery without signalling or selecting an active authority",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "S2-ATTEMPT-RUNNING-MULTIPLICITY 3 individually digest-valid wrapper-bound running attempts latch recovery without signalling or selecting an active authority" }
+    },
+    {
+      "id": "S2-F29-ARTIFACT-ROOT-01",
+      "category": "artifact-state-authority",
+      "file": "packages/orchestrator/test/artifacts.test.ts",
+      "testName": "FINAL-29-ARTIFACT-ROOT-01 accepts a private app-data root below the OS temp anchor but rejects group- or world-writable existing ancestors before metadata creation",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "FINAL-29-ARTIFACT-ROOT-01 accepts a private app-data root below the OS temp anchor but rejects group- or world-writable existing ancestors before metadata creation" }
+    },
+    {
+      "id": "S2-F29-ARTIFACT-ROOT-02",
+      "category": "artifact-state-authority",
+      "file": "packages/orchestrator/test/artifacts.test.ts",
+      "testName": "FINAL-29-ARTIFACT-ROOT-02 rejects a private current-user artifact root below a foreign-owned non-system ancestor when a fixture can create one",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "platformSkip": { "reason": "creating a foreign-owned ancestor requires a privileged test account" },
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "FINAL-29-ARTIFACT-ROOT-02 rejects a private current-user artifact root below a foreign-owned non-system ancestor when a fixture can create one" }
+    },
+    {
+      "id": "S2-F29-COCKPIT-ROOT-01",
+      "category": "cockpit-static-security",
+      "file": "packages/orchestrator/test/cockpit-static-boundary.test.ts",
+      "testName": "FINAL-29-COCKPIT-ROOT-01 never serves a group- or world-writable cockpit root, while loopback API health remains available",
+      "layer": "integration",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "FINAL-29-COCKPIT-ROOT-01 never serves a group- or world-writable cockpit root, while loopback API health remains available" }
+    },
+    {
+      "id": "S2-F29-COCKPIT-ROOT-02",
+      "category": "cockpit-static-security",
+      "file": "packages/orchestrator/test/cockpit-static-boundary.test.ts",
+      "testName": "FINAL-29-COCKPIT-ROOT-02 never serves a private cockpit leaf below an unsafe existing ancestor, while loopback API health remains available",
+      "layer": "integration",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "FINAL-29-COCKPIT-ROOT-02 never serves a private cockpit leaf below an unsafe existing ancestor, while loopback API health remains available" }
+    },
+    {
+      "id": "S2-F29-COCKPIT-ROOT-03",
+      "category": "cockpit-static-security",
+      "file": "packages/orchestrator/test/cockpit-static-boundary.test.ts",
+      "testName": "FINAL-29-COCKPIT-ROOT-03 never serves a foreign-owned cockpit root when a fixture can create one",
+      "layer": "integration",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "platformSkip": { "reason": "creating a foreign-owned cockpit root requires a privileged test account" },
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "FINAL-29-COCKPIT-ROOT-03 never serves a foreign-owned cockpit root when a fixture can create one" }
+    },
+    {
+      "id": "S2-F29-LOCAL-WEB-ANCHOR-01",
+      "category": "local-web-target-security",
+      "file": "profiles/local-web/test/target-path-security.test.ts",
+      "testName": "FINAL-29-LOCAL-WEB-ANCHOR-01 fresh generator and CLI children reject unsafe cwd anchors before package or Git mutation",
+      "layer": "profile",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "FINAL-29-LOCAL-WEB-ANCHOR-01 fresh generator and CLI children reject unsafe cwd anchors before package or Git mutation" }
+    },
+    {
+      "id": "S2-F29-LOCAL-WEB-ANCHOR-02",
+      "category": "local-web-target-security",
+      "file": "profiles/local-web/test/target-path-security.test.ts",
+      "testName": "FINAL-29-LOCAL-WEB-ANCHOR-02 fresh generator and CLI children reject unsafe TMPDIR anchors before package or Git mutation",
+      "layer": "profile",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "FINAL-29-LOCAL-WEB-ANCHOR-02 fresh generator and CLI children reject unsafe TMPDIR anchors before package or Git mutation" }
+    },
+    {
+      "id": "S2-F29-LOCAL-WEB-ANCHOR-03",
+      "category": "local-web-target-security",
+      "file": "profiles/local-web/test/target-path-security.test.ts",
+      "testName": "FINAL-29-LOCAL-WEB-ANCHOR-03 fresh children accept private cwd and TMPDIR anchors",
+      "layer": "profile",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "FINAL-29-LOCAL-WEB-ANCHOR-03 fresh children accept private cwd and TMPDIR anchors" }
+    },
+    {
+      "id": "S2-F29-CPT-TAB",
+      "category": "cockpit-novice-journey",
+      "file": "apps/cockpit/e2e/novice-journey.spec.ts",
+      "testName": "CPT-E2E-FINAL-29-TAB-DECISION-IDEA-TR reaches the current decision before the secondary language control at every supported Chromium desktop viewport",
+      "layer": "e2e",
+      "authority": "machine",
+      "command": "npm run test:e2e:chromium",
+      "crossBrowser": true,
+      "browserCommands": ["npm run test:e2e:chromium", "npm run test:e2e:webkit"],
+      "viewports": ["1280x800", "1024x768"],
+      "browserEvidence": [
+        { "variant": "final29-tab-idea-tr", "title": "CPT-E2E-FINAL-29-TAB-DECISION-IDEA-TR reaches the current decision before the secondary language control at every supported Chromium desktop viewport" },
+        { "variant": "final29-tab-idea-en", "title": "CPT-E2E-FINAL-29-TAB-DECISION-IDEA-EN reaches the current decision before the secondary language control at every supported Chromium desktop viewport" },
+        { "variant": "final29-tab-approval-tr", "title": "CPT-E2E-FINAL-29-TAB-DECISION-APPROVAL-TR reaches the current decision before the secondary language control at every supported Chromium desktop viewport" },
+        { "variant": "final29-tab-approval-en", "title": "CPT-E2E-FINAL-29-TAB-DECISION-APPROVAL-EN reaches the current decision before the secondary language control at every supported Chromium desktop viewport" },
+        { "variant": "final29-tab-recovery-tr", "title": "CPT-E2E-FINAL-29-TAB-RECOVERY-TR reaches refresh before the secondary language control at every supported Chromium desktop viewport" },
+        { "variant": "final29-tab-recovery-en", "title": "CPT-E2E-FINAL-29-TAB-RECOVERY-EN reaches refresh before the secondary language control at every supported Chromium desktop viewport" }
+      ],
+      "executionEvidence": { "source": "browser", "selector": "S2-F29-CPT-TAB" }
+    },
+    {
+      "id": "S2-F30-CPT-LAYOUT",
+      "category": "cockpit-novice-journey",
+      "file": "apps/cockpit/e2e/novice-journey.spec.ts",
+      "testName": "CPT-E2E-FINAL-30-LAYOUT-IDEA-TR keeps the persistent rail left and the current decision visible",
+      "layer": "e2e",
+      "authority": "machine",
+      "command": "npm run test:e2e:chromium",
+      "crossBrowser": true,
+      "browserCommands": ["npm run test:e2e:chromium", "npm run test:e2e:webkit"],
+      "viewports": ["1280x800", "1024x768"],
+      "browserEvidence": [
+        { "variant": "final30-layout-idea-tr", "title": "CPT-E2E-FINAL-30-LAYOUT-IDEA-TR keeps the persistent rail left and the current decision visible" },
+        { "variant": "final30-layout-idea-en", "title": "CPT-E2E-FINAL-30-LAYOUT-IDEA-EN keeps the persistent rail left and the current decision visible" },
+        { "variant": "final30-layout-recovery-tr", "title": "CPT-E2E-FINAL-30-LAYOUT-RECOVERY-TR keeps the persistent rail left and refresh visible" },
+        { "variant": "final30-layout-recovery-en", "title": "CPT-E2E-FINAL-30-LAYOUT-RECOVERY-EN keeps the persistent rail left and refresh visible" }
+      ],
+      "executionEvidence": { "source": "browser", "selector": "S2-F30-CPT-LAYOUT" }
+    },
+    {
+      "id": "S2-F30-SUCCESS-MARKER",
+      "category": "recovery-b1",
+      "file": "packages/orchestrator/test/final-30-success-marker-crash.test.ts",
+      "testName": "S2-FINAL-30 successful completion crash after G5 manifest commit finalizes only an exact stale success marker on reopen",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "S2-FINAL-30 successful completion crash after G5 manifest commit finalizes only an exact stale success marker on reopen" }
+    },
+    {
+      "id": "S2-F32-ENV",
+      "category": "minimal-environment",
+      "file": "packages/engine/test/env.test.ts",
+      "testName": "ENGINE-ENV-FINAL-32 scrubbedEnv admits only finite supported internal keys and omits an arbitrary caller GUIDELANE sentinel",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "ENGINE-ENV-FINAL-32 scrubbedEnv admits only finite supported internal keys and omits an arbitrary caller GUIDELANE sentinel" }
+    },
+    {
+      "id": "S2-F32-WRAPPER-PATH",
+      "category": "recovery-b1",
+      "file": "packages/orchestrator/test/final-32-wrapper-path.test.ts",
+      "testName": "ORCH-PATH-FINAL-32 production wrapper identity and completeAttempt work from a source path containing spaces",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "ORCH-PATH-FINAL-32 production wrapper identity and completeAttempt work from a source path containing spaces" }
+    },
+    {
+      "id": "S2-F32-COMPLETION-HISTORY-CRASH",
+      "category": "recovery-b1",
+      "file": "packages/orchestrator/test/final-32-completion-history-crash.test.ts",
+      "testName": "ORCH-CRASH-FINAL-32 exact-completion history stranded before active-fixture removal reconciles twice to a stable safe terminal",
+      "layer": "integration",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "ORCH-CRASH-FINAL-32 exact-completion history stranded before active-fixture removal reconciles twice to a stable safe terminal" }
+    },
+    {
+      "id": "S2-F32-CPT-RECOVERY",
+      "category": "cockpit-final-32",
+      "file": "apps/cockpit/test/final-32-recovery.test.ts",
+      "testName": "CPT-RECOVERY-FINAL-32 a successful same-revision recovery clears unavailable and loading after a transient snapshot GET failure",
+      "layer": "integration",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "CPT-RECOVERY-FINAL-32 a successful same-revision recovery clears unavailable and loading after a transient snapshot GET failure" }
+    },
+    {
+      "id": "S2-F33-ENV-METADATA",
+      "category": "minimal-environment",
+      "file": "packages/engine/test/env.test.ts",
+      "testName": "ENGINE-ENV-FINAL-33 scrubbedEnv metadata counts exactly the operator entries that cross and reports omitted entries",
+      "layer": "unit",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "ENGINE-ENV-FINAL-33 scrubbedEnv metadata counts exactly the operator entries that cross and reports omitted entries" }
+    },
+    {
+      "id": "S2-F33-CPT-EQUAL-REVISION-STATE",
+      "category": "cockpit-final-33",
+      "file": "apps/cockpit/test/final-33-equal-revision-state-change.test.ts",
+      "testName": "CPT-STATE-FINAL-33 a same-revision canonical recovery overlay replaces a stale action, while an older snapshot cannot replace it",
+      "layer": "integration",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "CPT-STATE-FINAL-33 a same-revision canonical recovery overlay replaces a stale action, while an older snapshot cannot replace it" }
+    },
+    {
+      "id": "S2-F33-NESTED-COMPLETION-RECONCILE-CRASH",
+      "category": "recovery-b1",
+      "file": "packages/orchestrator/test/final-33-nested-completion-reconcile-crash.test.ts",
+      "testName": "ORCH-CRASH-FINAL-33 a stale exact-completion marker from a reconciled G4 interruption finalizes once after supervisor death",
+      "layer": "integration",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "ORCH-CRASH-FINAL-33 a stale exact-completion marker from a reconciled G4 interruption finalizes once after supervisor death" }
+    },
+    {
+      "id": "S2-F33-COMPLETION-ARCHIVE-DURABILITY",
+      "category": "recovery-b1",
+      "file": "packages/orchestrator/test/final-33-completion-archive-durability.test.ts",
+      "testName": "ORCH-CRASH-FINAL-33 an exact running fixture stranded beside a completed G5 manifest is archived once without signalling",
+      "layer": "integration",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "ORCH-CRASH-FINAL-33 an exact running fixture stranded beside a completed G5 manifest is archived once without signalling" }
+    },
+    {
+      "id": "S2-F33-LOCK-TAKEOVER-RECLAIM",
+      "category": "recovery-b1",
+      "file": "packages/orchestrator/test/final-33-lock-takeover-crash.test.ts",
+      "testName": "ORCH-CRASH-FINAL-33 reclaims only a signed guard bound to unchanged dead predecessor and gone successor",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "ORCH-CRASH-FINAL-33 reclaims only a signed guard bound to unchanged dead predecessor and gone successor" }
+    },
+    {
+      "id": "S2-F33-LOCK-TAKEOVER-LIVE-SUCCESSOR",
+      "category": "recovery-b1",
+      "file": "packages/orchestrator/test/final-33-lock-takeover-crash.test.ts",
+      "testName": "ORCH-CRASH-FINAL-33 preserves a signed takeover guard while its bound successor is live",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "ORCH-CRASH-FINAL-33 preserves a signed takeover guard while its bound successor is live" }
+    },
+    {
+      "id": "S2-F33-LOCK-TAKEOVER-UNOBSERVABLE-PROBE",
+      "category": "recovery-b1",
+      "file": "packages/orchestrator/test/final-33-lock-takeover-crash.test.ts",
+      "testName": "ORCH-CRASH-FINAL-33 an unobservable predecessor or successor probe keeps its signed guard fail-closed",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "ORCH-CRASH-FINAL-33 an unobservable predecessor or successor probe keeps its signed guard fail-closed" }
+    },
+    {
+      "id": "S2-F33-LOCK-TAKEOVER-UNVERIFIED-GUARDS",
+      "category": "recovery-b1",
+      "file": "packages/orchestrator/test/final-33-lock-takeover-crash.test.ts",
+      "testName": "ORCH-CRASH-FINAL-33 preserves opaque, malformed, and unbound guards beside a dead predecessor",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "ORCH-CRASH-FINAL-33 preserves opaque, malformed, and unbound guards beside a dead predecessor" }
+    },
+    {
+      "id": "S2-F34-LOCK-TAKEOVER-SUCCESSOR-RECLAIM",
+      "category": "recovery-b1",
+      "file": "packages/orchestrator/test/final-34-lock-takeover-successor-crash.test.ts",
+      "testName": "ORCH-FINAL-34 reclaims one exact dead successor lock and its signed predecessor takeover guard without signalling",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "ORCH-FINAL-34 reclaims one exact dead successor lock and its signed predecessor takeover guard without signalling" }
+    },
+    {
+      "id": "S2-F34-HOSTILE-PATH-PS",
+      "category": "process-identity-security",
+      "file": "packages/orchestrator/test/final-34-hostile-path.test.ts",
+      "testName": "ORCH-FINAL-34 hostile PATH ps is never executed by production open, recovery, or completion identity checks",
+      "layer": "integration",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "ORCH-FINAL-34 hostile PATH ps is never executed by production open, recovery, or completion identity checks" }
+    },
+    {
+      "id": "S2-F34-UNOBSERVABLE-DETACHED-START",
+      "category": "recovery-b1",
+      "file": "packages/engine/test/session-final-34-unobservable-start.test.ts",
+      "testName": "ENGINE-FINAL-34 rejects every unobservable detached start and reaps its exact receipt-less group",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "ENGINE-FINAL-34 rejects every unobservable detached start and reaps its exact receipt-less group" }
+    },
+    {
+      "id": "S2-F34-CPT-CANONICAL-ACTIVITY",
+      "category": "cockpit-final-34",
+      "file": "apps/cockpit/test/final-34-canonical-activity.test.ts",
+      "testName": "CPT-FINAL-34 a differing equal-revision canonical recovery clears prior semantic activity and rejects an older snapshot",
+      "layer": "integration",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "CPT-FINAL-34 a differing equal-revision canonical recovery clears prior semantic activity and rejects an older snapshot" }
+    },
+    {
+      "id": "S2-F35-LOCAL-WEB-CLEANUP-RACE",
+      "category": "recovery-b1",
+      "file": "profiles/local-web/test/child-environment.test.ts",
+      "testName": "FINAL-35-LOCAL-WEB stopCommand settles when the owned child closes during cleanup listener attachment",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "FINAL-35-LOCAL-WEB stopCommand settles when the owned child closes during cleanup listener attachment" }
+    },
+    {
+      "id": "S2-F36-CPT-MATCHING-SNAPSHOT",
+      "category": "cockpit-final-36",
+      "file": "apps/cockpit/test/final-36-semantic-activity-recovery.test.ts",
+      "testName": "CPT-FINAL-36 the newest valid semantic activity remains displayed when recovery obtains its matching canonical snapshot",
+      "layer": "integration",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "CPT-FINAL-36 the newest valid semantic activity remains displayed when recovery obtains its matching canonical snapshot" }
+    },
+    {
+      "id": "S2-F36-CPT-PHASE-TRANSITION",
+      "category": "cockpit-final-36",
+      "file": "apps/cockpit/test/final-36-semantic-activity-recovery.test.ts",
+      "testName": "CPT-FINAL-36 a legitimate phase transition preserves localized semantic activity after the matching canonical fetch",
+      "layer": "integration",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "CPT-FINAL-36 a legitimate phase transition preserves localized semantic activity after the matching canonical fetch" }
+    },
+    {
+      "id": "S2-F36-CPT-EQUAL-REVISION-EVENT",
+      "category": "cockpit-final-36",
+      "file": "apps/cockpit/test/final-36-semantic-activity-recovery.test.ts",
+      "testName": "CPT-FINAL-36 a same-revision blueprint-ready semantic event remains displayed after snapshot-required recovery",
+      "layer": "integration",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "CPT-FINAL-36 a same-revision blueprint-ready semantic event remains displayed after snapshot-required recovery" }
+    },
+    {
+      "id": "S2-F36-CPT-MISSED-EVENT-FALLBACK",
+      "category": "cockpit-final-36",
+      "file": "apps/cockpit/test/final-36-semantic-activity-recovery.test.ts",
+      "testName": "CPT-FINAL-36 a missed blueprint-ready semantic event falls back to localized activity from the canonical phase snapshot",
+      "layer": "integration",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "CPT-FINAL-36 a missed blueprint-ready semantic event falls back to localized activity from the canonical phase snapshot" }
+    },
+    {
+      "id": "S2-F36-CPT-CONTRADICTORY-SNAPSHOT",
+      "category": "cockpit-final-36",
+      "file": "apps/cockpit/test/final-36-semantic-activity-recovery.test.ts",
+      "testName": "CPT-FINAL-36 a genuinely contradictory canonical snapshot clears stale semantic activity at the event revision",
+      "layer": "integration",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "CPT-FINAL-36 a genuinely contradictory canonical snapshot clears stale semantic activity at the event revision" }
+    },
+    {
+      "id": "S2-F37-LOCAL-WEB-ANCHOR-LEAF",
+      "category": "local-web-target-security",
+      "file": "profiles/local-web/test/target-path-security.test.ts",
+      "testName": "FINAL-37-LOCAL-WEB-ANCHOR-04 fresh generator and CLI reject private cwd and TMPDIR leaves below unsafe existing parents before package or Git mutation",
+      "layer": "profile",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "FINAL-37-LOCAL-WEB-ANCHOR-04 fresh generator and CLI reject private cwd and TMPDIR leaves below unsafe existing parents before package or Git mutation" }
+    },
+    {
+      "id": "S2-F37-CPT-STALE-RECOVERY",
+      "category": "cockpit-final-37",
+      "file": "apps/cockpit/test/final-36-semantic-activity-recovery.test.ts",
+      "testName": "CPT-FINAL-37 an event at revision R keeps stale R-1 recovery fail-closed and suppresses user controls until the matching canonical snapshot arrives",
+      "layer": "integration",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "CPT-FINAL-37 an event at revision R keeps stale R-1 recovery fail-closed and suppresses user controls until the matching canonical snapshot arrives" }
+    },
+    {
+      "id": "S2-F37-HTTP-NOSTORE",
+      "category": "http-websocket-protocol",
+      "file": "packages/orchestrator/test/server-and-recovery.test.ts",
+      "testName": "ORCH-FINAL-37 authenticated canonical snapshot GET returns no-store and preserves the read-only Origin exception",
+      "layer": "integration",
+      "authority": "machine",
+      "command": "npm run test:orchestrator-safety",
+      "executionEvidence": { "source": "orchestrator-tap", "selector": "ORCH-FINAL-37 authenticated canonical snapshot GET returns no-store and preserves the read-only Origin exception" }
+    },
+    {
+      "id": "S2-F37-WORKFLOW-SHA",
+      "category": "final-27-gate-contract",
+      "file": "tools/gates/final-27-immutability-and-workflow-contract.test.mjs",
+      "testName": "S2-F37-WORKFLOW every product-offline GitHub Action use is pinned to a full immutable commit SHA before successful evidence upload",
+      "layer": "contract",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F37-WORKFLOW every product-offline GitHub Action use is pinned to a full immutable commit SHA before successful evidence upload" }
+    },
+    {
+      "id": "S2-F44-LOCAL-WEB-ORPHAN-CLEANUP",
+      "category": "local-web-orphan-cleanup",
+      "file": "profiles/local-web/test/harness.test.ts",
+      "testName": "S2-F44-LOCAL-WEB-ORPHAN-CLEANUP normal harness reaps its real generated Next server and verified group before returning",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F44-LOCAL-WEB-ORPHAN-CLEANUP normal harness reaps its real generated Next server and verified group before returning" }
+    },
+    {
+      "id": "S2-F44-LOCAL-WEB-OBSERVER-FAILURE",
+      "category": "local-web-orphan-cleanup",
+      "file": "profiles/local-web/test/harness.test.ts",
+      "testName": "S2-F44-LOCAL-WEB-OBSERVER-FAILURE rejects the observer and reaps its verified generated Next group",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F44-LOCAL-WEB-OBSERVER-FAILURE rejects the observer and reaps its verified generated Next group" }
+    },
+    {
+      "id": "S2-F45-LEASE-EOF-01",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F45-LEASE-EOF-01 controller-loss lease EOF reaps the authenticated generated server group and releases its loopback port",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F45-LEASE-EOF-01 controller-loss lease EOF reaps the authenticated generated server group and releases its loopback port" }
+    },
+    {
+      "id": "S2-F45-BOOT-EVIDENCE-02",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F45-BOOT-EVIDENCE-02 boot-evidence persistence failure reaps the generated server before return and never publishes a passed boot gate",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F45-BOOT-EVIDENCE-02 boot-evidence persistence failure reaps the generated server before return and never publishes a passed boot gate" }
+    },
+    {
+      "id": "S2-F45-STALE-IDENTITY-03",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F45-STALE-IDENTITY-03 stale or reused diagnostic identity never authorizes parent negative-PGID signalling",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F45-STALE-IDENTITY-03 stale or reused diagnostic identity never authorizes parent negative-PGID signalling" }
+    },
+    {
+      "id": "S2-F45-CONTROL-04",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F45-CONTROL-04 malformed or missing supervisor readiness and control fails closed and leaves no owned group",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F45-CONTROL-04 malformed or missing supervisor readiness and control fails closed and leaves no owned group" }
+    },
+    {
+      "id": "S2-F45-FINITE-05",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F45-FINITE-05 finite completion and timeout each reap their descendant through the lease supervisor",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F45-FINITE-05 finite completion and timeout each reap their descendant through the lease supervisor" }
+    },
+    {
+      "id": "S2-F45-SOURCE-06",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F45-SOURCE-06 production Local Web source has no parent negative-PGID signal route",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F45-SOURCE-06 production Local Web source has no parent negative-PGID signal route" }
+    },
+    {
+      "id": "S2-F46-OBSERVATION-OUTAGE-01",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F46-OBSERVATION-OUTAGE-01 post-initial-proof ps outage during STOP and lease EOF keeps supervisor self-authority in-memory and reaps the target without parent signalling",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F46-OBSERVATION-OUTAGE-01 post-initial-proof ps outage during STOP and lease EOF keeps supervisor self-authority in-memory and reaps the target without parent signalling" }
+    },
+    {
+      "id": "S2-F46-SELF-GROUP-SIGNAL-02",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F46-SELF-GROUP-SIGNAL-02 supervisor self-group signal failure remains fail-stopped and retries instead of taking a voluntary cleanup exit",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F46-SELF-GROUP-SIGNAL-02 supervisor self-group signal failure remains fail-stopped and retries instead of taking a voluntary cleanup exit" }
+    },
+    {
+      "id": "S2-F46-ATTEMPT-AUTHORITY-03",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F46-ATTEMPT-AUTHORITY-03 prior boot pass cannot authorize a current attempt after candidate terminal or replacement failure",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F46-ATTEMPT-AUTHORITY-03 prior boot pass cannot authorize a current attempt after candidate terminal or replacement failure" }
+    },
+    {
+      "id": "S2-F46-AUTHORITY-BINDING-04",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F46-AUTHORITY-BINDING-04 missing pending malformed or mismatched authority and terminal binding fail closed with exact attempt candidate digest and result identity",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F46-AUTHORITY-BINDING-04 missing pending malformed or mismatched authority and terminal binding fail closed with exact attempt candidate digest and result identity" }
+    },
+    {
+      "id": "S2-F46-SOURCE-STRUCTURAL-05",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F46-SOURCE-STRUCTURAL-05 all scoped Local Web sources forbid parent negative-PGID signalling and persist no raw runtime identity authority",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F46-SOURCE-STRUCTURAL-05 all scoped Local Web sources forbid parent negative-PGID signalling and persist no raw runtime identity authority" }
+    },
+    {
+      "id": "S2-F56-LEADER-KILL-01",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F56-LEADER-KILL-01 SIGKILL of the original persistent supervisor leaves neither its exact target nor its recorded group running after the public stop path",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F56-LEADER-KILL-01 SIGKILL of the original persistent supervisor leaves neither its exact target nor its recorded group running after the public stop path" }
+    },
+    {
+      "id": "S2-F56-SOURCE-STRUCTURAL-02",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F56-SOURCE-STRUCTURAL-02 every Local Web negative-PGID signal route is limited to the proven detached supervisor self-group",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F56-SOURCE-STRUCTURAL-02 every Local Web negative-PGID signal route is limited to the proven detached supervisor self-group" }
+    },
+    {
+      "id": "S2-F56-SPAWN-FAILURE-03",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F56-SPAWN-FAILURE-03 synchronous persistent launch failure leaves no private guardian lease directory",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F56-SPAWN-FAILURE-03 synchronous persistent launch failure leaves no private guardian lease directory" }
+    },
+    {
+      "id": "S2-F56-GUARDIAN-ACK-STOP-RACE-04",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F56-GUARDIAN-ACK-STOP-RACE-04 authenticated same-chunk ACK and STOP reaps the real guardian target group",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F56-GUARDIAN-ACK-STOP-RACE-04 authenticated same-chunk ACK and STOP reaps the real guardian target group" }
+    },
+    {
+      "id": "S2-F56-GUARDIAN-ACK-STOP-ORDERING-05",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F56-GUARDIAN-ACK-STOP-ORDERING-05 guardian claims spawn ownership before async readiness and self-cleans post-spawn control failures",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F56-GUARDIAN-ACK-STOP-ORDERING-05 guardian claims spawn ownership before async readiness and self-cleans post-spawn control failures" }
+    },
+    {
+      "id": "S2-F56-GUARDIAN-FD3-RELAY-ISOLATION-06",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F56-GUARDIAN-FD3-RELAY-ISOLATION-06 authenticated target cannot inject a forged semantic frame into the guardian relay",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F56-GUARDIAN-FD3-RELAY-ISOLATION-06 authenticated target cannot inject a forged semantic frame into the guardian relay" }
+    },
+    {
+      "id": "S2-F56-GUARDIAN-RESULT-PLANE-07",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F56-GUARDIAN-RESULT-PLANE-07 guardian lease control rejects terminal result frames",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F56-GUARDIAN-RESULT-PLANE-07 guardian lease control rejects terminal result frames" }
+    },
+    {
+      "id": "S2-F56-GUARDIAN-LEASE-PERMISSIONS-08",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F56-GUARDIAN-LEASE-PERMISSIONS-08 persistent guardian lease has private modes and is removed after public cleanup",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F56-GUARDIAN-LEASE-PERMISSIONS-08 persistent guardian lease has private modes and is removed after public cleanup" }
+    },
+    {
+      "id": "S2-F56-LEADER-CLOSE-AUTOREAP-09",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F56-LEADER-CLOSE-AUTOREAP-09 original supervisor close alone revokes the guardian lease and reaps its target group",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F56-LEADER-CLOSE-AUTOREAP-09 original supervisor close alone revokes the guardian lease and reaps its target group" }
+    },
+    {
+      "id": "S2-F56-LEASE-REVOCATION-10",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F56-LEASE-REVOCATION-10 verified receipt becomes unavailable before group absence after public STOP",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F56-LEASE-REVOCATION-10 verified receipt becomes unavailable before group absence after public STOP" }
+    },
+    {
+      "id": "S2-F56-REGRESSION-LIVENESS-PIPE-11",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F56-REGRESSION-LIVENESS-PIPE-11 guardian reaps after only its original supervisor closes while the controller event loop is stalled",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F56-REGRESSION-LIVENESS-PIPE-11 guardian reaps after only its original supervisor closes while the controller event loop is stalled" }
+    },
+    {
+      "id": "S2-F56-REGRESSION-RESULT-RELAY-12",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F56-REGRESSION-RESULT-RELAY-12 missing or unterminated RESULT relay data cannot report a successful runCommand after cleanup",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F56-REGRESSION-RESULT-RELAY-12 missing or unterminated RESULT relay data cannot report a successful runCommand after cleanup" }
+    },
+    {
+      "id": "S2-F39-LOCAL-WEB-GIT-01",
+      "category": "local-web-git-security",
+      "file": "profiles/local-web/test/git.test.ts",
+      "testName": "FINAL-39-LOCAL-WEB-GIT-01 generated repository Git execution uses a trusted absolute executable and finite environment, rejecting PATH, Git-control, and secret-like inheritance",
+      "layer": "profile",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "FINAL-39-LOCAL-WEB-GIT-01 generated repository Git execution uses a trusted absolute executable and finite environment, rejecting PATH, Git-control, and secret-like inheritance" }
+    }
+  ]
+}

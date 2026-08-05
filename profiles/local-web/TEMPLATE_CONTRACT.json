@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "profile": "local-web",
+  "generatedProjectName": "guidelane-local-web-project",
+  "node": ">=22.6",
+  "framework": {
+    "next": "15.5.22",
+    "react": "19.1.1",
+    "tailwindcss": "4.1.13",
+    "drizzle-orm": "0.45.2",
+    "better-sqlite3": "12.0.0",
+    "playwright": "1.62.1",
+    "axe-core": "4.10.2"
+  },
+  "dependencyPolicy": {
+    "allVersionsPinned": true,
+    "runtimeGuidelaneDependency": false,
+    "externalApis": false,
+    "singleLocalUser": true
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "9.6.0"
+  },
+  "overrides": {
+    "postcss": "8.5.18",
+    "sharp": "0.35.1"
+  },
+  "lockfile": {
+    "file": "package-lock.json",
+    "lockfileVersion": 3,
+    "generatedBy": "profiles/local-web/src/generator.ts"
+  },
+  "healthRoute": "app/api/health/route.ts",
+  "liveServer": {
+    "hostname": "127.0.0.1",
+    "healthCommand": "npm run health",
+    "browserCommands": ["npm run axe", "npm run smoke"]
+  },
+  "mutationRecipes": [
+    { "seedId": "seed-lint", "gate": "lint", "files": ["app/lint-target.tsx"] },
+    { "seedId": "seed-type", "gate": "type", "files": ["app/type-target.tsx"] },
+    { "seedId": "seed-unit", "gate": "unit", "files": ["tests/seeded-unit.test.mjs"] },
+    { "seedId": "seed-build", "gate": "build", "files": ["next.config.ts"] },
+    { "seedId": "seed-boot", "gate": "boot", "files": ["scripts/health.mjs"] },
+    { "seedId": "seed-axe", "gate": "axe", "files": ["scripts/axe.mjs"] },
+    { "seedId": "seed-smoke", "gate": "smoke", "files": ["scripts/smoke.mjs"] }
+  ],
+  "scripts": [
+    "lint",
+    "typecheck",
+    "unit",
+    "build",
+    "start",
+    "health",
+    "axe",
+    "smoke"
+  ]
+}

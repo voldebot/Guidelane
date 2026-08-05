@@ -1,0 +1,4 @@
+{
+  "messages": ["Hata: /Users/alice/private/project.ts", "Hata: ./private/project.ts", "Hata: C:\\Users\\alice\\private\\project.ts", "token ghp_abcdefghijklmnopqrstuvwxyz1234567890", "stderr: DATABASE_URL=postgres://secret", "thinking: private reasoning", "diff --git a/private.ts b/private.ts", "ENOENT: no such file or directory, open private/project.ts", "Error: engine failed\\n    at runBuild (src/build.ts:14:3)", "$ claude --print\\nBuild finished", "The engine says this arbitrary raw message is safe."],
+  "event": {"stderr":"fatal: /Users/alice/client/.env DATABASE_URL=postgres://secret","thinking":"private chain of thought","diff":"--- a/private.ts","path":"/Users/alice/client/private.ts","token":"ghp_not-for-the-browser","unknownNestedPayload":{"secret":"must not cross the boundary"}}
+}

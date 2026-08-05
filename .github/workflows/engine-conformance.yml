@@ -27,6 +27,7 @@ on:
   push:
     paths:
       - 'tools/probe/**'
+      - 'tools/gates/**'
       - 'docs/research/S0-conformance-*'
       - '.github/workflows/engine-conformance.yml'
       # Added S1: `packages/**` and the workspace root, because the `packages`
@@ -44,14 +45,19 @@ on:
     - cron: '0 4 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   free-tier:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
 
@@ -73,7 +79,7 @@ jobs:
 
       - name: Publish the report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           # Deliberately NOT named like the baseline: this is ~10 probes with no
           # live calls, and a reviewer downloading it must not mistake it for the
@@ -89,56 +95,16 @@ jobs:
           set -euo pipefail
           git diff --exit-code -- docs/research/
 
-      # The redaction boundary is only as good as its last regression. This is
-      # the cheapest possible check that no home path, username, temp-dir salt or
-      # address reached a file headed for a public repo.
-      #
       # `if: always()` because without it ANY red probe run skipped the scan
       # entirely — so a commit that both broke a probe and added a leak shipped
       # unscanned, which is precisely the commit most likely to contain one.
+      # The S2 source scanner has bounded exceptions for exactly one hostile
+      # fixture and the repository-local generated-project identity. It checks
+      # the identity as a whole lexical token, so a prefixed or suffixed email
+      # still fails closed.
       - name: Assert the committed artifacts carry no identifiers
         if: always()
-        run: |
-          set -uo pipefail
-          # `git grep`, not `git ls-files | xargs grep`. Three fail-open modes in
-          # the previous form:
-          #   1. xargs returns 123 when ANY batch's grep exits 1-125, so once the
-          #      tracked file list outgrows ARG_MAX, a batch that matched plus a
-          #      batch that did not = exit 123 = the `if` is false = leak passes.
-          #   2. A typo'd or renamed pathspec yields an empty list; grep with no
-          #      operands reads EOF stdin, exits 1, and the step reports "clean"
-          #      about a scan that covered zero files.
-          #   3. The extension glob omitted .ts/.tsx — and CLAUDE.md §4 says the
-          #      next sprint creates apps/cockpit/ and packages/*/, all
-          #      TypeScript. The scan was about to go blind to new code.
-          # git grep -I walks every tracked TEXT file in one process: no
-          # batching, no glob to outgrow, and a documented tri-state exit.
-          COUNT=$(git ls-files | wc -l | tr -d ' ')
-          if [ "$COUNT" -lt 20 ]; then
-            echo "::error::Scan covered only $COUNT tracked files — the pathspec is wrong, not the repo clean."
-            exit 1
-          fi
-          # Three files are excluded because their job IS to contain these
-          # patterns: the redaction rules themselves, this workflow, and the hook
-          # fixture's temp-root allowlist. Excluding them by name keeps the scan
-          # honest; widening the pattern to accommodate them would not.
-          set +e
-          git grep -nEI -i \
-            -e '/users/[a-z]' -e '/home/[a-z]' -e '/var/folders/' -e 'c:\\users\\' \
-            -e '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' \
-            -e '\bsk-[A-Za-z0-9_-]{16,}\b' \
-            -e '\b(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}\b' \
-            -- \
-            ':!tools/probe/lib/redact.mjs' \
-            ':!tools/probe/fixtures/plugin/hooks/log-event.sh' \
-            ':!.github/workflows/engine-conformance.yml'
-          rc=$?
-          set -e
-          case "$rc" in
-            0) echo "::error::Identifier leaked into a committed artifact."; exit 1 ;;
-            1) echo "No identifiers in $COUNT tracked files." ;;
-            *) echo "::error::Leak scan harness failed (git grep rc=$rc) — treat as red."; exit 1 ;;
-          esac
+        run: node tools/gates/gate-artifacts.mjs --source-only
 
       # The uploaded artifact is publicly downloadable on a public repo and is
       # the only file here containing FRESH child-process output — i.e. the one
@@ -178,9 +144,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
 
@@ -194,19 +162,21 @@ jobs:
         run: npm run typecheck
 
       # The offline tier. `--if-present` in the root script means a package with
-      # no test script is skipped, so the count below is the real guard: it
-      # asserts the suite actually EXECUTED rather than trusting a zero exit from
-      # a run that matched no files.
+      # This job remains the package boundary; product-offline owns the cockpit
+      # and generated-project harness. The aggregate count below asserts both
+      # engine and orchestrator suites actually EXECUTED rather than trusting a
+      # zero exit from a run that matched no files. npm prints one TAP summary
+      # per selected workspace, so their pass counts are summed.
       - name: Test
         run: |
           set -o pipefail
-          npm test 2>&1 | tee /tmp/test-out.txt
-          PASSED=$(grep -oE '^# pass [0-9]+' /tmp/test-out.txt | grep -oE '[0-9]+' | head -1)
-          if [ -z "$PASSED" ] || [ "$PASSED" -lt 40 ]; then
-            echo "::error::Expected at least 40 passing tests, saw '${PASSED:-none}' — the suite did not run."
+          npm run test --workspace=@guidelane/engine --workspace=@guidelane/orchestrator 2>&1 | tee /tmp/test-out.txt
+          PASSED=$(grep -oE '^# pass [0-9]+' /tmp/test-out.txt | grep -oE '[0-9]+' | awk '{ total += $1 } END { print total + 0 }')
+          if [ "$PASSED" -lt 90 ]; then
+            echo "::error::Expected at least 90 aggregate package tests, saw '$PASSED' — one or more package suites did not run."
             exit 1
           fi
-          echo "Workspace suite executed: $PASSED passing."
+          echo "Workspace suites executed: $PASSED aggregate passing."
 
   # REVIEW-01 #5's accepted remedy is "a nightly conformance probe against the
   # latest CLI". The pinned job above cannot do that by construction — it always
@@ -219,8 +189,10 @@ jobs:
     timeout-minutes: 15
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
 

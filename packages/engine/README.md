@@ -86,18 +86,18 @@ unattended supervisor leaves `detached`, authenticated children spending quota.
 - **It does not install a process-exit reaper.** `registry.killAll()` exists and
   has no production caller, so a supervisor killed with `SIGKILL` still leaves
   children. That is Tier B1, the S2 exit gate.
-- **It does not restrict the child's environment to an allow-list.** The deny
-  list is a prefix rule over `ANTHROPIC_ AWS_ GOOGLE_ GCLOUD_ CLOUD_ML_` plus 25
-  named `CLAUDE_CODE_` auth keys — enough to stop a *routed-away backend*, not
-  enough to stop an unattended agent with `Bash` from reading `GITHUB_TOKEN`.
-  `scrubbedEnvKeys` and `scrubbedEnv().inherited` make the exposure visible.
-  Flipping to an allow-list is an owner decision with a live measurement
-  attached.
+- **It does not inherit the supervisor's environment.** `scrubbedEnv()` builds
+  the child environment from an explicit portable allow-list and reports
+  `inherited: 0`; backend-routing credentials and unrelated values such as
+  `GITHUB_TOKEN`, `NPM_TOKEN`, or `DATABASE_URL` never cross this boundary.
+  The owner-operated authenticated init smoke is still required to prove that
+  the allow-list preserves subscription login with `apiKeySource: none`; a
+  failed live check must not fall back to broad inheritance.
 
 ## Tests
 
 ```bash
-npm test --workspace @guidelane/engine                    # 58 offline
+npm test --workspace @guidelane/engine                    # 60 offline
 GUIDELANE_LIVE=1 npm test --workspace @guidelane/engine   # + 2 real engine calls
 ```
 

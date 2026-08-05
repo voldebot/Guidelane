@@ -11,25 +11,38 @@ plain-language surface with no file paths, terminals, or diffs in it.
 MIT licensed, and run as a non-commercial project — no paid tiers, no hosted
 service, nothing to sell you. That is a choice about how *this* project is run,
 not a restriction in the licence: MIT lets anyone, including you, do commercial
-things with the code. No Guidelane server exists — everything runs on your
-machine.
+things with the code. No Guidelane-operated remote server exists — the pilot
+process and its loopback cockpit run only on your machine.
 
 ---
 
-## Status: not usable yet
+## Status: offline safety spine accepted, not a usable friends pilot yet
 
 Read this part before anything else.
 
-**What exists today**: research, eight architecture decisions, and one piece of
-working code — `tools/probe/`, a 30-probe conformance suite that measures what
-the engine actually does.
+**What exists today**: the 36-probe engine conformance suite, the tested
+`packages/engine` adapter (60 offline tests plus 2 opt-in live tests), and an
+S2 offline safety spine: a fail-closed orchestrator, a Local Web profile
+harness, and a Turkish-first localhost cockpit exercised against a fake
+orchestrator in Chromium and WebKit. A post-close orphan finding in the Local
+Web harness led to the Final-44–54 remediation sequence. Final-54 is the first
+complete recorded frozen offline contract. The accepted offline surface now has
+lease-supervised process cleanup, per-attempt boot authority, and exact
+one-to-one artifact-index validation. Its source-bound offline evidence,
+reviews, final documentation-binding replay, and deliberately separate
+live/pilot blockers are recorded in `docs/research/sprint-03-novice-pilot/`;
+this is not a live-engine or friends-pilot claim.
 
-**What does not exist**: the cockpit, the orchestrator, the Atlas MCP server, the
-behaviour pack, the stack profile. All of it. There is nothing to install and
-nothing to run except the probe.
+**What is deliberately unavailable**: a public installer, an enabled real build
+phase, Atlas, Night Shift, multiple projects, deployment, accounts, payments,
+and external APIs. The cockpit and profile are offline evidence surfaces, not a
+claim that a friend can safely build an application today.
 
-**Honest timeline**: 2.5–4 months of steady work, per an independent review of
-the plan. macOS only for now.
+The intended pilot target is owner-installed macOS with current desktop Safari
+or Chrome. Friends-pilot distribution remains blocked until the limited
+owner-operated live gates, real Safari/Chrome smoke checks, required GitHub
+checks, and the written Anthropic headless-subscription response are recorded.
+The tested Claude CLI baseline remains `2.1.220`.
 
 This repository is public because the reasoning should be auditable, not because
 the product is ready.
@@ -97,11 +110,12 @@ Details, per probe, in [`docs/research/S0-conformance-report.md`](docs/research/
 
 ## Running the probe
 
-The only thing here you can run today. Node 22, zero dependencies.
+The conformance suite remains the only owner-facing runtime command. Node 22 is
+required; the free tier makes no authenticated engine call.
 
 ```bash
-node tools/probe/run.mjs          # free tier: help-text + observational (13 probes)
-node tools/probe/run.mjs --live   # + 17 live probes (spends your quota)
+node tools/probe/run.mjs          # free tier: 14 probes, no quota use
+node tools/probe/run.mjs --live   # + 22 opt-in live probes (spends your quota)
 node tools/probe/run.mjs --list   # what each probe checks, and why it matters
 ```
 
@@ -119,7 +133,7 @@ story, including why the live tier cannot run in CI.
 |---|---|
 | [`PROJECT_MAP.md`](PROJECT_MAP.md) | The atlas: charter, principles, decisions, and a do-not-revisit list |
 | [`docs/architecture.md`](docs/architecture.md) | Stack, module boundaries, budgets, security posture |
-| [`docs/decisions/`](docs/decisions/) | ADR-001..008. **007 and 008 are measured, not reasoned** |
+| [`docs/decisions/`](docs/decisions/) | ADR-001..010. **007–009 are engine-measurement-led; 010 is the offline S2 safety boundary** |
 | [`docs/research/REVIEW-01-*.md`](docs/research/) | An independent adversarial review; governs v1 scope |
 | [`docs/research/REVIEW-02-*.md`](docs/research/) | A second audit that found the runtime gaps; governs the S1 work list |
 | [`CLAUDE.md`](CLAUDE.md) | The project constitution the AI agents working here must follow |
