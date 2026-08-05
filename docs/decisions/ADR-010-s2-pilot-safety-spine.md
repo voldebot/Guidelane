@@ -190,6 +190,25 @@ make the cockpit a competing state authority.
    map; unknown or contradictory state clears it and can never become an API
    disclosure route.
 
+### Final-56 amendment — supervisor-leader-loss containment (2026-08-05)
+
+The persistent Local Web mode separates the controller, detached guardian, and
+target process into explicit ownership boundaries. The original supervisor
+provides the guardian with a dedicated fd4 liveness lease; the guardian treats
+EOF, error, or close on that lease as autonomous cleanup authority and reaps
+only its own proven process group. The target receives neither the fd4 lease nor
+the fd3 result relay. The controller and guardian each enforce the authenticated
+relay sequence `READY -> LEASED -> RESULT` with the per-launch nonce. Any
+duplicate, out-of-order, malformed, or nonce-mismatched relay invalidates
+terminal success and propagates a non-success result even when the child exits
+zero. This closes the prior supervisor-SIGKILL orphan and early-success relay
+gaps without granting a parent process negative-PGID signaling authority.
+
+The containment claim remains bounded to POSIX hosts and trusted same-UID
+targets. A hostile same-UID process that can interfere with the private socket
+or guardian is outside this single-user pilot guarantee and remains an explicit
+residual.
+
 ## Consequences
 
 - SQLite and Atlas are unnecessary for S2 state. A later need for queries or

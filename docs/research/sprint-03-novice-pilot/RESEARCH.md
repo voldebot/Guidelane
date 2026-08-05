@@ -1708,3 +1708,135 @@ not offline implementation.
 - Final-55 binds this corrected documentation to an otherwise identical full
   frozen-contract replay. It adds no production behavior, changes no reviewed
   security boundary, and cannot weaken any live or friends-pilot prerequisite.
+
+### 2026-08-05 — Final-56 supervisor-leader-loss remediation open
+
+- A fresh Sol Max review of the current committed S2 snapshot reproduced one
+  remaining Local Web containment gap: a direct `SIGKILL` of the detached
+  supervisor leader can leave its long-lived target and descendants alive in
+  the former process group. This supersedes the prior closed status for final
+  publication; the branch must not merge until the boundary is repaired and
+  accepted again.
+- Frozen decision: the parent retains no authority to signal an arbitrary
+  process group. Instead, the target side must retain a private lease-derived
+  cleanup path that survives leader loss, and the parent must close the lease
+  when the original supervisor closes unexpectedly. Any cleanup signal may
+  target only a process group that the signalling guardian currently proves it
+  belongs to.
+- Independent test intent: start a persistent test-owned target, await an
+  authenticated receipt and target PID, kill only the original supervisor
+  leader, invoke the public cleanup path, and prove both the target PID and
+  recorded group are absent. The regression must also prove that normal
+  supervisor shutdown remains bounded and must not grant parent negative-PGID
+  signalling authority.
+- Owned remediation candidates: `profiles/local-web/src/command.ts`,
+  `profiles/local-web/src/server-supervisor.mjs`, a new narrowly scoped local
+  guardian if required, and `profiles/local-web/test/lease-supervisor.test.ts`.
+  No engine, orchestrator, cockpit, artifact, live-Claude, GitHub ruleset, or
+  friends-pilot scope is reopened.
+- Frozen deterministic gates after implementation: the independently authored
+  leader-loss regression; `npm --workspace @guidelane/local-web-profile test`;
+  `npm test`; `npm run format:check`; `npm run lint`; `npm run typecheck`;
+  source redaction; product-offline GitHub CI; a fresh Sol review and targeted
+  risk-triggered Sol Max review. The owner-installed pilot remains separately
+  blocked on the written Anthropic response and required live/browser evidence.
+
+### 2026-08-05 — Final-56 accepted containment design
+
+- The production repair uses a per-launch, nonce-authenticated Unix-domain
+  lease between the parent and a new detached target guardian. The guardian is
+  a separate process-group leader for the actual target and is the only new
+  component permitted to self-signal its proven current group. The original
+  supervisor remains the public child/protocol relay and is deliberately not a
+  transport endpoint for the guardian lease.
+- The parent closes the guardian lease on normal STOP, parent termination, and
+  every original-supervisor close/error path. Lease EOF is authoritative for
+  guardian cleanup. The target inherits neither lease endpoint nor a control
+  writer. A guardian handshake, nonce, connection, malformed-frame, or
+  self-signal failure fails closed and never creates a transferable success.
+- This design is chosen over inherited original-stdio endpoints because an
+  inherited endpoint can retain the original ChildProcess stdio after leader
+  death, delaying its `close` event and invalidating the public cleanup
+  contract. Parent polling or parent negative-PGID signals are not accepted.
+- The independent test contract is updated before production edits to permit
+  only proven self-group signal routes in the explicitly listed supervisor and
+  guardian sources. All parent and target sources remain negative-PGID-free.
+- Trust boundary: a generated Local Web target and its dependencies run under
+  the same local user as Guidelane and are trusted for process control. Final-56
+  contains unexpected loss of the original public supervisor; it does not claim
+  to contain target code that deliberately kills its guardian or escapes into a
+  new session/process group. Such same-UID hostile code can already disrupt the
+  owner process outside this topology. Before adversarial generated-target
+  containment is claimed, use OS-level isolation or a separate principal; do
+  not extend the guardian pattern by itself. A failed cleanup remains
+  fail-closed and cannot publish a successful harness result.
+- Implementation ownership is one production writer for
+  `profiles/local-web/src/command.ts`,
+  `profiles/local-web/src/server-supervisor.mjs`, the new
+  `profiles/local-web/src/server-guardian.mjs`, and the matching frozen
+  inventory row. The independent test author alone owns
+  `profiles/local-web/test/lease-supervisor.test.ts`; root owns this research
+  checkpoint. Stop immediately on a failed authentication/EOF/reaping gate;
+  do not merge or waive it.
+
+### 2026-08-05 — Final-56 remediation and regression checkpoint
+
+- Accepted implementation decisions: the detached guardian now inherits a
+  supervisor-owned fd4 liveness lease whose EOF triggers autonomous cleanup;
+  the target inherits neither the result relay nor the liveness endpoint. Both
+  the supervisor and parent guardian-result relay enforce `READY -> LEASED ->
+  RESULT` ordering. A protocol or lease failure clears terminal evidence, and
+  `waitForExit` returns failure rather than falling back to a clean supervisor
+  exit code.
+- Changed production paths: `profiles/local-web/src/command.ts`,
+  `profiles/local-web/src/server-supervisor.mjs`, and the new
+  `profiles/local-web/src/server-guardian.mjs`. Test and gate paths are
+  `profiles/local-web/test/lease-supervisor.test.ts`,
+  `tools/gates/s2-test-inventory.json`, and
+  `tools/gates/validate-inventory.mjs`; the Final-56 gate contract is recorded
+  in `GATE_CONTRACT.md`.
+- Independent test intent is now executable in twelve static Final-56 rows,
+  including the controller-event-loop stall/liveness-EOF regression and the
+  early-success, missing-RESULT, and unterminated-relay regression. The
+  inventory requires all twelve
+  rows and maps each through `requiredBehaviorCoverage`.
+- Exact evidence: the focused Final-56 command passed 12/12 tests;
+  `npm run test:s2-contract`, `npm run format:check`, `npm run typecheck`, and
+  `npm run lint` each exited 0. The post-fix root `npm test` passed with 54
+  gates passing and no failures; `npm run test:offline -- --artifacts
+  /tmp/guidelane-final56-offline-acceptance` passed and recorded 73 execution
+  evidence rows, including all twelve Final-56 selectors. Fresh source and
+  changed-path evidence passed under
+  `/tmp/guidelane-final56-gates-final.iT2i0P`.
+- Security audit findings 1–3 were addressed within scope: autonomous
+  liveness EOF, terminal-success invalidation with non-success propagation,
+  and mandatory inventory rows for Final-56. Residual same-UID hostile-target
+  assumptions remain unchanged and are not claimed as contained by this
+  pattern.
+- Review correction: the first Sol Max pass found an additional
+  unterminated-relay EOF gap after the earlier review. Production now fails
+  closed on residual control/result bytes and the regression covers that exact
+  suffix; fresh independent re-review found no further blocker.
+
+### 2026-08-05 — Final-56 closure checkpoint
+
+- Outcome: Final-56 supervisor-leader-loss remediation is closed after fresh
+  independent re-review. The detached
+  guardian now owns a supervisor-provided fd4 liveness lease; EOF autonomously
+  reaps the target process group, while the target inherits neither fd4 nor the
+  fd3 result relay. Both relay layers enforce `READY -> LEASED -> RESULT` with
+  nonce and duplicate rejection, and lease/protocol failures cannot fall back
+  to a clean child exit code.
+- Frozen inventory: twelve executable Final-56 scenarios are mandatory and
+  statically bound to twelve required behavior keys; the local-web lease
+  supervisor category is 23 rows and the total inventory is 191 scenarios.
+- Acceptance commands and results: focused Final-56 12/12; root `npm test`
+  54/54 gates with zero failures; offline contract passed with 73 evidence
+  rows; `npm run test:gates` passed 54/54; the source-bound offline capture
+  `/tmp/guidelane-final56-offline-acceptance` recorded 275 source files and
+  `gate:changed-paths` passed against base
+  `3a7154e09502b06a68b122148516fe48a647a3d4`.
+- Independent review: gate author confirmed deterministic selectors and
+  prerequisites; fresh Sol High and Sol Max reviews found no blocker.
+- Remaining pilot blocks are unchanged: live authentication, owner-machine
+  Safari/Chrome smoke, required GitHub checks, and observed novice sessions.

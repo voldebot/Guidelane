@@ -2,7 +2,7 @@
 context_priority: high
 project: "Guidelane"
 created: "2026-07-30"
-last_sprint_close: "2026-08-04 — S2 offline safety spine closed after Final-54 complete source-bound acceptance and Final-55 documentation binding"
+last_sprint_close: "2026-08-05 — S2 offline safety spine closed after Final-56 supervisor-leader-loss remediation and independent review"
 current_sprint: "none — owner-operated live validation and friends-pilot prerequisites deferred"
 ---
 
@@ -81,7 +81,7 @@ dial rides on.
 | Cockpit | Same-origin localhost novice flow, blueprint/plan approvals, semantic activity, evidence, acceptance, and language dial | `apps/cockpit/` — Turkish-first desktop client; revision-bound, allow-listed activity, no-store canonical recovery, and stale-snapshot suppression | built; Final-54 complete offline acceptance passed |
 | Atlas | MCP server: architecture-first knowledge, quality standards, task patterns; project graph + impact maps; decision ledger; corpus builder + graph indexer | `packages/atlas/` (not yet created) | active (design) |
 | Behaviour pack | Claude Code plugin: persona, interviewer, translation hooks, fail-closed guards; dual surface | `packages/plugin/` (not yet created) | active (design) |
-| Stack profile: local-web | Ejectable Next.js + Tailwind v4 + SQLite/Drizzle scaffold and lint/type/unit/build/boot/axe/smoke harness | `profiles/local-web/` — fresh generated projects only; lease-supervised self-reap and exact per-attempt boot authority protect the normal harness after the prior orphan finding | built; Final-54 complete offline acceptance passed |
+| Stack profile: local-web | Ejectable Next.js + Tailwind v4 + SQLite/Drizzle scaffold and lint/type/unit/build/boot/axe/smoke harness | `profiles/local-web/` — fresh generated projects only; supervisor-owned guardian liveness lease, strict result relay FSM, lease-supervised self-reap, and exact per-attempt boot authority protect the normal harness after the prior orphan finding | built; Final-56 complete offline acceptance passed |
 | Conformance probe | The engine-contract regression suite: **36 probes (14 free, 22 live)**, baseline gate, cross-process lock, report generator, CI wiring. Seeded `packages/engine`'s spawn layer; `ctx.claudeStreaming` is the reactive rig the S1 Tier A answers came from | `tools/probe/` — **SHIPPED (S0), extended (S1)** | active (built) |
 
 ## 4. Active Decisions Index
@@ -97,7 +97,7 @@ dial rides on.
 | [ADR-007](docs/decisions/ADR-007-headless-engine-contract.md) | Headless engine contract, as measured (S0) | 2026-07-30 | s0 | Permissions = `auto` + explicit per-stage allow-list (engine is fail-closed); Atlas ships via `--mcp-config` so `--strict-mcp-config` isolation survives; Night Shift sleeps to `rate_limit_event.resetsAt`. Corrects RESEARCH-01 §4.3 mech. 2 and ADR-003 delivery |
 | [ADR-008](docs/decisions/ADR-008-session-isolation-and-init-receipt.md) | Session isolation + the init receipt | 2026-07-30 *(amended 2026-07-31; alias correction 2026-07-31)* | s0 | `--strict-mcp-config` **and** `--setting-sources ''` on every spawn (strict alone leaks the operator's plugins/skills/agents/permission mode); `system/init` asserted as a pre-flight gate, not telemetry; `--bare`/`--safe-mode` ban restated as a state ban with an env deny-list; MessageDisplay rewrite confirmed to reach stream-json; `apiKeySource` is the auth discriminator. **Two dated in-place corrections**: the built-in floor (§Amendment) and registration-vs-reachability (§2), the latter replacing a `status === 'connected'` gate that would have flaked |
 | [ADR-009](docs/decisions/ADR-009-phase-lifecycle-and-session-handle.md) | The phase lifecycle and the engine session handle | 2026-07-31 | s1 | A phase is one session and its boundary is `stdin.end()` — never `result` (per-turn) and never process exit; keep draining after the close (6,243 bytes still arrive); the stall watchdog is armed only while output is EXPECTED, and it stops the session before reporting that it did; per-supervisor `SessionRegistry` with group kills; every stream event is classified before a human sees it and an unrecognised one **escalates**; denial is `tool_result.is_error` and nothing else; the orchestrator validates hook stdout because the engine reports a malformed one as `success`; no control-channel responder is needed — the engine never asks headlessly |
-| [ADR-010](docs/decisions/ADR-010-s2-pilot-safety-spine.md) | S2 novice-pilot safety spine | 2026-08-03 | s2 | One append-only project authority; fail-closed recovery; explicit child-environment allow-list; same-origin loopback session/token boundary; semantic-only cockpit; lease-supervised Local Web cleanup; per-attempt authority and exact artifact indexing; offline and live evidence remain separate |
+| [ADR-010](docs/decisions/ADR-010-s2-pilot-safety-spine.md) | S2 novice-pilot safety spine | 2026-08-03 (amended 2026-08-05) | s2 | One append-only project authority; fail-closed recovery; explicit child-environment allow-list; same-origin loopback session/token boundary; semantic-only cockpit; supervisor-owned guardian liveness and strict relay FSM for Local Web cleanup; per-attempt authority and exact artifact indexing; offline and live evidence remain separate |
 
 ## 5. Superseded & Rejected (Do-Not-Revisit)
 

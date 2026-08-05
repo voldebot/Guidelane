@@ -1,5 +1,9 @@
 import { spawn, spawnSync } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
+import { chmodSync, mkdtempSync, rmSync } from 'node:fs'
+import { createServer } from 'node:net'
+import type { Server, Socket } from 'node:net'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { ChildProcess } from 'node:child_process'
 import type { CommandResult } from './types.ts'
@@ -9,6 +13,7 @@ const PROCESS_GROUP_GRACE_MS = 150
 const PROCESS_GROUP_KILL_WAIT_MS = 500
 const PROCESS_GROUP_ABSENCE_WAIT_MS = PROCESS_GROUP_GRACE_MS + PROCESS_GROUP_KILL_WAIT_MS + 250
 const LEASE_HANDSHAKE_TIMEOUT_MS = 2_000
+const LEASE_CONTROL_MAX_BYTES = 1_024
 const RECEIPT_ACQUISITION_TIMEOUT_MS = 500
 const RECEIPT_ACQUISITION_RETRY_MS = 10
 const PROCESS_STATUS_PROBE_TIMEOUT_MS = 100
@@ -16,6 +21,7 @@ const PORTABLE_ENVIRONMENT_KEYS = ['PATH', 'HOME', 'LANG', 'LC_ALL', 'TMPDIR', '
 const PROCESS_STATUS_COMMAND = process.platform === 'win32' ? null : '/bin/ps'
 const PROCESS_GROUP_COMMAND = process.platform === 'win32' ? null : '/usr/bin/pgrep'
 const PARENT_TERMINATION_REAP_TIMEOUT_MS = 1_000
+const GUARDIAN_LEASE_DIRECTORY_PREFIX = '/tmp/guidelane-local-web-lease-'
 
 export interface ProcessReceipt {
   pid: number
@@ -34,6 +40,7 @@ interface TargetTerminal {
 }
 
 type LeasePhase = 'spawning' | 'ready' | 'acknowledging' | 'leased' | 'failed'
+type LeaseTransport = 'supervisor' | 'guardian'
 
 interface LeaseWritable extends NodeJS.WritableStream {
   destroyed?: boolean
@@ -45,9 +52,25 @@ interface LeaseControl extends NodeJS.ReadableStream {
   destroy: () => void
 }
 
+interface GuardianLeaseRuntime {
+  directory: string
+  socketPath: string
+  server: Server
+  socket: Socket | null
+  closed: boolean
+  listening: boolean
+  cleanupPending: boolean
+  cleaned: boolean
+  connectionTimer: ReturnType<typeof setTimeout> | undefined
+}
+
 interface ProcessReceiptState {
+  transport: LeaseTransport
+  guardian: GuardianLeaseRuntime | null
   receipt: ProcessReceipt | null
   receiptReady: Promise<ProcessReceipt | null>
+  resolveReceipt: (receipt: ProcessReceipt | null) => void
+  receiptSettled: boolean
   leaseReady: Promise<boolean>
   resolveLeaseReady: (ready: boolean) => void
   leaseSettled: boolean
@@ -55,6 +78,7 @@ interface ProcessReceiptState {
   nonce: string
   lease: LeaseWritable | null
   control: LeaseControl | null
+  result: LeaseControl | null
   controlBuffer: string
   terminal: TargetTerminal | null
   protocolTimer: ReturnType<typeof setTimeout> | undefined
@@ -103,11 +127,22 @@ function observeProcess(pid: number): ProcessReceipt | null {
   return { pid: observedPid, pgid, startedAt }
 }
 
-function createReceiptState(nonce: string, lease: LeaseWritable | null, control: LeaseControl | null): ProcessReceiptState {
+function createReceiptState(
+  nonce: string,
+  lease: LeaseWritable | null,
+  control: LeaseControl | null,
+  transport: LeaseTransport = 'supervisor',
+  guardian: GuardianLeaseRuntime | null = null,
+): ProcessReceiptState {
+  let resolveReceipt!: (receipt: ProcessReceipt | null) => void
   let resolveLeaseReady!: (ready: boolean) => void
   return {
+    transport,
+    guardian,
     receipt: null,
-    receiptReady: Promise.resolve(null),
+    receiptReady: new Promise<ProcessReceipt | null>((resolve) => { resolveReceipt = resolve }),
+    resolveReceipt,
+    receiptSettled: false,
     leaseReady: new Promise<boolean>((resolve) => { resolveLeaseReady = resolve }),
     resolveLeaseReady,
     leaseSettled: false,
@@ -115,12 +150,20 @@ function createReceiptState(nonce: string, lease: LeaseWritable | null, control:
     nonce,
     lease,
     control,
+    result: null,
     controlBuffer: '',
     terminal: null,
     protocolTimer: undefined,
     closeObserved: false,
     stopRequested: false,
   }
+}
+
+function settleReceipt(state: ProcessReceiptState, receipt: ProcessReceipt | null): void {
+  if (state.receiptSettled) return
+  state.receiptSettled = true
+  state.receipt = receipt
+  state.resolveReceipt(receipt)
 }
 
 function settleLease(state: ProcessReceiptState, ready: boolean): void {
@@ -130,14 +173,68 @@ function settleLease(state: ProcessReceiptState, ready: boolean): void {
   state.resolveLeaseReady(ready)
 }
 
+function createGuardianLeaseRuntime(): GuardianLeaseRuntime {
+  const directory = mkdtempSync(GUARDIAN_LEASE_DIRECTORY_PREFIX)
+  try {
+    chmodSync(directory, 0o700)
+    return {
+      directory,
+      socketPath: join(directory, 'lease.sock'),
+      server: createServer(),
+      socket: null,
+      closed: false,
+      listening: false,
+      cleanupPending: false,
+      cleaned: false,
+      connectionTimer: undefined,
+    }
+  } catch (error) {
+    try { rmSync(directory, { recursive: true, force: true }) } catch { /* no lease directory may survive setup failure */ }
+    throw error
+  }
+}
+
+function finalizeGuardianLeaseRuntime(runtime: GuardianLeaseRuntime): void {
+  if (runtime.cleaned) return
+  runtime.cleaned = true
+  runtime.cleanupPending = false
+  try { rmSync(runtime.directory, { recursive: true, force: true }) } catch { /* the private lease is no longer usable after its server closes */ }
+}
+
+function closeGuardianLeaseServer(runtime: GuardianLeaseRuntime): void {
+  try {
+    runtime.server.close(() => finalizeGuardianLeaseRuntime(runtime))
+  } catch {
+    finalizeGuardianLeaseRuntime(runtime)
+  }
+}
+
+function closeGuardianLeaseRuntime(runtime: GuardianLeaseRuntime): void {
+  if (runtime.closed) return
+  runtime.closed = true
+  if (runtime.connectionTimer !== undefined) clearTimeout(runtime.connectionTimer)
+  runtime.connectionTimer = undefined
+  const socket = runtime.socket
+  runtime.socket = null
+  if (socket && !socket.destroyed) {
+    try { socket.destroy() } catch { /* connection loss is the guardian cleanup trigger */ }
+  }
+  if (runtime.listening || runtime.server.listening) closeGuardianLeaseServer(runtime)
+  else runtime.cleanupPending = true
+}
+
 function closeLease(state: ProcessReceiptState): void {
   const lease = state.lease
   state.lease = null
+  if (state.guardian) {
+    closeGuardianLeaseRuntime(state.guardian)
+    if (!state.receiptSettled) settleReceipt(state, null)
+  }
   if (!lease || lease.destroyed || lease.writableEnded) return
   try {
     lease.end()
   } catch {
-    try { lease.destroy() } catch { /* the supervisor will observe control loss if it remains live */ }
+    try { lease.destroy() } catch { /* the lease holder will observe control loss if it remains live */ }
   }
 }
 
@@ -173,16 +270,22 @@ function installParentTerminationLeaseGuard(): void {
 
 function failLease(state: ProcessReceiptState): void {
   if (state.phase !== 'failed') state.phase = 'failed'
+  // A terminal frame is advisory until the supervised child closes cleanly.
+  // Never let an earlier success survive a later protocol or lease failure.
+  state.terminal = null
   settleLease(state, false)
+  settleReceipt(state, null)
   closeLease(state)
   try { state.control?.destroy() } catch { /* EOF on the lease remains the authoritative failure path */ }
   state.control = null
 }
 
-function recordProcessReceipt(child: ChildProcess, state: ProcessReceiptState): void {
-  let resolveReceipt!: (receipt: ProcessReceipt | null) => void
-  state.receiptReady = new Promise<ProcessReceipt | null>((resolve) => { resolveReceipt = resolve })
+function relinquishLease(state: ProcessReceiptState): void {
+  if (state.phase === 'leased') closeLease(state)
+  else failLease(state)
+}
 
+function recordProcessReceipt(child: ChildProcess, state: ProcessReceiptState): void {
   let settled = false
   let retryTimer: ReturnType<typeof setTimeout> | undefined
   let acquisitionTimer: ReturnType<typeof setTimeout> | undefined
@@ -194,8 +297,7 @@ function recordProcessReceipt(child: ChildProcess, state: ProcessReceiptState): 
     child.removeListener('spawn', onSpawn)
     child.removeListener('close', onClose)
     child.removeListener('error', onError)
-    state.receipt = receipt
-    resolveReceipt(receipt)
+    settleReceipt(state, receipt)
   }
   const onClose = (): void => settle(null)
   const onError = (): void => settle(null)
@@ -231,9 +333,18 @@ function recordProcessReceipt(child: ChildProcess, state: ProcessReceiptState): 
   if (child.pid !== undefined) onSpawn()
 }
 
-function ownsDetachedGroup(child: ChildProcess, state: ProcessReceiptState): ProcessReceipt | null {
+function recordGuardianReceipt(state: ProcessReceiptState, pid: number): boolean {
+  if (!Number.isSafeInteger(pid) || pid <= 0 || state.receiptSettled) return false
+  const receipt = observeProcess(pid)
+  if (!receipt || receipt.pid !== pid || receipt.pgid !== pid) return false
+  settleReceipt(state, receipt)
+  return true
+}
+
+function ownsManagedGroup(child: ChildProcess, state: ProcessReceiptState): ProcessReceipt | null {
   const receipt = state.receipt
-  if (!receipt || hasExited(child) || child.pid !== receipt.pid || receipt.pgid !== receipt.pid) return null
+  if (!receipt || hasExited(child) || receipt.pgid !== receipt.pid) return null
+  if (state.transport === 'supervisor' && child.pid !== receipt.pid) return null
   const current = observeProcess(receipt.pid)
   if (!current || current.pid !== receipt.pid || current.pgid !== receipt.pgid || current.startedAt !== receipt.startedAt) return null
   return receipt
@@ -301,6 +412,7 @@ function releaseChildHandle(child: ChildProcess, state?: ProcessReceiptState): v
   child.stdout?.destroy()
   child.stderr?.destroy()
   try { state?.control?.destroy() } catch { /* closing the lease is sufficient */ }
+  try { state?.result?.destroy() } catch { /* releasing the relay cannot create target authority */ }
   child.unref?.()
 }
 
@@ -315,7 +427,7 @@ function parseTerminal(exitValue: string, signalValue: string): TargetTerminal |
 
 async function acknowledgeReady(child: ChildProcess, state: ProcessReceiptState): Promise<void> {
   const receipt = await state.receiptReady
-  if (state.phase !== 'ready' || !receipt || !ownsDetachedGroup(child, state)) {
+  if (state.phase !== 'ready' || !receipt || !ownsManagedGroup(child, state)) {
     failLease(state)
     return
   }
@@ -345,13 +457,25 @@ function consumeControlMessage(child: ChildProcess, state: ProcessReceiptState, 
     failLease(state)
     return
   }
-  if (kind === 'READY' && fields.length === 2 && state.phase === 'spawning') {
-    state.phase = 'ready'
-    void acknowledgeReady(child, state)
-    return
+  if (kind === 'READY' && state.phase === 'spawning') {
+    if (state.transport === 'supervisor' && fields.length === 2) {
+      state.phase = 'ready'
+      void acknowledgeReady(child, state)
+      return
+    }
+    if (state.transport === 'guardian' && fields.length === 3 && first !== undefined) {
+      const guardianPid = Number(first)
+      if (!recordGuardianReceipt(state, guardianPid)) {
+        failLease(state)
+        return
+      }
+      state.phase = 'ready'
+      void acknowledgeReady(child, state)
+      return
+    }
   }
   if (kind === 'LEASED' && fields.length === 2 && state.phase === 'acknowledging') {
-    if (!ownsDetachedGroup(child, state)) {
+    if (!ownsManagedGroup(child, state)) {
       failLease(state)
       return
     }
@@ -359,7 +483,7 @@ function consumeControlMessage(child: ChildProcess, state: ProcessReceiptState, 
     settleLease(state, true)
     return
   }
-  if (kind === 'RESULT' && fields.length === 4 && state.phase === 'leased' && first !== undefined && second !== undefined) {
+  if (state.transport === 'supervisor' && kind === 'RESULT' && fields.length === 4 && state.phase === 'leased' && first !== undefined && second !== undefined) {
     const terminal = parseTerminal(first, second)
     if (!terminal || state.terminal) {
       failLease(state)
@@ -401,9 +525,112 @@ function attachLeaseProtocol(child: ChildProcess, state: ProcessReceiptState): v
   })
   control.once('error', () => failLease(state))
   control.once('end', () => {
-    if (!hasExited(child)) failLease(state)
+    if (state.controlBuffer.length > 0) failLease(state)
+    else if (!hasExited(child)) relinquishLease(state)
+  })
+  control.once('close', () => {
+    if (state.controlBuffer.length > 0) failLease(state)
+    else if (!hasExited(child)) relinquishLease(state)
   })
   state.lease.once('error', () => failLease(state))
+}
+
+function attachGuardianLeaseProtocol(child: ChildProcess, state: ProcessReceiptState, runtime: GuardianLeaseRuntime): void {
+  const rejectLease = () => {
+    // A listen error cannot later produce a listening event.  Consume a
+    // pre-listening close race here rather than waiting for an event that will
+    // never arrive, while the normal later-listening path still closes first.
+    if (!runtime.listening) finalizeGuardianLeaseRuntime(runtime)
+    if (runtime.closed) return
+    failLease(state)
+  }
+  runtime.server.on('error', rejectLease)
+  runtime.server.on('listening', () => {
+    runtime.listening = true
+    if (runtime.closed) {
+      closeGuardianLeaseServer(runtime)
+      return
+    }
+    try {
+      chmodSync(runtime.socketPath, 0o600)
+    } catch {
+      failLease(state)
+    }
+  })
+  runtime.server.on('connection', (socket) => {
+    if (runtime.closed || runtime.socket !== null || state.phase !== 'spawning') {
+      try { socket.destroy() } catch { /* an unexpected peer cannot retain the lease */ }
+      if (!runtime.closed) failLease(state)
+      return
+    }
+    runtime.socket = socket
+    if (runtime.connectionTimer !== undefined) clearTimeout(runtime.connectionTimer)
+    runtime.connectionTimer = undefined
+    state.lease = socket as LeaseWritable
+    state.control = socket as LeaseControl
+    attachLeaseProtocol(child, state)
+  })
+  runtime.connectionTimer = setTimeout(() => failLease(state), LEASE_HANDSHAKE_TIMEOUT_MS)
+  try {
+    runtime.server.listen(runtime.socketPath)
+  } catch {
+    finalizeGuardianLeaseRuntime(runtime)
+    failLease(state)
+  }
+}
+
+function attachGuardianResultRelay(child: ChildProcess, state: ProcessReceiptState): void {
+  const result = child.stdio[3] as LeaseControl | null
+  if (!result) {
+    failLease(state)
+    return
+  }
+  state.result = result
+  let buffer = ''
+  let relayPhase: 'awaiting-ready' | 'ready' | 'leased' | 'terminal' = 'awaiting-ready'
+  result.setEncoding('utf8')
+  result.on('data', (chunk: string) => {
+    if (state.phase === 'failed') return
+    buffer += chunk
+    if (buffer.length > LEASE_CONTROL_MAX_BYTES) {
+      failLease(state)
+      return
+    }
+    let newline = buffer.indexOf('\n')
+    while (newline >= 0) {
+      const line = buffer.slice(0, newline)
+      buffer = buffer.slice(newline + 1)
+      const fields = line.split(' ')
+      if (!line || line.endsWith('\r') || fields.some((field) => field.length === 0)) {
+        failLease(state)
+        return
+      }
+      const [kind, receivedNonce, first, second] = fields
+      const validReady = kind === 'READY' && fields.length === 2 && relayPhase === 'awaiting-ready'
+      const validLeased = kind === 'LEASED' && fields.length === 2 && relayPhase === 'ready'
+      const terminal = kind === 'RESULT' && relayPhase === 'leased' && fields.length === 4 && first !== undefined && second !== undefined
+        ? parseTerminal(first, second)
+        : null
+      if (receivedNonce !== state.nonce || (!validReady && !validLeased && terminal === null)) {
+        failLease(state)
+        return
+      }
+      if (validReady) relayPhase = 'ready'
+      if (validLeased) relayPhase = 'leased'
+      if (terminal !== null) relayPhase = 'terminal'
+      if (terminal) state.terminal = terminal
+      newline = buffer.indexOf('\n')
+    }
+  })
+  result.once('error', () => failLease(state))
+  result.once('end', () => {
+    if (buffer.length > 0) failLease(state)
+    else if (!hasExited(child)) relinquishLease(state)
+  })
+  result.once('close', () => {
+    if (buffer.length > 0) failLease(state)
+    else if (!hasExited(child)) relinquishLease(state)
+  })
 }
 
 function startLeaseSupervisedCommand(
@@ -415,26 +642,59 @@ function startLeaseSupervisedCommand(
 ): ChildProcess {
   const supervisor = fileURLToPath(new URL('./server-supervisor.mjs', import.meta.url))
   const nonce = randomBytes(32).toString('hex')
-  const child = spawn(process.execPath, [supervisor, nonce, command, JSON.stringify(args), cwd, mode], {
-    cwd,
-    detached: true,
-    stdio: ['pipe', 'pipe', 'pipe', 'pipe'],
-    env: buildChildEnvironment(environment),
-  })
-  const state = createReceiptState(nonce, child.stdin as LeaseWritable | null, child.stdio[3] as LeaseControl | null)
+  const guardian = mode === 'persistent' ? createGuardianLeaseRuntime() : null
+  let child: ChildProcess
+  try {
+    child = spawn(process.execPath, [
+      supervisor,
+      nonce,
+      command,
+      JSON.stringify(args),
+      cwd,
+      guardian ? 'persistent-guardian' : mode,
+      ...(guardian ? [guardian.socketPath] : []),
+    ], {
+      cwd,
+      detached: true,
+      stdio: ['pipe', 'pipe', 'pipe', 'pipe'],
+      env: buildChildEnvironment(environment),
+    })
+  } catch (error) {
+    if (guardian) finalizeGuardianLeaseRuntime(guardian)
+    throw error
+  }
+  const state = createReceiptState(
+    nonce,
+    guardian ? null : child.stdin as LeaseWritable | null,
+    guardian ? null : child.stdio[3] as LeaseControl | null,
+    guardian ? 'guardian' : 'supervisor',
+    guardian,
+  )
   processReceipts.set(child, state)
   activeLeaseChildren.add(child)
   installParentTerminationLeaseGuard()
-  child.once('close', () => {
+  child.once('close', (code, signal) => {
     state.closeObserved = true
-    if (state.phase !== 'leased') settleLease(state, false)
+    const terminalValid = state.terminal !== null
+      && (state.transport !== 'guardian'
+        || !(state.terminal.exitCode === 0 && state.terminal.signal === null && (code !== 0 || signal !== null)))
+    if (state.phase !== 'leased' || !terminalValid) failLease(state)
+    else closeLease(state)
     if (state.protocolTimer !== undefined) clearTimeout(state.protocolTimer)
     activeLeaseChildren.delete(child)
     removeParentTerminationLeaseGuard()
   })
-  child.once('error', () => failLease(state))
-  recordProcessReceipt(child, state)
-  attachLeaseProtocol(child, state)
+  child.once('error', () => relinquishLease(state))
+  if (guardian) {
+    // The original supervisor has no control input in guardian mode. Closing
+    // this direct pipe makes that non-lease boundary explicit.
+    try { child.stdin?.destroy() } catch { /* child close will revoke the guardian lease */ }
+    attachGuardianLeaseProtocol(child, state, guardian)
+    attachGuardianResultRelay(child, state)
+  } else {
+    recordProcessReceipt(child, state)
+    attachLeaseProtocol(child, state)
+  }
   drainOutput(child)
   return child
 }
@@ -462,6 +722,19 @@ function requestAuthenticatedStop(child: ChildProcess, state: ProcessReceiptStat
   }
 }
 
+function leaseMayStillBecomeActive(state: ProcessReceiptState): boolean {
+  if (state.stopRequested || state.closeObserved || state.phase === 'failed') return false
+  if (state.transport === 'guardian') return state.guardian !== null && !state.guardian.closed
+  const lease = state.lease
+  return lease !== null && !lease.destroyed && !lease.writableEnded
+}
+
+function hasActiveLease(state: ProcessReceiptState): boolean {
+  if (state.phase !== 'leased' || !leaseMayStillBecomeActive(state)) return false
+  const lease = state.lease
+  return lease !== null && !lease.destroyed && !lease.writableEnded
+}
+
 async function waitForLease(state: ProcessReceiptState): Promise<boolean> {
   return state.leaseReady
 }
@@ -473,14 +746,15 @@ async function reapObservation(state: ProcessReceiptState, timeoutMs: number): P
 }
 
 /**
- * Return diagnostic process coordinates only while the original lease
- * supervisor is both live and currently proven to lead its own detached group.
+ * Return diagnostic process coordinates only while the direct leader remains
+ * live and its managed detached group is currently proven.
  * Receipt data never gives a parent signal authority.
  */
 export async function verifiedProcessReceipt(child: ChildProcess): Promise<ProcessReceipt | null> {
   const state = processReceipts.get(child)
-  if (!state || !(await waitForLease(state)) || hasExited(child)) return null
-  return ownsDetachedGroup(child, state)
+  if (!state || !leaseMayStillBecomeActive(state)) return null
+  if (!(await waitForLease(state)) || !hasActiveLease(state) || hasExited(child)) return null
+  return ownsManagedGroup(child, state)
 }
 
 export async function runCommand(
@@ -494,7 +768,8 @@ export async function runCommand(
   const child = startCommand(cwd, command, args, environment)
   const waitResult = await waitForExit(child, timeoutMs)
   const cleanup = await stopCommand(child, PROCESS_GROUP_ABSENCE_WAIT_MS)
-  const terminal = processReceipts.get(child)?.terminal
+  const state = processReceipts.get(child)
+  const terminal = state?.phase === 'failed' ? null : state?.terminal
   return {
     command,
     args,
@@ -540,7 +815,10 @@ export async function waitForExit(child: ChildProcess, timeoutMs: number): Promi
   }
   if (state) await reapObservation(state, PROCESS_GROUP_ABSENCE_WAIT_MS)
   const terminal = state?.terminal
-  return { exitCode: terminal?.exitCode ?? child.exitCode, timedOut: !closedBeforeTimeout }
+  // A protocol/lease failure is a real command failure even when cleanup lets
+  // the supervisor exit with code 0. Never fall back to that exit code after
+  // fail-closed state has been recorded.
+  return { exitCode: state?.phase === 'failed' ? 1 : (terminal?.exitCode ?? child.exitCode), timedOut: !closedBeforeTimeout }
 }
 
 export async function stopCommand(child: ChildProcess, timeoutMs = 2_000): Promise<CleanupResult> {
@@ -558,7 +836,7 @@ export async function stopCommand(child: ChildProcess, timeoutMs = 2_000): Promi
     return { ownershipVerified: false, childProcessesReaped }
   }
 
-  const ownershipVerified = ownsDetachedGroup(child, state) !== null || (state.phase === 'leased' && state.receipt !== null)
+  const ownershipVerified = ownsManagedGroup(child, state) !== null || (state.phase === 'leased' && state.receipt !== null)
   if (!hasExited(child)) requestAuthenticatedStop(child, state)
   else closeLease(state)
   await waitForChildClose(child, Math.max(timeoutMs, PROCESS_GROUP_GRACE_MS))

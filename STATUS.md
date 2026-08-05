@@ -1,6 +1,6 @@
 # Project Status
 
-Updated: 2026-08-04
+Updated: 2026-08-05
 
 Active sprint: **none — S2 offline safety spine closed; owner-pilot validation remains deferred**
 
@@ -28,6 +28,12 @@ pilot slice:
 - `apps/cockpit` is a Turkish-first React/Vite desktop flow with semantic-only
   activity, G0–G6 states, strict loopback session handling, and no raw engine
   output, reasoning, paths, diffs, or terminal surface.
+
+Final-56 closes the Local Web supervisor-leader-loss remediation. Persistent
+targets use a detached guardian with a supervisor-owned liveness lease (fd4),
+strict `READY -> LEASED -> RESULT` relay ordering, and fail-closed protocol
+failure propagation. Twelve regression/containment selectors are mandatory in
+the inventory; the final offline capture contains 73 execution-evidence rows.
 
 Final-21 through Final-53 are diagnostic, remediation, or explicitly rejected
 evidence only. Their independent tests and reviews drove the implemented

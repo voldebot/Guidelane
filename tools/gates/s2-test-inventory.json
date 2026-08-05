@@ -16,7 +16,7 @@
     "cockpit-final-37": 1,
     "local-web-git-security": 1,
     "local-web-orphan-cleanup": 2,
-    "local-web-lease-supervisor": 11
+    "local-web-lease-supervisor": 23
   },
   "requiredBehaviorCoverage": {
     "artifact-atomic-temp-write-interruption": "S2-ART-01",
@@ -107,7 +107,19 @@
     "final46-self-group-signal-failure-fail-stop": "S2-F46-SELF-GROUP-SIGNAL-02",
     "final46-attempt-authority-is-fresh-and-terminal": "S2-F46-ATTEMPT-AUTHORITY-03",
     "final46-authority-and-terminal-binding-fail-closed": "S2-F46-AUTHORITY-BINDING-04",
-    "final46-source-structural-signal-and-redaction-boundary": "S2-F46-SOURCE-STRUCTURAL-05"
+    "final46-source-structural-signal-and-redaction-boundary": "S2-F46-SOURCE-STRUCTURAL-05",
+    "final56-leader-loss-cleanup": "S2-F56-LEADER-KILL-01",
+    "final56-supervisor-close-auto-reap": "S2-F56-LEADER-CLOSE-AUTOREAP-09",
+    "final56-lease-revocation": "S2-F56-LEASE-REVOCATION-10",
+    "final56-spawn-failure-cleanup": "S2-F56-SPAWN-FAILURE-03",
+    "final56-ack-stop-race": "S2-F56-GUARDIAN-ACK-STOP-RACE-04",
+    "final56-ack-stop-ordering": "S2-F56-GUARDIAN-ACK-STOP-ORDERING-05",
+    "final56-fd3-relay-isolation": "S2-F56-GUARDIAN-FD3-RELAY-ISOLATION-06",
+    "final56-result-plane": "S2-F56-GUARDIAN-RESULT-PLANE-07",
+    "final56-lease-permissions": "S2-F56-GUARDIAN-LEASE-PERMISSIONS-08",
+    "final56-source-structural-signal": "S2-F56-SOURCE-STRUCTURAL-02",
+    "final56-liveness-pipe": "S2-F56-REGRESSION-LIVENESS-PIPE-11",
+    "final56-result-relay-fail-closed": "S2-F56-REGRESSION-RESULT-RELAY-12"
   },
   "scenarios": [
     {
@@ -2231,6 +2243,126 @@
       "authority": "machine",
       "command": "npm run test:offline",
       "executionEvidence": { "source": "offline-tap", "selector": "S2-F46-SOURCE-STRUCTURAL-05 all scoped Local Web sources forbid parent negative-PGID signalling and persist no raw runtime identity authority" }
+    },
+    {
+      "id": "S2-F56-LEADER-KILL-01",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F56-LEADER-KILL-01 SIGKILL of the original persistent supervisor leaves neither its exact target nor its recorded group running after the public stop path",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F56-LEADER-KILL-01 SIGKILL of the original persistent supervisor leaves neither its exact target nor its recorded group running after the public stop path" }
+    },
+    {
+      "id": "S2-F56-SOURCE-STRUCTURAL-02",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F56-SOURCE-STRUCTURAL-02 every Local Web negative-PGID signal route is limited to the proven detached supervisor self-group",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F56-SOURCE-STRUCTURAL-02 every Local Web negative-PGID signal route is limited to the proven detached supervisor self-group" }
+    },
+    {
+      "id": "S2-F56-SPAWN-FAILURE-03",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F56-SPAWN-FAILURE-03 synchronous persistent launch failure leaves no private guardian lease directory",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F56-SPAWN-FAILURE-03 synchronous persistent launch failure leaves no private guardian lease directory" }
+    },
+    {
+      "id": "S2-F56-GUARDIAN-ACK-STOP-RACE-04",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F56-GUARDIAN-ACK-STOP-RACE-04 authenticated same-chunk ACK and STOP reaps the real guardian target group",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F56-GUARDIAN-ACK-STOP-RACE-04 authenticated same-chunk ACK and STOP reaps the real guardian target group" }
+    },
+    {
+      "id": "S2-F56-GUARDIAN-ACK-STOP-ORDERING-05",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F56-GUARDIAN-ACK-STOP-ORDERING-05 guardian claims spawn ownership before async readiness and self-cleans post-spawn control failures",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F56-GUARDIAN-ACK-STOP-ORDERING-05 guardian claims spawn ownership before async readiness and self-cleans post-spawn control failures" }
+    },
+    {
+      "id": "S2-F56-GUARDIAN-FD3-RELAY-ISOLATION-06",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F56-GUARDIAN-FD3-RELAY-ISOLATION-06 authenticated target cannot inject a forged semantic frame into the guardian relay",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F56-GUARDIAN-FD3-RELAY-ISOLATION-06 authenticated target cannot inject a forged semantic frame into the guardian relay" }
+    },
+    {
+      "id": "S2-F56-GUARDIAN-RESULT-PLANE-07",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F56-GUARDIAN-RESULT-PLANE-07 guardian lease control rejects terminal result frames",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F56-GUARDIAN-RESULT-PLANE-07 guardian lease control rejects terminal result frames" }
+    },
+    {
+      "id": "S2-F56-GUARDIAN-LEASE-PERMISSIONS-08",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F56-GUARDIAN-LEASE-PERMISSIONS-08 persistent guardian lease has private modes and is removed after public cleanup",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F56-GUARDIAN-LEASE-PERMISSIONS-08 persistent guardian lease has private modes and is removed after public cleanup" }
+    },
+    {
+      "id": "S2-F56-LEADER-CLOSE-AUTOREAP-09",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F56-LEADER-CLOSE-AUTOREAP-09 original supervisor close alone revokes the guardian lease and reaps its target group",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F56-LEADER-CLOSE-AUTOREAP-09 original supervisor close alone revokes the guardian lease and reaps its target group" }
+    },
+    {
+      "id": "S2-F56-LEASE-REVOCATION-10",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F56-LEASE-REVOCATION-10 verified receipt becomes unavailable before group absence after public STOP",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F56-LEASE-REVOCATION-10 verified receipt becomes unavailable before group absence after public STOP" }
+    },
+    {
+      "id": "S2-F56-REGRESSION-LIVENESS-PIPE-11",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F56-REGRESSION-LIVENESS-PIPE-11 guardian reaps after only its original supervisor closes while the controller event loop is stalled",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F56-REGRESSION-LIVENESS-PIPE-11 guardian reaps after only its original supervisor closes while the controller event loop is stalled" }
+    },
+    {
+      "id": "S2-F56-REGRESSION-RESULT-RELAY-12",
+      "category": "local-web-lease-supervisor",
+      "file": "profiles/local-web/test/lease-supervisor.test.ts",
+      "testName": "S2-F56-REGRESSION-RESULT-RELAY-12 missing or unterminated RESULT relay data cannot report a successful runCommand after cleanup",
+      "layer": "process",
+      "authority": "machine",
+      "command": "npm run test:offline",
+      "executionEvidence": { "source": "offline-tap", "selector": "S2-F56-REGRESSION-RESULT-RELAY-12 missing or unterminated RESULT relay data cannot report a successful runCommand after cleanup" }
     },
     {
       "id": "S2-F39-LOCAL-WEB-GIT-01",

@@ -21,6 +21,7 @@ const requiredBehaviorKeys = new Set([
   'final45-controller-loss-lease-eof-cleanup', 'final45-boot-evidence-persistence-cleanup', 'final45-stale-identity-no-parent-negative-pgid', 'final45-malformed-supervisor-control-fails-closed',
   'final45-finite-completion-and-timeout-cleanup', 'final45-production-source-no-parent-negative-pgid',
   'final46-observation-outage-reap-without-parent-authority', 'final46-self-group-signal-failure-fail-stop', 'final46-attempt-authority-is-fresh-and-terminal', 'final46-authority-and-terminal-binding-fail-closed', 'final46-source-structural-signal-and-redaction-boundary',
+  'final56-leader-loss-cleanup', 'final56-supervisor-close-auto-reap', 'final56-lease-revocation', 'final56-spawn-failure-cleanup', 'final56-ack-stop-race', 'final56-ack-stop-ordering', 'final56-fd3-relay-isolation', 'final56-result-plane', 'final56-lease-permissions', 'final56-source-structural-signal', 'final56-liveness-pipe', 'final56-result-relay-fail-closed',
 ])
 const final22CockpitScenarioIds = Object.freeze([
   'S2-CPT-01', 'S2-CPT-02', 'S2-CPT-03', 'S2-CPT-04', 'S2-CPT-05', 'S2-CPT-06', 'S2-CPT-07', 'S2-CPT-08', 'S2-CPT-09', 'S2-CPT-10',
@@ -51,6 +52,21 @@ const final46LeaseSupervisorScenarios = Object.freeze([
   ['S2-F46-SOURCE-STRUCTURAL-05', 'S2-F46-SOURCE-STRUCTURAL-05 all scoped Local Web sources forbid parent negative-PGID signalling and persist no raw runtime identity authority'],
 ])
 const final46LeaseSupervisorScenarioMap = new Map(final46LeaseSupervisorScenarios)
+const final56LeaseSupervisorScenarios = Object.freeze([
+  ['S2-F56-LEADER-KILL-01', 'S2-F56-LEADER-KILL-01 SIGKILL of the original persistent supervisor leaves neither its exact target nor its recorded group running after the public stop path'],
+  ['S2-F56-SOURCE-STRUCTURAL-02', 'S2-F56-SOURCE-STRUCTURAL-02 every Local Web negative-PGID signal route is limited to the proven detached supervisor self-group'],
+  ['S2-F56-SPAWN-FAILURE-03', 'S2-F56-SPAWN-FAILURE-03 synchronous persistent launch failure leaves no private guardian lease directory'],
+  ['S2-F56-GUARDIAN-ACK-STOP-RACE-04', 'S2-F56-GUARDIAN-ACK-STOP-RACE-04 authenticated same-chunk ACK and STOP reaps the real guardian target group'],
+  ['S2-F56-GUARDIAN-ACK-STOP-ORDERING-05', 'S2-F56-GUARDIAN-ACK-STOP-ORDERING-05 guardian claims spawn ownership before async readiness and self-cleans post-spawn control failures'],
+  ['S2-F56-GUARDIAN-FD3-RELAY-ISOLATION-06', 'S2-F56-GUARDIAN-FD3-RELAY-ISOLATION-06 authenticated target cannot inject a forged semantic frame into the guardian relay'],
+  ['S2-F56-GUARDIAN-RESULT-PLANE-07', 'S2-F56-GUARDIAN-RESULT-PLANE-07 guardian lease control rejects terminal result frames'],
+  ['S2-F56-GUARDIAN-LEASE-PERMISSIONS-08', 'S2-F56-GUARDIAN-LEASE-PERMISSIONS-08 persistent guardian lease has private modes and is removed after public cleanup'],
+  ['S2-F56-LEADER-CLOSE-AUTOREAP-09', 'S2-F56-LEADER-CLOSE-AUTOREAP-09 original supervisor close alone revokes the guardian lease and reaps its target group'],
+  ['S2-F56-LEASE-REVOCATION-10', 'S2-F56-LEASE-REVOCATION-10 verified receipt becomes unavailable before group absence after public STOP'],
+  ['S2-F56-REGRESSION-LIVENESS-PIPE-11', 'S2-F56-REGRESSION-LIVENESS-PIPE-11 guardian reaps after only its original supervisor closes while the controller event loop is stalled'],
+  ['S2-F56-REGRESSION-RESULT-RELAY-12', 'S2-F56-REGRESSION-RESULT-RELAY-12 missing or unterminated RESULT relay data cannot report a successful runCommand after cleanup'],
+])
+const final56LeaseSupervisorScenarioMap = new Map(final56LeaseSupervisorScenarios)
 const browserScenarioIds = Object.freeze([...final22CockpitScenarioIds, ...final27CockpitScenarioIds, ...final29CockpitScenarioIds, ...final30CockpitScenarioIds, final24BrowserScenarioId])
 const browserScenarioSet = new Set(browserScenarioIds)
 const requiredBrowserNames = Object.freeze(['chromium', 'webkit'])
@@ -83,6 +99,8 @@ await main('inventory', async () => {
     if (final45Title !== undefined && (row.category !== 'local-web-lease-supervisor' || row.file !== 'profiles/local-web/test/lease-supervisor.test.ts' || row.testName !== final45Title || row.layer !== 'process' || row.authority !== 'machine' || row.command !== 'npm run test:offline' || row.executionEvidence.selector !== final45Title)) throw new Error(`${row.id} local-web lease-supervisor inventory contract is invalid`)
     const final46Title = final46LeaseSupervisorScenarioMap.get(row.id)
     if (final46Title !== undefined && (row.category !== 'local-web-lease-supervisor' || row.file !== 'profiles/local-web/test/lease-supervisor.test.ts' || row.testName !== final46Title || row.layer !== 'process' || row.authority !== 'machine' || row.command !== 'npm run test:offline' || row.executionEvidence.selector !== final46Title)) throw new Error(`${row.id} Final46 lease-supervisor inventory contract is invalid`)
+    const final56Title = final56LeaseSupervisorScenarioMap.get(row.id)
+    if (final56Title !== undefined && (row.category !== 'local-web-lease-supervisor' || row.file !== 'profiles/local-web/test/lease-supervisor.test.ts' || row.testName !== final56Title || row.layer !== 'process' || row.authority !== 'machine' || row.command !== 'npm run test:offline' || row.executionEvidence.selector !== final56Title)) throw new Error(`${row.id} Final56 lease-supervisor inventory contract is invalid`)
     const executionKey = `${expectedSource}:${row.executionEvidence.selector}`
     if (executionSelectors.has(executionKey)) throw new Error(`duplicate executionEvidence selector: ${executionKey}`)
     executionSelectors.add(executionKey)
@@ -90,7 +108,7 @@ await main('inventory', async () => {
     try { source = await readFile(resolve(new URL('../..', import.meta.url).pathname, row.file), 'utf8') } catch { throw new Error(`${row.id} names unreadable test file ${row.file}`) }
     if (expectedSource === 'offline-tap' || expectedSource === 'orchestrator-tap') {
       assertTapExecutionSelectorInSource(source, row.executionEvidence.selector)
-      if (row.id.startsWith('S2-F29-') || row.id.startsWith('S2-F30-') || row.id === 'S2-F39-LOCAL-WEB-GIT-01' || row.id === final44LocalWebOrphanCleanupId || row.id === final44LocalWebObserverRejectionId || final45LeaseSupervisorScenarioMap.has(row.id) || final46LeaseSupervisorScenarioMap.has(row.id)) assertStaticTopLevelTapExecutionSelectorInSource(source, row.executionEvidence.selector)
+      if (row.id.startsWith('S2-F29-') || row.id.startsWith('S2-F30-') || row.id === 'S2-F39-LOCAL-WEB-GIT-01' || row.id === final44LocalWebOrphanCleanupId || row.id === final44LocalWebObserverRejectionId || final45LeaseSupervisorScenarioMap.has(row.id) || final46LeaseSupervisorScenarioMap.has(row.id) || final56LeaseSupervisorScenarioMap.has(row.id)) assertStaticTopLevelTapExecutionSelectorInSource(source, row.executionEvidence.selector)
     }
     if (!source.includes(row.testName)) throw new Error(`${row.id} maps to no executable test name in ${row.file}: ${row.testName}`)
     if (isCockpitBrowser || isFinal24Browser) {
@@ -110,7 +128,7 @@ await main('inventory', async () => {
     }
   }
   if (![...final29PlatformSkips.keys()].every((id) => ids.has(id))) throw new Error('inventory omits a frozen Final-29 platformSkip row')
-  if (![final44LocalWebOrphanCleanupId, final44LocalWebObserverRejectionId, ...final45LeaseSupervisorScenarioMap.keys(), ...final46LeaseSupervisorScenarioMap.keys()].every((id) => ids.has(id))) throw new Error('inventory omits a frozen Final-44, Final-45, or Final-46 local-web cleanup row')
+  if (![final44LocalWebOrphanCleanupId, final44LocalWebObserverRejectionId, ...final45LeaseSupervisorScenarioMap.keys(), ...final46LeaseSupervisorScenarioMap.keys(), ...final56LeaseSupervisorScenarioMap.keys()].every((id) => ids.has(id))) throw new Error('inventory omits a frozen Final-44, Final-45, Final-46, or Final-56 local-web cleanup row')
   if (!inventory.requiredBehaviorCoverage || typeof inventory.requiredBehaviorCoverage !== 'object' || Array.isArray(inventory.requiredBehaviorCoverage)) throw new Error('inventory must declare requiredBehaviorCoverage')
   const coverageKeys = Object.keys(inventory.requiredBehaviorCoverage)
   if (coverageKeys.length !== requiredBehaviorKeys.size || coverageKeys.some((key) => !requiredBehaviorKeys.has(key))) throw new Error('inventory required behavior keys must exactly match the frozen gate contract')

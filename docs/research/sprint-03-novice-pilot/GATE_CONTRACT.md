@@ -810,3 +810,48 @@ IDs. The five required behavior keys are
 `final46-source-structural-signal-and-redaction-boundary`. Existing Final-44
 and Final-45 rows, browser counts, browser matrix, and platform-skip policy
 remain unchanged.
+
+## Final-56 Supervisor-Leader-Loss Addendum
+
+Final-56 closes the remaining detached Local Web supervisor-leader loss
+boundary. Production edits are accepted only with the complete selector set
+below, a supervisor-owned guardian liveness lease, and a relay state machine
+that invalidates any terminal success after protocol or lease failure. The
+controller must not be the only cleanup trigger: guardian EOF on the original
+supervisor's liveness pipe must self-reap the guardian target group even while
+the controller event loop is stalled.
+
+Every row is a unique static top-level native TAP title in
+`profiles/local-web/test/lease-supervisor.test.ts` and reconciles exactly one
+passed `offline-tap` execution through `npm run test:offline`. Missing,
+duplicate, skipped, TODO, failed, malformed, or non-static selectors are red.
+The inventory validator fixes the title, file, layer, authority, command, and
+execution source for every row; an inventory-only remap cannot weaken this
+contract.
+
+| Scenario ID | Static title | Required invariant |
+| --- | --- | --- |
+| `S2-F56-LEADER-KILL-01` | `S2-F56-LEADER-KILL-01 SIGKILL of the original persistent supervisor leaves neither its exact target nor its recorded group running after the public stop path` | Killing only the original supervisor and then using the public cleanup path must reap the exact target PID and authenticated guardian process group. |
+| `S2-F56-SOURCE-STRUCTURAL-02` | `S2-F56-SOURCE-STRUCTURAL-02 every Local Web negative-PGID signal route is limited to the proven detached supervisor self-group` | Parent and target sources contain no negative-PGID route; only a locally proven detached self-group may signal itself. |
+| `S2-F56-SPAWN-FAILURE-03` | `S2-F56-SPAWN-FAILURE-03 synchronous persistent launch failure leaves no private guardian lease directory` | Synchronous launch failure removes the per-launch private lease directory and creates no transferable authority. |
+| `S2-F56-GUARDIAN-ACK-STOP-RACE-04` | `S2-F56-GUARDIAN-ACK-STOP-RACE-04 authenticated same-chunk ACK and STOP reaps the real guardian target group` | Same-chunk ACK/STOP ordering must authenticate, start, and clean the actual guardian target group. |
+| `S2-F56-GUARDIAN-ACK-STOP-ORDERING-05` | `S2-F56-GUARDIAN-ACK-STOP-ORDERING-05 guardian claims spawn ownership before async readiness and self-cleans post-spawn control failures` | Any post-spawn control failure must self-reap after ownership is claimed, including before asynchronous readiness. |
+| `S2-F56-GUARDIAN-FD3-RELAY-ISOLATION-06` | `S2-F56-GUARDIAN-FD3-RELAY-ISOLATION-06 authenticated target cannot inject a forged semantic frame into the guardian relay` | The target receives no relay writer and cannot inject semantic frames into the guardian result plane. |
+| `S2-F56-GUARDIAN-RESULT-PLANE-07` | `S2-F56-GUARDIAN-RESULT-PLANE-07 guardian lease control rejects terminal result frames` | Guardian UDS lease control accepts no terminal `RESULT`; terminal frames stay on the supervisor relay. |
+| `S2-F56-GUARDIAN-LEASE-PERMISSIONS-08` | `S2-F56-GUARDIAN-LEASE-PERMISSIONS-08 persistent guardian lease has private modes and is removed after public cleanup` | The lease directory/socket are private and are removed after public cleanup. |
+| `S2-F56-LEADER-CLOSE-AUTOREAP-09` | `S2-F56-LEADER-CLOSE-AUTOREAP-09 original supervisor close alone revokes the guardian lease and reaps its target group` | Supervisor close revokes the lease and reaps the target without requiring an additional public STOP. |
+| `S2-F56-LEASE-REVOCATION-10` | `S2-F56-LEASE-REVOCATION-10 verified receipt becomes unavailable before group absence after public STOP` | Public STOP revokes diagnostic receipt authority before group absence is observed. |
+| `S2-F56-REGRESSION-LIVENESS-PIPE-11` | `S2-F56-REGRESSION-LIVENESS-PIPE-11 guardian reaps after only its original supervisor closes while the controller event loop is stalled` | Guardian liveness EOF must reap the target while the controller remains alive and stalled. |
+| `S2-F56-REGRESSION-RESULT-RELAY-12` | `S2-F56-REGRESSION-RESULT-RELAY-12 missing or unterminated RESULT relay data cannot report a successful runCommand after cleanup` | A missing, unterminated, or otherwise rejected relay frame clears terminal success; successful child cleanup cannot convert protocol failure into a passed command. |
+
+These twelve rows raise `local-web-lease-supervisor` from 11 to **23**
+required scenarios and raise the frozen static inventory from 179 to **191**
+scenario IDs. The twelve required behavior keys are
+`final56-leader-loss-cleanup`, `final56-supervisor-close-auto-reap`,
+`final56-lease-revocation`, `final56-spawn-failure-cleanup`,
+`final56-ack-stop-race`, `final56-ack-stop-ordering`,
+`final56-fd3-relay-isolation`, `final56-result-plane`,
+`final56-lease-permissions`, `final56-source-structural-signal`,
+`final56-liveness-pipe`, and `final56-result-relay-fail-closed`. Existing
+Final-44 and Final-45 rows, browser counts, browser matrix, and
+platform-skip policy remain unchanged.
