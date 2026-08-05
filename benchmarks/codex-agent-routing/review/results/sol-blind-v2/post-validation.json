@@ -1,0 +1,78 @@
+{
+  "all_reviews_valid_after_validator_fix": true,
+  "reviews": [
+    {
+      "final_message_sha256": "c92015aafce6a6fd1341fa4f2ac5dabc82330ba141137f643277140c98ba0a1d",
+      "observed_commands": [
+        "/bin/zsh -c \"sed -n '1,240p' REVIEW_PACKET.md\"",
+        "/bin/zsh -c \"sed -n '241,480p' REVIEW_PACKET.md\"",
+        "/bin/zsh -c \"sed -n '481,720p' REVIEW_PACKET.md\"",
+        "/bin/zsh -c \"sed -n '721,1080p' REVIEW_PACKET.md\"",
+        "/bin/zsh -c \"sed -n '1081,1440p' REVIEW_PACKET.md\"",
+        "/bin/zsh -c \"sed -n '1441,1800p' REVIEW_PACKET.md\"",
+        "/bin/zsh -c \"sed -n '1801,2160p' REVIEW_PACKET.md\"",
+        "/bin/zsh -c \"sed -n '2161,2520p' REVIEW_PACKET.md\"",
+        "/bin/zsh -c \"sed -n '2521,2880p' REVIEW_PACKET.md\""
+      ],
+      "original_record_preserved": true,
+      "original_validation_defect": "The initial validator checked routing.scenario_id, but the frozen prompt schema requires routing.workload.",
+      "reasoning_effort": "medium",
+      "review_valid_after_validator_fix": true,
+      "schema_version": "sol-blind-review-post-validation/v1"
+    },
+    {
+      "final_message_sha256": "105f2d6aaa7f5ffae8f17a7ce52ce52aa11088978929c0de8f55dbe782db6ed8",
+      "observed_commands": [
+        "/bin/zsh -c 'cat REVIEW_PACKET.md'",
+        "/bin/zsh -c \"sed -n '1,950p' REVIEW_PACKET.md\"",
+        "/bin/zsh -c \"sed -n '951,1900p' REVIEW_PACKET.md\"",
+        "/bin/zsh -c \"sed -n '1901,2850p' REVIEW_PACKET.md\""
+      ],
+      "original_record_preserved": true,
+      "original_validation_defect": "The initial validator checked routing.scenario_id, but the frozen prompt schema requires routing.workload.",
+      "reasoning_effort": "high",
+      "review_valid_after_validator_fix": true,
+      "schema_version": "sol-blind-review-post-validation/v1"
+    },
+    {
+      "final_message_sha256": "1449de5eddd5ae65f8576fd8a05322edc411fd68f26b13b1773adee9081afb08",
+      "observed_commands": [
+        "/bin/zsh -c 'cat REVIEW_PACKET.md'",
+        "/bin/zsh -c \"sed -n '1,500p' REVIEW_PACKET.md\"",
+        "/bin/zsh -c \"sed -n '501,1000p' REVIEW_PACKET.md\"",
+        "/bin/zsh -c \"sed -n '1001,1500p' REVIEW_PACKET.md\"",
+        "/bin/zsh -c \"sed -n '1501,2000p' REVIEW_PACKET.md\"",
+        "/bin/zsh -c \"sed -n '2001,2500p' REVIEW_PACKET.md\"",
+        "/bin/zsh -c \"sed -n '2501,2751p' REVIEW_PACKET.md\""
+      ],
+      "original_record_preserved": true,
+      "original_validation_defect": "The initial validator checked routing.scenario_id, but the frozen prompt schema requires routing.workload.",
+      "reasoning_effort": "xhigh",
+      "review_valid_after_validator_fix": true,
+      "schema_version": "sol-blind-review-post-validation/v1"
+    },
+    {
+      "final_message_sha256": "59c5775e57d632dc71e02d568207c46835578c2172e0f8aff22a8c1a729b8e8d",
+      "observed_commands": [
+        "/bin/zsh -c 'cat REVIEW_PACKET.md'",
+        "/bin/zsh -c \"rg -n '\"'^## |''^### Candidate task|''^### Deterministic metrics|''^### Retained candidate output|''^### A[0-9][0-9]$'\"' REVIEW_PACKET.md\"",
+        "/bin/zsh -c \"sed -n '34,615p' REVIEW_PACKET.md\"",
+        "/bin/zsh -c \"sed -n '616,866p' REVIEW_PACKET.md\"",
+        "/bin/zsh -c \"sed -n '867,1057p' REVIEW_PACKET.md\"",
+        "/bin/zsh -c \"sed -n '1058,1215p' REVIEW_PACKET.md\"",
+        "/bin/zsh -c \"sed -n '1216,1389p' REVIEW_PACKET.md\"",
+        "/bin/zsh -c \"sed -n '1390,1576p' REVIEW_PACKET.md\"",
+        "/bin/zsh -c \"sed -n '1577,1764p' REVIEW_PACKET.md\"",
+        "/bin/zsh -c \"sed -n '1765,1947p' REVIEW_PACKET.md\"",
+        "/bin/zsh -c \"sed -n '1948,2142p' REVIEW_PACKET.md\"",
+        "/bin/zsh -c \"sed -n '2143,2308p' REVIEW_PACKET.md\""
+      ],
+      "original_record_preserved": true,
+      "original_validation_defect": "The initial validator checked routing.scenario_id, but the frozen prompt schema requires routing.workload.",
+      "reasoning_effort": "max",
+      "review_valid_after_validator_fix": true,
+      "schema_version": "sol-blind-review-post-validation/v1"
+    }
+  ],
+  "schema_version": "sol-blind-review-post-validation-batch/v1"
+}

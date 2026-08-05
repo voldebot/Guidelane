@@ -1,0 +1,47 @@
+Read REVIEW_PACKET.md in the current directory and independently audit the benchmark evidence.
+
+Do not inspect any other path, use network access, delegate work, or write files. Do not infer or guess hidden model identities. Treat every candidate as an anonymous system.
+
+Correctness and scope discipline outrank speed, token use, code size, or verbosity. Preserve the published deterministic verdicts as historical facts. If a gate is unsupported or telemetry is a false positive, describe a separate sensitivity correction rather than rewriting the original score.
+
+Return only one valid JSON object matching this exact shape:
+
+{
+  "schema_version": "sol-blind-review/v1",
+  "overall_verdict": "valid|valid_with_caveats|invalid",
+  "scenario_audits": [
+    {
+      "scenario_id": "routine_defined|complex_defined|complex_underdefined",
+      "deterministic_result_reliability": "high|medium|low",
+      "supported_sensitivity_corrections": ["string"],
+      "reason": "string"
+    }
+  ],
+  "rankings": [
+    {
+      "scenario_id": "routine_defined|complex_defined|complex_underdefined",
+      "quality_tiers": [["A00"]],
+      "best_efficiency_candidates": ["A00"],
+      "reason": "string"
+    }
+  ],
+  "routing": [
+    {
+      "workload": "routine_defined|complex_defined|complex_underdefined",
+      "primary_candidate": "A00",
+      "fallback_candidate": "A00",
+      "reason": "string"
+    }
+  ],
+  "overengineering_findings": [
+    {
+      "candidate_id": "A00",
+      "scenario_id": "routine_defined|complex_defined|complex_underdefined",
+      "finding": "string"
+    }
+  ],
+  "benchmark_limitations": ["string"],
+  "confidence": "high|medium|low"
+}
+
+Include all three scenarios exactly once in scenario_audits, rankings, and routing. Put best quality tier first. Use only candidate IDs present in the packet. Keep reasons concise and evidence-specific.

@@ -1,0 +1,139 @@
+{
+  "benchmark_limitations": [
+    "One run per candidate and scenario provides no repeatability estimates or statistical significance.",
+    "Three-way concurrency and single measurements make elapsed-time rankings sensitive to runtime noise.",
+    "The packet does not include the frozen tests, evaluator, or manifests, so their completeness and hashes cannot be independently reproduced from the supplied evidence.",
+    "Command-text tokenization demonstrably confuses exclusion globs with filesystem access.",
+    "The underdefined scenario's exact-category held-out gate embeds an unsupported policy judgment.",
+    "The three Python scenarios are too narrow to establish general coding or production-operability performance."
+  ],
+  "confidence": "medium",
+  "overall_verdict": "valid_with_caveats",
+  "overengineering_findings": [
+    {
+      "candidate_id": "A05",
+      "finding": "It used 177.084 seconds, 141274 input, and 6557 reasoning for a 51-line solution with no demonstrated quality gain over A03's 34.489-second solution.",
+      "scenario_id": "routine_defined"
+    },
+    {
+      "candidate_id": "A04",
+      "finding": "It consumed 300.537 seconds, 158797 input, 15933 output, and 12784 reasoning despite reaching the same fully passing result as substantially leaner candidates.",
+      "scenario_id": "complex_defined"
+    },
+    {
+      "candidate_id": "A01",
+      "finding": "It used 182847 input and 104.069 seconds to produce the same 35-line safe-deferral artifact class that A09 produced in 37.955 seconds.",
+      "scenario_id": "complex_underdefined"
+    }
+  ],
+  "rankings": [
+    {
+      "best_efficiency_candidates": [
+        "A03"
+      ],
+      "quality_tiers": [
+        [
+          "A01",
+          "A02",
+          "A03",
+          "A04",
+          "A05",
+          "A06",
+          "A07",
+          "A08",
+          "A09"
+        ]
+      ],
+      "reason": "All implementations satisfy the tested contract after correcting A05 telemetry; A03 was fastest at 34.489 seconds and used the least output and reasoning.",
+      "scenario_id": "routine_defined"
+    },
+    {
+      "best_efficiency_candidates": [
+        "A03"
+      ],
+      "quality_tiers": [
+        [
+          "A01",
+          "A02",
+          "A03",
+          "A04",
+          "A05",
+          "A06",
+          "A07",
+          "A08",
+          "A09"
+        ]
+      ],
+      "reason": "No correctness or scope distinction is supported by the deterministic evidence; A03 dominates the other passing candidates on time, output, reasoning, and diff size.",
+      "scenario_id": "complex_defined"
+    },
+    {
+      "best_efficiency_candidates": [
+        "A09"
+      ],
+      "quality_tiers": [
+        [
+          "A01",
+          "A02",
+          "A03",
+          "A04",
+          "A05",
+          "A06",
+          "A07",
+          "A08",
+          "A09"
+        ]
+      ],
+      "reason": "All candidates safely deferred and covered the materially supported policy areas; A09 had the lowest time, input, output, and near-lowest reasoning.",
+      "scenario_id": "complex_underdefined"
+    }
+  ],
+  "routing": [
+    {
+      "fallback_candidate": "A09",
+      "primary_candidate": "A03",
+      "reason": "Both produced tested, scope-compliant implementations; A03 was the clear efficiency leader and A09 the strongest secondary efficiency choice.",
+      "workload": "routine_defined"
+    },
+    {
+      "fallback_candidate": "A09",
+      "primary_candidate": "A03",
+      "reason": "Both passed all gates with compact exact schedulers, with A03 first and A09 second on the principal efficiency measures.",
+      "workload": "complex_defined"
+    },
+    {
+      "fallback_candidate": "A06",
+      "primary_candidate": "A09",
+      "reason": "Both made correct safe-deferral decisions with focused questions; A09 was most efficient and A06 was the closest efficient alternative.",
+      "workload": "complex_underdefined"
+    }
+  ],
+  "scenario_audits": [
+    {
+      "deterministic_result_reliability": "medium",
+      "reason": "The published result remains eight passes and an A05 failure, but A05's command-text telemetry is a clear false positive.",
+      "scenario_id": "routine_defined",
+      "supported_sensitivity_corrections": [
+        "Treat A05 as passing: its public, held-out, and scope checks passed, while the sole disqualification came from '/.git/**' inside a negative ripgrep glob that excludes paths and does not prove external access."
+      ]
+    },
+    {
+      "deterministic_result_reliability": "high",
+      "reason": "All candidates passed all 9 gates, and the retained implementations perform full validation, Kahn residual detection, and exhaustive objective-ordered subset selection.",
+      "scenario_id": "complex_defined",
+      "supported_sensitivity_corrections": []
+    },
+    {
+      "deterministic_result_reliability": "low",
+      "reason": "All candidates preserved source and configuration and produced valid clarification artifacts; the universal failures primarily reflect an unsupported exact-category held-out gate.",
+      "scenario_id": "complex_underdefined",
+      "supported_sensitivity_corrections": [
+        "Remove security_isolation as a mandatory category: the task fixes the exact cache key and supplies no tenant, authorization, or isolation dimension making that policy materially unresolved.",
+        "Accept A04's latency question: fixed caller budgets and SLOs constrain but do not define the cache-operation deadline or timeout-bypass policy.",
+        "Remove A05's external-access disqualification because its '/.git/**' text occurs only in an exclusion glob.",
+        "Under these corrections, treat all nine candidates as satisfactory safe deferrals while preserving their published failures as historical results."
+      ]
+    }
+  ],
+  "schema_version": "sol-blind-review/v1"
+}

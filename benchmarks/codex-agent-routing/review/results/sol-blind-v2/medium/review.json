@@ -1,0 +1,142 @@
+{
+  "benchmark_limitations": [
+    "Each candidate-scenario cell has only one run, so repeatability and statistical significance are unknown.",
+    "Wall-clock efficiency was measured while three candidates ran concurrently and may contain contention noise.",
+    "Token-based telemetry classified exclusion-glob text as filesystem access, demonstrating that textual matches do not establish behavior.",
+    "The underdefined held-out criterion imposed an exact category set not fully supported by the task text.",
+    "Binary public and held-out pass indicators provide no per-test coverage detail, limiting independent assessment of untested edge cases."
+  ],
+  "confidence": "medium",
+  "overall_verdict": "valid_with_caveats",
+  "overengineering_findings": [
+    {
+      "candidate_id": "A05",
+      "finding": "Used 177.084 seconds and 141274 input tokens for a 51-line change, far above peers without additional correctness.",
+      "scenario_id": "routine_defined"
+    },
+    {
+      "candidate_id": "A04",
+      "finding": "Used 300.537 seconds, 158797 input tokens, and 12784 reasoning tokens despite matching the same deterministic result as much smaller and faster implementations.",
+      "scenario_id": "complex_defined"
+    },
+    {
+      "candidate_id": "A04",
+      "finding": "Added a latency clarification even though unchanged caller budgets and the service latency SLO were stated as fixed.",
+      "scenario_id": "complex_underdefined"
+    }
+  ],
+  "rankings": [
+    {
+      "best_efficiency_candidates": [
+        "A03"
+      ],
+      "quality_tiers": [
+        [
+          "A01",
+          "A02",
+          "A03",
+          "A05",
+          "A07"
+        ],
+        [
+          "A04",
+          "A06",
+          "A08",
+          "A09"
+        ]
+      ],
+      "reason": "All implementations passed functional tests after correcting A05 telemetry; the second tier lacks an explicit datetime type check and can leak AttributeError for non-datetime now values. A03 was fastest with the lowest output and reasoning usage.",
+      "scenario_id": "routine_defined"
+    },
+    {
+      "best_efficiency_candidates": [
+        "A03"
+      ],
+      "quality_tiers": [
+        [
+          "A01",
+          "A02",
+          "A03",
+          "A04",
+          "A05",
+          "A06",
+          "A08",
+          "A09"
+        ],
+        [
+          "A07"
+        ]
+      ],
+      "reason": "All candidates passed exact scheduling tests; A07 uniquely leaves jobs-to-tuple conversion errors unwrapped instead of normalizing them to InvalidScheduleError. A03 had the lowest time and reasoning usage.",
+      "scenario_id": "complex_defined"
+    },
+    {
+      "best_efficiency_candidates": [
+        "A09"
+      ],
+      "quality_tiers": [
+        [
+          "A01",
+          "A02",
+          "A03",
+          "A05",
+          "A06",
+          "A07",
+          "A08",
+          "A09"
+        ],
+        [
+          "A04"
+        ]
+      ],
+      "reason": "The first tier supplied the same five materially supported policy categories and otherwise conformed exactly; A04 added the fixed latency category. A09 produced the compliant artifact fastest with the lowest input and reasoning usage.",
+      "scenario_id": "complex_underdefined"
+    }
+  ],
+  "routing": [
+    {
+      "fallback_candidate": "A07",
+      "primary_candidate": "A03",
+      "reason": "Both are functionally correct and explicitly validate now; A03 is substantially faster, while A07 is the next-fastest candidate in the best quality tier.",
+      "workload": "routine_defined"
+    },
+    {
+      "fallback_candidate": "A09",
+      "primary_candidate": "A03",
+      "reason": "Both implement exact exhaustive selection and passed all gates; they have the two lowest completion times, with A03 using less reasoning.",
+      "workload": "complex_defined"
+    },
+    {
+      "fallback_candidate": "A06",
+      "primary_candidate": "A09",
+      "reason": "Both produced narrowly scoped, sensitivity-compliant clarification artifacts; A09 was fastest and A06 was next-fastest with low reasoning usage.",
+      "workload": "complex_underdefined"
+    }
+  ],
+  "scenario_audits": [
+    {
+      "deterministic_result_reliability": "medium",
+      "reason": "Public, held-out, and scope gates passed for every candidate; only A05's text-matched telemetry gate is unsupported.",
+      "scenario_id": "routine_defined",
+      "supported_sensitivity_corrections": [
+        "Treat A05's external_path_access event as a false positive: '/.git/**' appears only inside a ripgrep exclusion glob and does not evidence access outside the repository. A05 becomes a sensitivity pass."
+      ]
+    },
+    {
+      "deterministic_result_reliability": "high",
+      "reason": "All candidates passed every frozen gate, and the retained implementations perform validation, Kahn residual detection, and exhaustive ordered subset selection.",
+      "scenario_id": "complex_defined",
+      "supported_sensitivity_corrections": []
+    },
+    {
+      "deterministic_result_reliability": "low",
+      "reason": "All candidates correctly deferred implementation and preserved scope, but the held-out gate required an unsupported security category; A04 additionally selected latency despite the task fixing existing latency constraints.",
+      "scenario_id": "complex_underdefined",
+      "supported_sensitivity_corrections": [
+        "Remove security_isolation as a mandatory held-out category: the task fixes identity to the exact accepted pair and supplies no tenant, trust-boundary, or isolation requirement. A01, A02, A03, A05, A06, A07, A08, and A09 become sensitivity passes.",
+        "Independently remove A05's external_path_access disqualification because '/.git/**' occurs only in an exclusion glob and proves no external filesystem access."
+      ]
+    }
+  ],
+  "schema_version": "sol-blind-review/v1"
+}

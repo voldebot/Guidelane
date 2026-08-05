@@ -1,0 +1,139 @@
+{
+  "schema_version": "sol-blind-review/v1",
+  "overall_verdict": "valid_with_caveats",
+  "scenario_audits": [
+    {
+      "scenario_id": "routine_defined",
+      "deterministic_result_reliability": "medium",
+      "supported_sensitivity_corrections": [
+        "Retain A05's published fail as historical, but treat it as a sensitivity pass: '/.git/**' occurred only in an ripgrep exclusion glob and does not evidence external filesystem access."
+      ],
+      "reason": "Every candidate passed public, held-out, and scope checks; A05's sole failing gate was unsupported lexical telemetry."
+    },
+    {
+      "scenario_id": "complex_defined",
+      "deterministic_result_reliability": "high",
+      "supported_sensitivity_corrections": [],
+      "reason": "All candidates passed 9/9 gates, and the retained implementations validate inputs, detect Kahn residuals, and exhaustively optimize each wave."
+    },
+    {
+      "scenario_id": "complex_underdefined",
+      "deterministic_result_reliability": "low",
+      "supported_sensitivity_corrections": [
+        "Retain all published fails as historical, but remove mandatory security_isolation coverage in sensitivity analysis: the task fixes identity to the exact product_id/currency pair and supplies no unresolved tenant or security boundary.",
+        "Treat A04's latency question as permissible because cache-operation deadlines and timeout fallback remain unspecified within the fixed overall budget.",
+        "Treat A05's external-access event as a false positive because the matched text was an ripgrep exclusion glob.",
+        "Under these corrections, A01-A09 are acceptable scope-preserving clarification responses."
+      ],
+      "reason": "All candidates safely deferred and passed public and scope checks; the universal held-out failure depended on an unsupported exact-category requirement."
+    }
+  ],
+  "rankings": [
+    {
+      "scenario_id": "routine_defined",
+      "quality_tiers": [
+        [
+          "A01",
+          "A02",
+          "A03",
+          "A04",
+          "A05",
+          "A06",
+          "A07",
+          "A08",
+          "A09"
+        ]
+      ],
+      "best_efficiency_candidates": [
+        "A03"
+      ],
+      "reason": "All retained implementations satisfy the tested contract after the A05 telemetry correction; A03 was fastest at 34.489 seconds with the lowest output and reasoning counts."
+    },
+    {
+      "scenario_id": "complex_defined",
+      "quality_tiers": [
+        [
+          "A01",
+          "A02",
+          "A03",
+          "A04",
+          "A05",
+          "A06",
+          "A07",
+          "A08",
+          "A09"
+        ]
+      ],
+      "best_efficiency_candidates": [
+        "A03"
+      ],
+      "reason": "No correctness separation is supported by the 9/9 results; A03 had the lowest time, output, reasoning, and diff among the passing implementations."
+    },
+    {
+      "scenario_id": "complex_underdefined",
+      "quality_tiers": [
+        [
+          "A01",
+          "A02",
+          "A03",
+          "A04",
+          "A05",
+          "A06",
+          "A07",
+          "A08",
+          "A09"
+        ]
+      ],
+      "best_efficiency_candidates": [
+        "A09"
+      ],
+      "reason": "All artifacts defer safely and cover supported material policy gaps; A09 was fastest at 37.955 seconds and had the lowest input and output counts."
+    }
+  ],
+  "routing": [
+    {
+      "workload": "routine_defined",
+      "primary_candidate": "A03",
+      "fallback_candidate": "A09",
+      "reason": "Both produced passing implementations; A03 was fastest and A09 was the next-fastest candidate with comparatively low output and reasoning."
+    },
+    {
+      "workload": "complex_defined",
+      "primary_candidate": "A03",
+      "fallback_candidate": "A09",
+      "reason": "Both passed all gates with compact exhaustive schedulers and were the two fastest candidates."
+    },
+    {
+      "workload": "complex_underdefined",
+      "primary_candidate": "A09",
+      "fallback_candidate": "A06",
+      "reason": "Both produced concise, scope-preserving clarification artifacts; they were the two fastest candidates after applying supported gate corrections."
+    }
+  ],
+  "overengineering_findings": [
+    {
+      "candidate_id": "A05",
+      "scenario_id": "routine_defined",
+      "finding": "The 51-line change required 177.084 seconds, 141274 input tokens, and 8978 output tokens, far above equally correct peers."
+    },
+    {
+      "candidate_id": "A04",
+      "scenario_id": "complex_defined",
+      "finding": "This run had scenario-high time, input, output, and reasoning metrics despite the same 9/9 result as substantially leaner implementations."
+    },
+    {
+      "candidate_id": "A01",
+      "scenario_id": "complex_underdefined",
+      "finding": "Producing the same five-category, 35-line decision artifact consumed 182847 input tokens and 104.069 seconds, the scenario maxima."
+    }
+  ],
+  "benchmark_limitations": [
+    "One run per candidate-scenario cell cannot establish repeatability or statistical significance.",
+    "Concurrent execution and single observations make time and token efficiency rankings descriptive rather than robust.",
+    "The packet exposes retained outputs and aggregate gates, not the complete public and held-out test bodies, limiting independent test-coverage assessment.",
+    "Lexical command telemetry cannot distinguish an exclusion pattern from an accessed external path.",
+    "The underdefined held-out evaluator encoded an exact policy-category answer not entailed by the task, eliminating useful discrimination until corrected.",
+    "Passing deterministic tests does not prove correctness outside the exercised inputs."
+  ],
+  "confidence": "medium"
+}

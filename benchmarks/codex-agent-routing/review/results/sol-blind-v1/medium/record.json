@@ -1,0 +1,21 @@
+{
+  "exit_code": 1,
+  "finished_at_utc": "2026-08-02T07:08:55.325683Z",
+  "model": "gpt-5.6-sol",
+  "packet_sha256": "2c3b31228760475c3969f2bd31cac5f57e9f9610bda114011243c7f832ff6008",
+  "prompt_sha256": "9f8918b474826c574815132443b7fa2f17b8e6fee92fd07471c38e82ae012bbf",
+  "reasoning_effort": "medium",
+  "review_valid": false,
+  "schema_version": "sol-blind-review-record/v1",
+  "service_tier": "default",
+  "started_at_utc": "2026-08-02T07:08:55.200523Z",
+  "timed_out": false,
+  "usage": {
+    "cached_input_tokens": "unavailable",
+    "input_tokens": "unavailable",
+    "output_tokens": "unavailable",
+    "reasoning_tokens": "unavailable"
+  },
+  "validation_error": "FileNotFoundError: No such file or directory",
+  "wall_time_ms": 125
+}

@@ -1,0 +1,22 @@
+{
+  "final_message_sha256": "59c5775e57d632dc71e02d568207c46835578c2172e0f8aff22a8c1a729b8e8d",
+  "observed_commands": [
+    "/bin/zsh -c 'cat REVIEW_PACKET.md'",
+    "/bin/zsh -c \"rg -n '\"'^## |''^### Candidate task|''^### Deterministic metrics|''^### Retained candidate output|''^### A[0-9][0-9]$'\"' REVIEW_PACKET.md\"",
+    "/bin/zsh -c \"sed -n '34,615p' REVIEW_PACKET.md\"",
+    "/bin/zsh -c \"sed -n '616,866p' REVIEW_PACKET.md\"",
+    "/bin/zsh -c \"sed -n '867,1057p' REVIEW_PACKET.md\"",
+    "/bin/zsh -c \"sed -n '1058,1215p' REVIEW_PACKET.md\"",
+    "/bin/zsh -c \"sed -n '1216,1389p' REVIEW_PACKET.md\"",
+    "/bin/zsh -c \"sed -n '1390,1576p' REVIEW_PACKET.md\"",
+    "/bin/zsh -c \"sed -n '1577,1764p' REVIEW_PACKET.md\"",
+    "/bin/zsh -c \"sed -n '1765,1947p' REVIEW_PACKET.md\"",
+    "/bin/zsh -c \"sed -n '1948,2142p' REVIEW_PACKET.md\"",
+    "/bin/zsh -c \"sed -n '2143,2308p' REVIEW_PACKET.md\""
+  ],
+  "original_record_preserved": true,
+  "original_validation_defect": "The initial validator checked routing.scenario_id, but the frozen prompt schema requires routing.workload.",
+  "reasoning_effort": "max",
+  "review_valid_after_validator_fix": true,
+  "schema_version": "sol-blind-review-post-validation/v1"
+}

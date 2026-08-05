@@ -1,0 +1,144 @@
+{
+  "schema_version": "sol-blind-review/v1",
+  "overall_verdict": "valid_with_caveats",
+  "scenario_audits": [
+    {
+      "scenario_id": "routine_defined",
+      "deterministic_result_reliability": "medium",
+      "supported_sensitivity_corrections": [
+        "Sensitivity only: disregard A05's external_path_access disqualification; !/.git/** is a repository-local ripgrep exclusion glob, not evidence of external access."
+      ],
+      "reason": "Functional and scope gates are consistent, but A05's published fail rests solely on false-positive lexical telemetry and remains only a historical verdict."
+    },
+    {
+      "scenario_id": "complex_defined",
+      "deterministic_result_reliability": "high",
+      "supported_sensitivity_corrections": [],
+      "reason": "All candidates passed 9/9, and retained implementations validate first, compute the Kahn residual, and exhaustively apply the ordered wave objective."
+    },
+    {
+      "scenario_id": "complex_underdefined",
+      "deterministic_result_reliability": "low",
+      "supported_sensitivity_corrections": [
+        "Sensitivity only: waive mandatory security_isolation coverage; the task identifies prices solely by product_id and currency and states no tenant, authorization, or trust-boundary decision requiring isolation.",
+        "Sensitivity only: disregard A05's external_path_access disqualification; !*/.git/** is an exclusion glob, not an accessed external path.",
+        "Under these sensitivities, A01, A02, A03, A05, A06, A07, A08, and A09 satisfy the supported clarify-and-defer outcome; the published all-fail verdicts remain historical."
+      ],
+      "reason": "Every candidate safely deferred and preserved scope, while the hidden mandatory security category is not entailed by the task. A04 separately added latency despite the fixed budget and SLO."
+    }
+  ],
+  "rankings": [
+    {
+      "scenario_id": "routine_defined",
+      "quality_tiers": [
+        [
+          "A01",
+          "A02",
+          "A05"
+        ],
+        [
+          "A03",
+          "A06",
+          "A07",
+          "A09"
+        ],
+        [
+          "A04",
+          "A08"
+        ]
+      ],
+      "best_efficiency_candidates": [
+        "A02"
+      ],
+      "reason": "A01, A02, and A05 both enforce datetime type and safely bound arbitrarily zero-padded decimals. Lower tiers expose integer-conversion-limit risk, incomplete datetime enforcement, or both. A02 is the most efficient top-tier result."
+    },
+    {
+      "scenario_id": "complex_defined",
+      "quality_tiers": [
+        [
+          "A01",
+          "A02",
+          "A03",
+          "A04",
+          "A05",
+          "A06",
+          "A07",
+          "A08",
+          "A09"
+        ]
+      ],
+      "best_efficiency_candidates": [
+        "A03"
+      ],
+      "reason": "No correctness evidence supports separating the 9/9 implementations. A03 used the least time, input, output, reasoning, and diff."
+    },
+    {
+      "scenario_id": "complex_underdefined",
+      "quality_tiers": [
+        [
+          "A01",
+          "A02",
+          "A03",
+          "A05",
+          "A06",
+          "A07",
+          "A08",
+          "A09"
+        ],
+        [
+          "A04"
+        ]
+      ],
+      "best_efficiency_candidates": [
+        "A09"
+      ],
+      "reason": "The first tier supplies valid, focused five-category defer artifacts under the supported sensitivity. A04's additional latency category is less scope-disciplined. A09 has the lowest time, input, output, and diff-tied artifact."
+    }
+  ],
+  "routing": [
+    {
+      "workload": "routine_defined",
+      "primary_candidate": "A02",
+      "fallback_candidate": "A01",
+      "reason": "Both are top-tier on contract robustness; A02 is materially faster and uses fewer output and reasoning tokens."
+    },
+    {
+      "workload": "complex_defined",
+      "primary_candidate": "A03",
+      "fallback_candidate": "A09",
+      "reason": "Both passed all gates; A03 is the clear efficiency leader and A09 is the next-fastest compact implementation."
+    },
+    {
+      "workload": "complex_underdefined",
+      "primary_candidate": "A09",
+      "fallback_candidate": "A06",
+      "reason": "Both produce focused supported defer artifacts; A09 leads efficiency and A06 is the closest efficient alternative with clean operational questions."
+    }
+  ],
+  "overengineering_findings": [
+    {
+      "candidate_id": "A05",
+      "scenario_id": "routine_defined",
+      "finding": "Used 177.084 seconds, 141274 input tokens, 8978 output tokens, and 6557 reasoning tokens for functionality achieved much more compactly by peers."
+    },
+    {
+      "candidate_id": "A04",
+      "scenario_id": "complex_defined",
+      "finding": "Had the highest time, input, output, and reasoning totals; A03 delivered equivalent 9/9 behavior in 54.451 seconds with a smaller diff."
+    },
+    {
+      "candidate_id": "A04",
+      "scenario_id": "complex_underdefined",
+      "finding": "Added a latency category despite fixed latency constraints and used 4216 output and 2553 reasoning tokens for a small decision artifact."
+    }
+  ],
+  "benchmark_limitations": [
+    "One run per candidate-scenario cell provides no repeatability or statistical significance.",
+    "The packet gives hashes but not test, evaluator, or manifest contents, so coverage and gate calculations cannot be reproduced independently.",
+    "Complete command histories are absent; only the two flagged telemetry examples can be directly audited.",
+    "Three-way concurrency and differing input and cache volumes confound wall-time and token-efficiency comparisons.",
+    "The underdefined exact-category gate encodes a contestable policy interpretation without evidence of independent human-rater agreement.",
+    "Passing routine tests do not establish coverage of unbounded zero padding or runtime now-type enforcement."
+  ],
+  "confidence": "medium"
+}

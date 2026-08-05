@@ -1,0 +1,19 @@
+{
+  "final_message_sha256": "c92015aafce6a6fd1341fa4f2ac5dabc82330ba141137f643277140c98ba0a1d",
+  "observed_commands": [
+    "/bin/zsh -c \"sed -n '1,240p' REVIEW_PACKET.md\"",
+    "/bin/zsh -c \"sed -n '241,480p' REVIEW_PACKET.md\"",
+    "/bin/zsh -c \"sed -n '481,720p' REVIEW_PACKET.md\"",
+    "/bin/zsh -c \"sed -n '721,1080p' REVIEW_PACKET.md\"",
+    "/bin/zsh -c \"sed -n '1081,1440p' REVIEW_PACKET.md\"",
+    "/bin/zsh -c \"sed -n '1441,1800p' REVIEW_PACKET.md\"",
+    "/bin/zsh -c \"sed -n '1801,2160p' REVIEW_PACKET.md\"",
+    "/bin/zsh -c \"sed -n '2161,2520p' REVIEW_PACKET.md\"",
+    "/bin/zsh -c \"sed -n '2521,2880p' REVIEW_PACKET.md\""
+  ],
+  "original_record_preserved": true,
+  "original_validation_defect": "The initial validator checked routing.scenario_id, but the frozen prompt schema requires routing.workload.",
+  "reasoning_effort": "medium",
+  "review_valid_after_validator_fix": true,
+  "schema_version": "sol-blind-review-post-validation/v1"
+}
