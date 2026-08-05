@@ -29,7 +29,7 @@ jobs:
     timeout-minutes: 90
     env:
       CI: '1'
-      S2_BASE: 952cdf52dffb3acc47fc3918c97183b456eb0cf3
+      S2_BASE: 3a7154e09502b06a68b122148516fe48a647a3d4
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
