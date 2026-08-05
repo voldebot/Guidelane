@@ -27,14 +27,14 @@
   "integrity": {
     "algorithm": "SHA-256",
     "canonicalization": "Delete /integrity/manifest_sha256, then encode Python stdlib json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(',', ':')) as UTF-8.",
-    "manifest_sha256": "0c54e6be9d29c5ec7b9022b05d1d528f460f081afb29d19f966885b054ab39f9"
+    "manifest_sha256": "74499a77d0a746e33f1a25389b17351d8c96bfddb594dcd8131f1e27b259ecc5"
   },
   "control_file_hashes": {
     "evaluation/evaluator.py": "15ff49b62c7d63014798f45c6762401ec21efe8dcb8ae42fed444ba0d5e6ba9e",
     "evaluation/heldout/complex_defined/test_heldout.py": "664b57af883871cb65a11c4d423d083ee137538982cd89d0c3f79a673492f411",
     "evaluation/heldout/complex_underdefined/test_heldout.py": "d4264348ccb0b66801e701f67b96a2125ff51c8bceea1ecb53cb7d45bd58efcb",
     "evaluation/heldout/routine_defined/test_heldout.py": "8675660df0309e5e89cc449105c919a70e22ad500cbca2d587f657a5057279d7",
-    "runner/runner.py": "8d757070f8348cdb32fad16fedfee39c888c25ed3daea26eeb737b3b0199d08b",
+    "runner/runner.py": "89a1fe5bc2f9012af5a58c4f44e6e7868d6e18ba47765c27056c9649764ab171",
     "scenarios/complex_defined/tests/test_public.py": "f05b09bbf439183abd02e706b5de86bb49dbbbbab0dc56097cd6adfdf759ddf0",
     "scenarios/complex_underdefined/tests/test_public.py": "943483105ed60f751ee0b02f8fdb5ebe630f0876bf8f53492bf7d46542cce39a",
     "scenarios/routine_defined/tests/test_public.py": "34b6203ba64f30ee2766ab2d8eebdc5a1047afea59a6174aca8589fb156197cb"

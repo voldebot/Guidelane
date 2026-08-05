@@ -458,7 +458,7 @@ def copy_visible_scenario(scenario: Scenario, workspace: Path) -> None:
 
 def initialize_repository(workspace: Path) -> str:
     run_git(["init", "--quiet"], workspace)
-    run_git(["config", "user.email", "benchmark@example.invalid"], workspace)
+    run_git(["config", "user.email", "benchmark.local.invalid"], workspace)
     run_git(["config", "user.name", "Codex Benchmark Runner"], workspace)
     run_git(["add", "--all"], workspace)
     run_git(["commit", "--allow-empty", "--quiet", "--message", "Benchmark baseline"], workspace)

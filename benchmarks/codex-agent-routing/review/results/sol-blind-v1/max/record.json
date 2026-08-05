@@ -16,6 +16,6 @@
     "output_tokens": "unavailable",
     "reasoning_tokens": "unavailable"
   },
-  "validation_error": "[Errno 2] No such file or directory: '/Users/talhamac/Desktop/Projects/Guidelane/benchmarks/codex-agent-routing/review/results/sol-blind-v1/max/final_message.json'",
+  "validation_error": "FileNotFoundError: No such file or directory",
   "wall_time_ms": 124
 }

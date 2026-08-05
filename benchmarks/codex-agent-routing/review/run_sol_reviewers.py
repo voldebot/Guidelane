@@ -81,7 +81,7 @@ def create_codex_home() -> Path:
 def initialize_workspace(workspace: Path) -> None:
     commands = (
         ("git", "init", "--quiet"),
-        ("git", "config", "user.email", "review-benchmark@example.invalid"),
+        ("git", "config", "user.email", "review-benchmark.local.invalid"),
         ("git", "config", "user.name", "Blind Review Harness"),
         ("git", "add", "REVIEW_PACKET.md"),
         ("git", "commit", "--quiet", "--message", "Frozen blinded review packet"),
@@ -244,7 +244,11 @@ def run_one(effort: str, results_root: Path, codex_bin: str, timeout_seconds: in
                 (json.dumps(parsed, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8"),
             )
         except (OSError, UnicodeDecodeError, json.JSONDecodeError, ReviewError) as error:
-            validation_error = str(error)
+            validation_error = (
+                f"{error.__class__.__name__}: {error.strerror or 'review output unavailable'}"
+                if isinstance(error, OSError)
+                else str(error)
+            )
         record = {
             "schema_version": "sol-blind-review-record/v1",
             "model": "gpt-5.6-sol",
