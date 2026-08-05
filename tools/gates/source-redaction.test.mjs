@@ -47,6 +47,14 @@ test('source redaction rejects a prefix or suffix around the local identity inst
     scanFixture({ 'suffix.txt': `${allowedIdentity}.example` }),
     /redaction violation/,
   )
+  await assert.rejects(
+    scanFixture({ 'overlap-suffix.txt': `${allowedIdentity}@example.com` }),
+    /redaction violation/,
+  )
+  await assert.rejects(
+    scanFixture({ 'overlap-prefix.txt': `other@${allowedIdentity}` }),
+    /redaction violation/,
+  )
 })
 
 test('source redaction preserves other sensitive values on a line containing the allowed identity', async () => {

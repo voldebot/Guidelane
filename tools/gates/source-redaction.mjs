@@ -11,7 +11,7 @@ const redactionPolicyTokens = Object.freeze([
   '/users/[a-z]', '/home/[a-z]', '/var/folders/',
   '/private/var/folders/...', '/var/folders/...', '/users/talhamac/...',
 ])
-const identityToken = new RegExp(`(?<![A-Za-z0-9._%+\\-])${allowedIdentity.replace('.', '\\.')}(?![A-Za-z0-9._%+\\-])`, 'g')
+const identityToken = new RegExp(`(?<![A-Za-z0-9._%+@\\-])${allowedIdentity.replace('.', '\\.')}(?![A-Za-z0-9._%+@\\-])`, 'g')
 
 // These are the only source locations where the non-personal generated-project
 // identity is required. Every other source path must remain free of email-like
