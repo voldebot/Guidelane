@@ -1,0 +1,115 @@
+name: product-offline
+
+on:
+  push:
+    paths:
+      - 'apps/cockpit/**'
+      - 'packages/engine/**'
+      - 'packages/orchestrator/**'
+      - 'profiles/local-web/**'
+      - 'tools/gates/**'
+      - 'docs/research/sprint-03-novice-pilot/**'
+      - 'docs/decisions/ADR-010-s2-pilot-safety-spine.md'
+      - 'README.md'
+      - 'STATUS.md'
+      - 'PROJECT_MAP.md'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.json'
+      - '.github/workflows/product-offline.yml'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  product-offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      CI: '1'
+      S2_BASE: 952cdf52dffb3acc47fc3918c97183b456eb0cf3
+      S2_EVIDENCE_DIR: ${{ runner.temp }}/guidelane-s2-gates
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install pinned workspace dependencies
+        run: npm ci
+
+      - name: Install pinned browser revisions
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Capture immutable source identity
+        run: |
+          unset GUIDELANE_LIVE
+          unset GUIDELANE_SOURCE_ROOT
+          npm run evidence:source -- --artifacts "$S2_EVIDENCE_DIR"
+
+      - name: Audit pinned dependency graphs
+        run: |
+          npm audit --package-lock-only --audit-level=high
+          npm audit --prefix profiles/local-web --package-lock-only --audit-level=high --workspaces=false
+
+      - name: Repository static gates
+        run: |
+          npm run format:check
+          npm run lint
+          npm run typecheck
+
+      - name: Repository workspace tests
+        run: npm test
+
+      - name: Offline isolation gate
+        run: npm run test:offline -- --artifacts "$S2_EVIDENCE_DIR/offline"
+
+      - name: S2 inventory contract
+        run: npm run test:s2-contract -- --artifacts "$S2_EVIDENCE_DIR/inventory"
+
+      - name: Orchestrator safety and recovery
+        run: npm run test:orchestrator-safety -- --artifacts "$S2_EVIDENCE_DIR/orchestrator"
+
+      - name: Cockpit production build
+        run: npm run build:cockpit -- --artifacts "$S2_EVIDENCE_DIR/cockpit-build"
+
+      - name: Chromium novice journey
+        run: npm run test:e2e:chromium -- --artifacts "$S2_EVIDENCE_DIR/e2e-chromium"
+
+      - name: WebKit novice journey
+        run: npm run test:e2e:webkit -- --artifacts "$S2_EVIDENCE_DIR/e2e-webkit"
+
+      - name: Local Web clean profile
+        run: npm run test:profile:local-web -- --artifacts "$S2_EVIDENCE_DIR/local-web"
+
+      - name: Local Web seeded failures
+        run: npm run test:profile:local-web:seeded -- --artifacts "$S2_EVIDENCE_DIR/local-web-seeded"
+
+      - name: Index core evidence
+        run: npm run evidence:index -- --artifacts "$S2_EVIDENCE_DIR"
+
+      - name: Evidence integrity and redaction
+        run: npm run gate:artifacts -- --artifacts "$S2_EVIDENCE_DIR"
+
+      - name: Changed-path policy
+        run: npm run gate:changed-paths -- --base "$S2_BASE" --artifacts "$S2_EVIDENCE_DIR/changed-paths"
+
+      - name: Finalize complete evidence index
+        run: npm run evidence:index -- --final --artifacts "$S2_EVIDENCE_DIR"
+
+      - name: Validate final evidence tree
+        run: npm run gate:artifacts -- --validate-only --artifacts "$S2_EVIDENCE_DIR"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        name: Upload offline evidence
+        if: ${{ success() }}
+        with:
+          name: guidelane-s2-product-offline
+          path: ${{ runner.temp }}/guidelane-s2-gates/

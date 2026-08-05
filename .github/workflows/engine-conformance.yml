@@ -194,19 +194,21 @@ jobs:
         run: npm run typecheck
 
       # The offline tier. `--if-present` in the root script means a package with
-      # no test script is skipped, so the count below is the real guard: it
-      # asserts the suite actually EXECUTED rather than trusting a zero exit from
-      # a run that matched no files.
+      # This job remains the package boundary; product-offline owns the cockpit
+      # and generated-project harness. The aggregate count below asserts both
+      # engine and orchestrator suites actually EXECUTED rather than trusting a
+      # zero exit from a run that matched no files. npm prints one TAP summary
+      # per selected workspace, so their pass counts are summed.
       - name: Test
         run: |
           set -o pipefail
-          npm test 2>&1 | tee /tmp/test-out.txt
-          PASSED=$(grep -oE '^# pass [0-9]+' /tmp/test-out.txt | grep -oE '[0-9]+' | head -1)
-          if [ -z "$PASSED" ] || [ "$PASSED" -lt 40 ]; then
-            echo "::error::Expected at least 40 passing tests, saw '${PASSED:-none}' — the suite did not run."
+          npm run test --workspace=@guidelane/engine --workspace=@guidelane/orchestrator 2>&1 | tee /tmp/test-out.txt
+          PASSED=$(grep -oE '^# pass [0-9]+' /tmp/test-out.txt | grep -oE '[0-9]+' | awk '{ total += $1 } END { print total + 0 }')
+          if [ "$PASSED" -lt 90 ]; then
+            echo "::error::Expected at least 90 aggregate package tests, saw '$PASSED' — one or more package suites did not run."
             exit 1
           fi
-          echo "Workspace suite executed: $PASSED passing."
+          echo "Workspace suites executed: $PASSED aggregate passing."
 
   # REVIEW-01 #5's accepted remedy is "a nightly conformance probe against the
   # latest CLI". The pinned job above cannot do that by construction — it always

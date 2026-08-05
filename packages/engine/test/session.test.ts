@@ -253,7 +253,7 @@ test('engine-authored prose is redacted before it reaches a failure record', () 
 
 // --- stderr: the pipe that deadlocks a phase if nobody drains it -------------
 
-test('a stderr flood does not deadlock the phase, and the tail is kept', async () => {
+test('a diagnostic stream flood does not deadlock the phase, and the bounded tail is kept', async () => {
   // The engine BLOCKS under backpressure rather than dropping (measured on
   // stdout; a pipe is a pipe). An unread stderr fills its ~64 KiB buffer, the
   // child blocks in write(2), stdout goes quiet, and the stall watchdog reports

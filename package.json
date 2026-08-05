@@ -7,11 +7,30 @@
     "node": ">=22.6"
   },
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "apps/*",
+    "profiles/*"
   ],
   "scripts": {
-    "typecheck": "tsc --noEmit",
-    "test": "npm run test --workspaces --if-present",
+    "format:check": "git diff --check",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "tsc --noEmit && npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present && npm run test:gates",
+    "test:gates": "node --test tools/gates/*.test.mjs",
+    "test:offline": "node tools/gates/run-suite.mjs offline",
+    "test:s2-contract": "node tools/gates/validate-inventory.mjs",
+    "test:orchestrator-safety": "node tools/gates/run-suite.mjs orchestrator",
+    "build:cockpit": "node tools/gates/run-suite.mjs cockpit-build",
+    "test:e2e:chromium": "node tools/gates/run-suite.mjs e2e-chromium",
+    "test:e2e:webkit": "node tools/gates/run-suite.mjs e2e-webkit",
+    "test:profile:local-web": "node tools/gates/run-suite.mjs local-web",
+    "test:profile:local-web:seeded": "node tools/gates/run-suite.mjs local-web-seeded",
+    "evidence:source": "node tools/gates/write-evidence-index.mjs --source-only",
+    "evidence:index": "node tools/gates/write-evidence-index.mjs",
+    "gate:artifacts": "node tools/gates/gate-artifacts.mjs",
+    "gate:changed-paths": "node tools/gates/gate-changed-paths.mjs",
+    "test:live:auth": "node tools/gates/run-live.mjs auth",
+    "test:live:journey": "node tools/gates/run-live.mjs journey",
     "probe": "node tools/probe/run.mjs",
     "probe:live": "node tools/probe/run.mjs --live"
   },

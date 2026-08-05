@@ -30,9 +30,35 @@ test('a caller CANNOT re-introduce a denied key by passing it explicitly', () =>
   assert.ok(removed.includes('ANTHROPIC_BASE_URL'))
 })
 
-test('a non-denied extra survives', () => {
-  const { env } = scrubbedEnv({ GUIDELANE_PHASE: 'build' })
-  assert.equal(env.GUIDELANE_PHASE, 'build')
+test('ENGINE-ENV-FINAL-32 scrubbedEnv admits only finite supported internal keys and omits an arbitrary caller GUIDELANE sentinel', () => {
+  const sentinel = 'GUIDELANE_OWN'
+  const { env, removed } = scrubbedEnv({ [sentinel]: 'must-not-cross-the-engine-boundary' })
+
+  assert.equal(env[sentinel], undefined, 'an arbitrary caller GUIDELANE_* name is not an engine capability grant')
+  assert.ok(removed.includes(sentinel), 'the omitted sentinel is reported as withheld rather than silently inherited')
+  assert.deepEqual(
+    Object.keys(env).filter((key) => key.startsWith('GUIDELANE_')),
+    [],
+    'this engine boundary has no supported caller-provided GUIDELANE_* keys',
+  )
+})
+
+test('ENGINE-ENV-FINAL-33 scrubbedEnv metadata counts exactly the operator entries that cross and reports omitted entries', () => {
+  const supplied = {
+    PATH: 'final33-controlled-path',
+    LANG: 'final33-controlled-lang',
+    FINAL33_OPERATOR_SECRET: 'must-not-cross-the-engine-boundary',
+  }
+  const { env, removed, inherited } = scrubbedEnv(supplied)
+  const admitted = Object.keys(env).filter((key) => key !== 'DISABLE_AUTOUPDATER')
+
+  assert.equal(env.PATH, supplied.PATH)
+  assert.equal(env.LANG, supplied.LANG)
+  assert.equal(env.FINAL33_OPERATOR_SECRET, undefined)
+  assert.equal(inherited, admitted.length, 'inherited counts every ambient or supplied operator entry that actually reaches the child, excluding the internally forced updater value')
+  assert.ok(removed.includes('FINAL33_OPERATOR_SECRET'), 'omitted caller input remains auditable')
+  assert.ok(!removed.includes('PATH'), 'an admitted explicit portable key is not reported as removed')
+  assert.ok(!removed.includes('LANG'), 'an admitted explicit portable key is not reported as removed')
 })
 
 test('auto-update is disabled in every child', () => {

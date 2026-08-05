@@ -24,8 +24,10 @@
 //   - no stream 'error' may reach the top level: an unattended supervisor that
 //     dies leaves DETACHED, authenticated children spending the user's quota.
 
-import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
+import { execFileSync, spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { EventEmitter } from 'node:events'
+import { existsSync, realpathSync } from 'node:fs'
+import { delimiter, isAbsolute, join } from 'node:path'
 import { applyIsolation, assertIsolated } from './isolation.ts'
 import { scrubbedEnv } from './env.ts'
 import {
@@ -180,6 +182,13 @@ const MAX_LINE_BYTES = 32 * 1024 * 1024
 /** How much stderr to keep. A ring, not a log — this must never be the leak. */
 const STDERR_KEEP_BYTES = 64 * 1024
 
+/** Resolve the actual executable before spawning; never let PATH drift select it later. */
+function resolveExecutable(requested: string, pathValue: string | undefined): string {
+  const candidates = isAbsolute(requested) ? [requested] : (pathValue ?? '').split(delimiter).filter(Boolean).map((part) => join(part, requested))
+  for (const candidate of candidates) if (existsSync(candidate)) return realpathSync(candidate)
+  throw new Error(`engine executable could not be resolved: ${requested}`)
+}
+
 /**
  * Scrub prose that crosses this boundary into a failure record.
  *
@@ -200,6 +209,43 @@ const redactText = (s: string): string =>
   s
     .replace(/\/(?:Users|home)\/[^/\s"':]+/gi, '~')
     .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, '<uuid>')
+
+type ProcessIdentityObservation =
+  | { kind: 'observed'; startIdentity: string }
+  | { kind: 'absent' | 'unobservable' }
+
+/** The receipt format is supported only where this trusted platform tool exists. */
+const trustedPsExecutable = process.platform === 'darwin' || process.platform === 'linux' ? '/bin/ps' : null
+
+const isConfirmedAbsent = (error: unknown): boolean =>
+  typeof error === 'object' && error !== null && (error as { code?: unknown }).code === 'ESRCH'
+
+/**
+ * Observe the OS start identity without consulting PATH.
+ *
+ * `ps` failure and an empty response are not evidence that the just-spawned
+ * process disappeared. Only an explicit ESRCH from its liveness probe may mean
+ * absent; every other outcome remains unobservable and therefore unsafe for a
+ * durable receipt.
+ */
+const observeProcessIdentity = (pid: number): ProcessIdentityObservation => {
+  if (trustedPsExecutable === null) return { kind: 'unobservable' }
+  try {
+    const startIdentity = execFileSync(trustedPsExecutable, ['-o', 'lstart=', '-p', String(pid)], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim()
+    if (startIdentity) return { kind: 'observed', startIdentity }
+  } catch {
+    // Liveness below distinguishes confirmed absence from an unavailable probe.
+  }
+  try {
+    process.kill(pid, 0)
+  } catch (error) {
+    if (isConfirmedAbsent(error)) return { kind: 'absent' }
+  }
+  return { kind: 'unobservable' }
+}
 
 const parseVersion = (s: string): number[] | null => {
   const parts = s.split('.').map(Number)
@@ -350,7 +396,14 @@ export class EngineSession extends EventEmitter<Events> {
   readonly #opts: SessionOptions
   readonly #stallMs: number
   readonly #initMs: number
+  /**
+   * A just-spawned detached group is owned locally while its durable receipt is
+   * being verified. It must never enter the registry before that verification.
+   */
+  #provisionalPgid: number | null = null
   #pgid: number | null = null
+  #startIdentity: string | null = null
+  #receiptEstablished = false
   #scrubbed: string[] = []
 
   constructor(opts: SessionOptions) {
@@ -400,6 +453,13 @@ export class EngineSession extends EventEmitter<Events> {
     return this.#scrubbed
   }
 
+  /** Narrow durable receipt fields suitable for supervisor persistence. */
+  get processReceipt(): Readonly<{ pid: number; pgid: number; startIdentity: string }> | null {
+    return this.#pgid === null || !this.#child?.pid || this.#startIdentity === null
+      ? null
+      : Object.freeze({ pid: this.#child.pid, pgid: this.#pgid, startIdentity: this.#startIdentity })
+  }
+
   start(): void {
     // A second start() spawned a second child, overwrote #pgid, and left the
     // first pgid in the registry forever while the first child's own 'close'
@@ -407,6 +467,13 @@ export class EngineSession extends EventEmitter<Events> {
     // live, authenticated engine per retry.
     if (this.#started) throw new Error('start() called twice — construct a new EngineSession per phase')
     this.#started = true
+
+    // Negative-pid process-group reaping and the durable start identity below
+    // are POSIX-only. Fail before spawn elsewhere so no receipt-less child can
+    // survive on a platform this adapter cannot verify or reap as a group.
+    if (trustedPsExecutable === null) {
+      throw new Error('engine process receipts require /bin/ps on this platform')
+    }
 
     const ambient = this.#opts.ambient ?? false
     const args = this.argv
@@ -434,7 +501,10 @@ export class EngineSession extends EventEmitter<Events> {
 
     const { env, removed } = scrubbedEnv(this.#opts.env ?? {})
     this.#scrubbed = removed
-    const child = spawn(this.#opts.claudeBin ?? 'claude', args, {
+    // Test adapters may deliberately exercise Node's spawn-error path. Every
+    // integrated (non-ambient) engine invocation resolves before spawn.
+    const executable = ambient ? (this.#opts.claudeBin ?? 'claude') : resolveExecutable(this.#opts.claudeBin ?? 'claude', env.PATH)
+    const child = spawn(executable, args, {
       cwd: this.#opts.cwd,
       env,
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -443,16 +513,37 @@ export class EngineSession extends EventEmitter<Events> {
       detached: true,
     })
     this.#child = child
-    if (child.pid) {
-      this.#pgid = child.pid
-      this.#opts.registry.add(child.pid)
-    }
 
+    // Attach this before receipt observation. A spawn that reports no pid can
+    // still emit an asynchronous error, and a thrown start() must not turn that
+    // into an unhandled event.
     child.on('error', (err) => {
       // A child that never launched is not a finding about the engine.
       // Node's ENOENT/EACCES text carries the binary path and the cwd.
       this.emit('failure', { kind: 'spawn', message: 'The engine could not be started.', detail: redactText(String(err)) })
     })
+
+    const pid = child.pid
+    if (pid !== undefined && Number.isSafeInteger(pid) && pid > 0) {
+      // This is deliberately the first ownership write after spawn. If the
+      // identity probe is unavailable, the local receipt still authorizes only
+      // this freshly detached group to be reaped; it is never made durable.
+      this.#provisionalPgid = pid
+      const identity = observeProcessIdentity(pid)
+      if (identity.kind !== 'observed') {
+        this.#reapProvisionalGroup()
+        throw new Error(
+          identity.kind === 'absent'
+            ? 'engine process exited before a durable process receipt could be established'
+            : 'engine process receipt could not establish an OS-observed start identity'
+        )
+      }
+      this.#pgid = pid
+      this.#startIdentity = identity.startIdentity
+      this.#receiptEstablished = true
+      this.#opts.registry.add(pid)
+      this.#provisionalPgid = null
+    }
 
     // An unhandled 'error' on any of these three streams throws out of a stream
     // callback and takes an unattended supervisor with it — while the children,
@@ -501,6 +592,7 @@ export class EngineSession extends EventEmitter<Events> {
         // and the victim would be an unrelated process of the user's, killed
         // with no log line anywhere.
         this.#pgid = null
+        this.#startIdentity = null
       }
       this.emit('closed', { code, signal, pendingBytes: this.#buf.length, dropped: this.#dropped })
     })
@@ -542,6 +634,7 @@ export class EngineSession extends EventEmitter<Events> {
    */
   send(text: string): void {
     if (!this.#child) throw new Error('send() before start()')
+    if (!this.#receiptEstablished) throw new Error('send() before a usable process receipt was established')
     if (this.#gateFailed) throw new Error('the init receipt failed — this session may not be used')
     if (this.#closed) throw new Error('send() after the session closed')
     if (this.#finished) throw new Error('session already finished — stdin is closed')
@@ -587,6 +680,7 @@ export class EngineSession extends EventEmitter<Events> {
    */
   finish(): void {
     if (!this.#child) throw new Error('finish() before start()')
+    if (!this.#receiptEstablished) throw new Error('finish() before a usable process receipt was established')
     if (this.#finished) return
     this.#finished = true
     this.#expectingOutput = true
@@ -631,7 +725,26 @@ export class EngineSession extends EventEmitter<Events> {
     // someone else. Signalling it then is not defensive, it is dangerous.
     if (this.#closed) return
     if (this.#pgid !== null) this.#opts.registry.kill(this.#pgid)
-    this.#child?.kill('SIGKILL')
+    else this.#reapProvisionalGroup()
+  }
+
+  /**
+   * Reap only the group owned by the immediately preceding detached spawn.
+   *
+   * There is intentionally no `child.kill()` fallback: a bare pid can be
+   * recycled after an unobservable identity probe, while a negative provisional
+   * pgid names only the group this spawn created. The group signal includes its
+   * descendants, which the direct child signal would leave behind.
+   */
+  #reapProvisionalGroup(): void {
+    const pgid = this.#provisionalPgid
+    this.#provisionalPgid = null
+    if (pgid === null) return
+    try {
+      process.kill(-pgid, 'SIGKILL')
+    } catch {
+      // The group may already be absent. A fallback bare-pid signal is unsafe.
+    }
   }
 
   /**

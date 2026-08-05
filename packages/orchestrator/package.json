@@ -1,0 +1,4 @@
+{
+  "name": "@guidelane/orchestrator", "version": "0.0.0", "private": true, "type": "module", "exports": { ".": "./src/index.ts" },
+  "scripts": { "test": "cd ../.. && node --test --experimental-strip-types packages/orchestrator/test/*.test.ts" }
+}

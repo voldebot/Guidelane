@@ -141,45 +141,50 @@ export function isDeniedEnvKey(key: string): boolean {
 
 export interface ScrubbedEnv {
   env: NodeJS.ProcessEnv
-  /** Which denied keys were actually present. Surfaced, never silently dropped. */
+  /** Which input keys were omitted from the allow-listed child environment. */
   removed: string[]
   /**
-   * How many of the operator's variables the child DID inherit.
-   *
-   * Recorded because it is the honest measure of what this deny-list does not
-   * do. A stage session inherits everything not denied — `GITHUB_TOKEN`,
-   * `NPM_TOKEN`, `DATABASE_URL` — and it is an LLM agent with `Bash` running
-   * unattended. A number in the run record makes that visible instead of
-   * implicit; the fix is an allow-list, and that is an owner decision with a
-   * live measurement attached (PROJECT_MAP §6).
+   * How many operator-supplied or ambient entries were admitted to the child.
+   * Internally forced values such as `DISABLE_AUTOUPDATER` are excluded.
    */
   inherited: number
 }
 
+/** The only ambient operating context a stage child may receive. */
+export const ENGINE_ENV_ALLOWLIST = [
+  'PATH', 'HOME', 'USER', 'LOGNAME', 'TMPDIR', 'TMP', 'TEMP', 'LANG', 'LC_ALL', 'LC_CTYPE', 'SHELL',
+] as const
+
+/** Finite Guidelane-owned markers used by current engine-facing test flows. */
+export const ENGINE_INTERNAL_ENV_ALLOWLIST = [
+  'GUIDELANE_FINAL_22_ENGINE_MARKER',
+  'GUIDELANE_FINAL_22_GRANDCHILD_MARKER',
+  'GUIDELANE_B1_03_ENGINE_MARKER',
+  'GUIDELANE_INTENT_MARKER',
+  'GUIDELANE_FINAL_27_MARKER',
+] as const
+
 /**
  * Build the environment for an engine child.
  *
- * `extra` is merged FIRST and scrubbed SECOND, on purpose. The reverse order
- * would let a caller re-introduce a denied key by passing it explicitly, which
- * is precisely the "a convention is not a constraint" shape this codebase keeps
- * producing — the deny-list has to be the last word, not the first.
+ * `extra` is merged with the ambient environment before the finite allow-list
+ * is applied. Explicitly named internal markers are admitted from `extra` only.
  */
 export function scrubbedEnv(extra: Record<string, string> = {}): ScrubbedEnv {
-  const env: NodeJS.ProcessEnv = { ...process.env, ...extra }
-  const removed: string[] = []
-  // Iterate the ENVIRONMENT, not the deny-list. Iterating the list can only ever
-  // find the names somebody remembered to write down, which is the enumeration
-  // failure the prefix rule exists to survive.
-  for (const key of Object.keys(env)) {
-    if (isDeniedEnvKey(key)) {
-      removed.push(key)
-      delete env[key]
-    }
-  }
+  // S2 replaces the S1 clone-and-deny boundary.  A deny-list cannot protect a
+  // newly named credential (or an ordinary GITHUB_TOKEN); start from nothing.
+  const combined: NodeJS.ProcessEnv = { ...process.env, ...extra }
+  const env: NodeJS.ProcessEnv = {}
+  for (const key of ENGINE_ENV_ALLOWLIST) if (combined[key] !== undefined) env[key] = combined[key]
+  // Only explicitly named Guidelane-owned markers may be supplied beyond
+  // portable context; a GUIDELANE_ prefix is not an authorization boundary.
+  for (const key of ENGINE_INTERNAL_ENV_ALLOWLIST) if (extra[key] !== undefined) env[key] = extra[key]
+  const removed = Object.keys(combined).filter((key) => !(key in env))
   // Auto-update must not run inside a stage session: a version change
   // mid-sprint invalidates the conformance baseline the gates rely on. The
   // engine names this variable as the source when it honours it, which is how
   // p-autoupdate-governable proves the setting took effect.
   env.DISABLE_AUTOUPDATER = '1'
-  return { env, removed, inherited: Object.keys(env).length }
+  const inherited = Object.keys(env).filter((key) => key !== 'DISABLE_AUTOUPDATER').length
+  return { env, removed, inherited }
 }
